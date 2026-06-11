@@ -1,0 +1,179 @@
+{
+  "id": "ei-338-brozinskas",
+  "title": "EI-338 BROZINSKAS — Justina Brozinskas",
+  "subtitle": "Lithuania, 1912 · age 16 · interviewed 1993 at age 98",
+  "paragraphs": [
+    { "id": "b1",  "speaker": "SIGRIST",   "text": "1895 is when you were born, correct? You were born in 1895? Yes?" },
+    { "id": "b2",  "speaker": "POVILAITIS","text": "Yes, Ma. She won't hear you." },
+    { "id": "b3",  "speaker": "SIGRIST",   "text": "Okay. That's okay. Go right ahead." },
+    { "id": "b4",  "speaker": "BROZINSKAS","text": "( to her daughter ) You come up here. You tell me, because I don't know a lot of things." },
+    { "id": "b5",  "speaker": "POVILAITIS","text": "You were born March 29th, 1895." },
+    { "id": "b6",  "speaker": "BROZINSKAS","text": "Uh-huh." },
+    { "id": "b7",  "speaker": "POVILAITIS","text": "Okay?" },
+    { "id": "b8",  "speaker": "BROZINSKAS","text": "Okay." },
+    { "id": "b9",  "speaker": "SIGRIST",   "text": "Whose farm did you live on?" },
+    { "id": "b10", "speaker": "BROZINSKAS","text": "Huh?" },
+    { "id": "b11", "speaker": "SIGRIST",   "text": "Whose farm was it that you lived on?" },
+    { "id": "b12", "speaker": "BROZINSKAS","text": "( to her daughter ) What does that mean?" },
+    { "id": "b13", "speaker": "POVILAITIS","text": "Whose farm did you live on? Whose farm? Your father's? Whose farm? Was it your father's farm?" },
+    { "id": "b14", "speaker": "BROZINSKAS","text": "Father's farmer." },
+    { "id": "b15", "speaker": "POVILAITIS","text": "Yeah. Who owned the farm? Your father?" },
+    { "id": "b16", "speaker": "BROZINSKAS","text": "Yeah, yeah." },
+    { "id": "b17", "speaker": "SIGRIST",   "text": "Did the cow have a name?" },
+    { "id": "b18", "speaker": "BROZINSKAS","text": "The cow's name? Just cow, that's all. ( they laugh ) That's all, cow. It was a brown color." },
+    { "id": "b19", "speaker": "SIGRIST",   "text": "How do you milk a cow? Tell us how you milk a cow?" },
+    { "id": "b20", "speaker": "BROZINSKAS","text": "I milk a cow with a pail. That's all." },
+    { "id": "b21", "speaker": "POVILAITIS","text": "With your hands." },
+    { "id": "b22", "speaker": "BROZINSKAS","text": "With hands, with hands. Oh, yes, with hands. With hands milk the cow." }
+  ],
+  "steps": [
+    {
+      "id": "b-s1",
+      "type": "structure",
+      "title": "StructureDoc · S1: The interview as a three-way conversation",
+      "paragraph_ids": ["b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8"],
+      "content": {
+        "section_id": "S1",
+        "char_start": 1450,
+        "char_end": 2400,
+        "gist": "Birth date is established through three turns: the interviewer asks, the daughter confirms, the mother asks her daughter to come up and tell her because she does not remember. The interview is conducted in the presence of an interpreter who is also a family member."
+      }
+    },
+    {
+      "id": "b-c1",
+      "type": "code",
+      "title": "Persona A · code on b4",
+      "paragraph_ids": ["b4"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Family member as co-interviewee",
+      "quote": "You come up here. You tell me, because I don't know a lot of things.",
+      "rationale": "Surface: the mother invites the daughter into the interview as the speaker of biographical fact. The daughter has been the corrector (b2, b5) and now becomes the named source. The interviewer's role is reduced to prompting."
+    },
+    {
+      "id": "b-c2",
+      "type": "code",
+      "title": "Persona B · code on b4",
+      "paragraph_ids": ["b4"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "Memory as a collaborative, mediated act in late life",
+      "quote": "I don't know a lot of things",
+      "rationale": "Latent: 'I don't know' is a public assertion of memory failure in the presence of the interviewer, the daughter, and a recording device. The interpretive claim is that this interview is not a recollection but a co-construction — the mother's authority over her own biography is partial and acknowledged as such."
+    },
+    {
+      "id": "b-m1",
+      "type": "merge",
+      "title": "Conciliator · minority flag on b4",
+      "paragraph_ids": ["b4"],
+      "action": "minority",
+      "label": "Memory as co-construction (latent, kept)",
+      "note": "Code b-c2 (B, latent) is kept as a minority entry. A merge with b-c1 would erase the interpretive lift; a vote would silence B. Flag as minority=true, retain the rationale.",
+      "rationale": "This is the divergence-preservation decision in action. b-c1 names the surface fact (the daughter is now a speaker); b-c2 names the deeper fact (the mother has named her own memory failure on the record). Merging would collapse the interpretive difference. The minority flag preserves both."
+    },
+    {
+      "id": "b-s2",
+      "type": "structure",
+      "title": "StructureDoc · S2: 'What does that mean?' — the comprehension gap",
+      "paragraph_ids": ["b9", "b10", "b11", "b12", "b13", "b14", "b15", "b16"],
+      "content": {
+        "section_id": "S2",
+        "char_start": 2400,
+        "char_end": 3300,
+        "gist": "The interviewer asks whose farm it was. The mother does not understand. She turns to her daughter and asks what the question means. The daughter rephrases several times. The mother eventually produces 'Father's farmer,' a fragment of English that signals the comprehension gap more clearly than any fluent answer would."
+      }
+    },
+    {
+      "id": "b-c3",
+      "type": "code",
+      "title": "Persona A · code on b12",
+      "paragraph_ids": ["b12"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Comprehension gap in late-life interview",
+      "quote": "What does that mean?",
+      "rationale": "Surface: the speaker does not understand the question. The phrase is short, direct, and addressed to the daughter, not the interviewer. The interviewer's question is not in the speaker's working English."
+    },
+    {
+      "id": "b-c4",
+      "type": "code",
+      "title": "Persona B · code on b14",
+      "paragraph_ids": ["b14"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "The daughter as linguistic bridge",
+      "quote": "Father's farmer",
+      "rationale": "Latent: the mother's answer is a fragment — 'Father's farmer' rather than 'My father's farm' or 'It was my father's farm.' The grammar is broken but the answer is complete. The interpretive claim is that the daughter has rephrased enough for the mother to land on a single noun phrase, which is itself evidence of how much translation was needed."
+    },
+    {
+      "id": "b-m2",
+      "type": "merge",
+      "title": "Conciliator · create ×2 on S2",
+      "paragraph_ids": ["b12", "b14"],
+      "action": "create",
+      "label": "Two distinct codes enter — no merge",
+      "note": "Codes b-c3 (the comprehension gap) and b-c4 (the daughter as linguistic bridge) both enter the codebook as separate entries.",
+      "rationale": "They share an exchange, not a claim: b-c3 is about what the mother cannot do alone, b-c4 about what the daughter does to make the answer possible. A code that 'names the question, the answer, and the bridge' would be a summary of the section, not a code — and summarizing is the StructureDoc's job, not the codebook's."
+    },
+    {
+      "id": "b-memo1",
+      "type": "memo",
+      "title": "Reconcile · drift memo on S2",
+      "paragraph_ids": ["b9", "b10", "b11", "b12", "b13", "b14", "b15", "b16"],
+      "label": "S2 coded sparsely relative to its arc",
+      "note": "The StructureDoc gist for S2 describes an eight-turn negotiation of meaning; the codebook holds two codes for it, both anchored to the mother's turns. The daughter's four rephrasings (b13, b15) are uncoded. Advisory only — this memo is surfaced at the codebook checkpoint and never blocks. A human may decide the rephrasings deserve a code of their own."
+    },
+    {
+      "id": "b-s3",
+      "type": "structure",
+      "title": "StructureDoc · S3: The cow named 'cow'",
+      "paragraph_ids": ["b17", "b18", "b19", "b20", "b21", "b22"],
+      "content": {
+        "section_id": "S3",
+        "char_start": 3300,
+        "char_end": 4200,
+        "gist": "The interviewer asks if the cow had a name. The speaker says: 'Just cow, that's all.' The family laughs. The interviewer then asks how the cow was milked; the mother says 'with a pail'; the daughter adds 'with your hands'; the mother repeats 'with hands.'"
+      }
+    },
+    {
+      "id": "b-c5",
+      "type": "code",
+      "title": "Persona A · code on b18",
+      "paragraph_ids": ["b18"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Naming practices for farm animals",
+      "quote": "The cow's name? Just cow, that's all.",
+      "rationale": "Surface: the cow is referred to by species, not by a personal name. The interviewer expected a name; the speaker denies that naming was a practice. The laugh is a shared moment of the absurdity of the question from the speaker's frame."
+    },
+    {
+      "id": "b-c6",
+      "type": "code",
+      "title": "Persona B · code on b18",
+      "paragraph_ids": ["b18"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "Naming as a category mistake from the speaker's frame",
+      "quote": "The cow's name? Just cow, that's all. ( they laugh ) That's all, cow. It was a brown color.",
+      "rationale": "Latent: the laugh signals that the speaker finds the question amusing, not that she has forgotten. The interpretive claim is that naming the cow was not a category the household used; the cow was 'cow' the way a household object is 'the table.' The interviewer's question is from a different cultural grammar."
+    },
+    {
+      "id": "b-m3",
+      "type": "merge",
+      "title": "Conciliator · minority flag on b18",
+      "paragraph_ids": ["b18"],
+      "action": "minority",
+      "label": "Naming as a category mistake (latent, kept)",
+      "note": "Code b-c6 (B, latent) is kept as a minority entry alongside b-c5. Flag as minority=true, retain the rationale.",
+      "rationale": "b-c5 reports a practice (the cow had no name); b-c6 claims the question itself came from a different cultural grammar — a reading of the laugh, not of the answer. A reader could accept the practice and reject the grammar claim, so they are separate codes; the minority flag marks that only one persona made the latent claim."
+    },
+    {
+      "id": "b-t1",
+      "type": "theme",
+      "title": "Candidate theme",
+      "paragraph_ids": ["b4", "b12", "b14", "b18", "b22"],
+      "label": "Late-life oral history as a three-person speech act",
+      "statement": "This interview is not a recollection but a co-construction. The mother names her own memory failure on the record ('I don't know a lot of things'); the daughter serves as interpreter, corrector, and bridge between the speaker and the interviewer's language; and the interviewer becomes a prompter rather than a questioner of one person. The cow named 'cow' is the same moment in miniature: a question from one cultural grammar, a laugh, an answer in the speaker's frame."
+    }
+  ]
+}

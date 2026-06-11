@@ -1,0 +1,100 @@
+{
+  "papers": [
+    {
+      "id": "braun-clarke-2006",
+      "title": "Using thematic analysis in psychology",
+      "authors": "Braun, V. & Clarke, V.",
+      "year": 2006,
+      "venue": "Qualitative Research in Psychology 3(2): 77–101",
+      "takeaway": "The original six-phase TA paper. The 'reflexive TA' framing — and the formulation of themes as 'patterns of shared meaning organized around a central concept,' not clusters — comes from the 2019–2021 refinements (next entry)."
+    },
+    {
+      "id": "braun-clarke-2019",
+      "title": "Reflecting on reflexive thematic analysis",
+      "authors": "Braun, V. & Clarke, V.",
+      "year": 2019,
+      "venue": "Qualitative Research in Sport, Exercise and Health 11(4): 589–597",
+      "takeaway": "Argues against inter-rater reliability for reflexive TA — subjectivity is a generative resource, not bias to eliminate."
+    },
+    {
+      "id": "gatos",
+      "title": "GATOS — LLM-based human-LLM collaborative inductive coding",
+      "authors": "Katz, Coloyan Fleming & Main",
+      "year": 2024,
+      "venue": "arXiv:2410.03721 (2024); Humanities & Social Sciences Communications 13(1):209 (2026)",
+      "takeaway": "Embeds clusters, kNN against existing codebook (k=5), create-or-merge. Synthetic ground-truth validation. Our closest prior art."
+    },
+    {
+      "id": "chalet",
+      "title": "CHALET — Human-LLM collaboration for qualitative analysis",
+      "authors": "Meng et al.",
+      "year": 2024,
+      "venue": "arXiv:2405.05758; ACM TOCHI",
+      "takeaway": "Uses irreconcilable human–LLM disagreement as a source of grounded conceptual discovery beyond the initial codebook."
+    },
+    {
+      "id": "abductivai",
+      "title": "AbductivAI — AI as a co-researcher",
+      "authors": "Costa, Bryda, Christou & Kasperiuniene",
+      "year": 2025,
+      "venue": "International Journal of Qualitative Methods 24: 1–12",
+      "takeaway": "8-phase abductive model with a 'Phase 5.5 CoT-Review loop' for divergence detection. Uses Cohen's κ — sits closer to codebook TA than reflexive TA."
+    },
+    {
+      "id": "thematic-lm",
+      "title": "Thematic-LM",
+      "authors": "Qiao et al.",
+      "year": 2025,
+      "venue": "ACM Web Conf 2025",
+      "takeaway": "Coder / aggregator / reviewer / theme-coder agents, identity-perspective coders, GPT-4o. Demonstrates that distinct personas increase divergence."
+    },
+    {
+      "id": "tama",
+      "title": "TAMA — clinical thematic analysis with multi-agents",
+      "authors": "Xu et al.",
+      "year": 2025,
+      "venue": "arXiv:2503.20666",
+      "takeaway": "Coder–reviewer–refiner. Reports Coverage / Actionability / Distinctiveness / Relevance metrics and ~99% time reduction."
+    },
+    {
+      "id": "details",
+      "title": "DeTAILS — six-phase RTA with codebook-as-boundary-object",
+      "authors": "Sharma, Cochrane & Wallace",
+      "year": 2025,
+      "venue": "arXiv:2510.17575",
+      "takeaway": "18-researcher study on Reddit data. Confirms Braun & Clarke's six phases map cleanly to LLM calls — and that 'reflexivity' degenerates to verifying AI output without intervention."
+    },
+    {
+      "id": "martinez-montes",
+      "title": "Chalmers SE study — rubric-based RTA evaluation",
+      "authors": "Martinez Montes et al.",
+      "year": 2025,
+      "venue": "arXiv:2510.18456",
+      "takeaway": "Blind expert evaluators preferred LLM codes 61% of the time but flagged fragmentation and missed latent interpretations. The template for our exit-gate evaluation."
+    },
+    {
+      "id": "depaoli-mathis",
+      "title": "Inductive Thematic Saturation (ITS)",
+      "authors": "De Paoli & Mathis",
+      "year": 2024,
+      "venue": "arXiv:2401.03239",
+      "takeaway": "Saturation as the divergence between cumulative-total and cumulative-unique code curves. A soft signal, not a hard stop."
+    },
+    {
+      "id": "borchers-persona",
+      "title": "Temperature and Persona in multi-agent LLM coding",
+      "authors": "Borchers et al.",
+      "year": 2025,
+      "venue": "arXiv:2507.11198",
+      "takeaway": "77,000+ coding decisions across six open-source LLMs: personas delayed consensus in 4 of 6 models with minimal accuracy gain. Multi-agent is task-conditional."
+    },
+    {
+      "id": "tavory-timmermans",
+      "title": "Abductive analysis in theory and practice",
+      "authors": "Tavory, I. & Timmermans, S.",
+      "year": 2014,
+      "venue": "University of Chicago Press",
+      "takeaway": "Abduction is a 'creative inferential process aimed at producing new hypotheses … based on surprising research evidence.' Our theoretical anchor for the surprise-detector (post-v0)."
+    }
+  ]
+}

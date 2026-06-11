@@ -1,0 +1,11 @@
+# Claude Code internal state — never public
+.claude/
+
+# macOS
+.DS_Store
+
+# Source materials kept private
+transcripts_sample/
+MASSHINE_v0_SPEC.md
+research.md
+REWORK_PLAN.md

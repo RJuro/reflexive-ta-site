@@ -1,0 +1,157 @@
+{
+  "decisions": [
+    {
+      "id": "no-ml",
+      "num": "01",
+      "title": "No traditional ML in v0",
+      "category": "no-ml",
+      "spec": "No traditional ML in v0. Code similarity, merging, grouping, theme construction, and eval matching are all LLM judgments with written rationales — which makes every decision auditable in natural language instead of a cosine number. Embeddings are a later, optional scaling tool (§9), never a requirement.",
+      "source": "MASSHINE_v0_SPEC.md §2.1",
+      "research": "Theme as bucket vs. theme as pattern of shared meaning is the recurring distortion. Engineering pipelines almost universally implement themes as clusters/buckets of codes (embedding clustering, topic-model-like grouping). Braun & Clarke's 'theme as a pattern of shared meaning organized around a central concept' is an interpretive construction, not a cluster.",
+      "researchSource": "research.md, Key Findings #2",
+      "deviation": "Research TL;DR #3 calls embedding-based de-duplication with map-reduce batching the architecture you 'must use' at the 1,343-transcript scale — the proven recipe (GATOS kNN k=5, LOGOS cosine 0.65). The spec deliberately defers it: LLM-judged merging keeps every decision auditable in natural language at v0 scale. Revisit trigger (spec §9): codebook approaches the context budget → LLM-written digest first, embeddings only if the digest fails.",
+      "transcript": {
+        "quote": "It was an average peasant home. It was three rooms, living room and kitchen in the middle and a small room on the side. And then facing what would be, I guess, the east side was half, was a barn where the cattle were.",
+        "source": "DP-40 GRANDE · Mary Yankovik Grande, age 10, Yugoslavia 1920",
+        "why": "An embedding-based cluster would put this passage near other 'house description' passages. A reader pays attention to the phrase 'I guess, the east side' — the speaker is uncertain of the cardinal direction, suggesting she's reconstructing the layout from a child's memory. That uncertainty is interpretive material; a cosine score would lose it."
+      }
+    },
+    {
+      "id": "file-based",
+      "num": "02",
+      "title": "Files, not a database",
+      "category": "file-based",
+      "spec": "Files, not a database. Artifacts are JSON files under runs/<run_id>/; the run directory is git-committed → git is the provenance and diff layer. SQLite only if/when file counts hurt.",
+      "source": "MASSHINE_v0_SPEC.md §2.2",
+      "research": "Provenance/audit trails are the linchpin deliverable. They serve double duty: (a) interpretive-depth evaluation (excerpt → code → theme definition → memo traceability) and (b) step-by-step comparability against the human benchmark. Existing systems already attach verbatim quotes to codes (Thematic-LM saves up to 20 quotes per code; TAMA retains excerpt provenance).",
+      "researchSource": "research.md, Key Findings #6",
+      "deviation": "Research §5 recommends persisting artifacts in a store — 'e.g., SQLite, as in GATOS-style tooling.' The spec chooses git-diffable JSON files until file counts hurt (spec §2.2): provenance-as-directory-tree beats provenance-as-joins for human audit. SQLite is the written fallback, not the design.",
+      "transcript": {
+        "quote": "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job.",
+        "source": "DP-40 GRANDE · Mary Yankovik Grande",
+        "why": "A single sentence that has to travel, intact, from the transcript, through a Code, through a MergeDecision, into a CandidateTheme, and finally into a report. If any of those artifacts is a row in a relational table, the trace requires joins. In JSON files, the trace is the directory tree."
+      }
+    },
+    {
+      "id": "prompts-versioned",
+      "num": "03",
+      "title": "Prompts are versioned files",
+      "category": "file-based",
+      "spec": "Prompts are versioned files in src/masshine/prompts/*.md, never inline strings. The system's entire analytic logic must be readable as prompts + JSON.",
+      "source": "MASSHINE_v0_SPEC.md §2.3",
+      "research": "Cross-cutting legibility requirement: emit each phase's output as a discrete, inspectable artifact with stable IDs so the human benchmark can be diffed against the machine output at every phase, not just on final themes. The system's analytic logic must be as inspectable as its outputs.",
+      "researchSource": "research.md, §1 cross-cutting requirement",
+      "transcript": {
+        "quote": "Lodz, Poland. And I'll tell you, June—June 6th, 1911.",
+        "source": "EI-1257 HIRSCH · Jean Hirsch, age 9, Poland 1920",
+        "why": "The interviewer's introduction gave Piotrkow as her town; her first answer was 'I was actually born in Lodz,' and this turn drives the correction home. A code on 'correction of biographical details' depends on a coder prompt that asks for self-corrections. If that prompt is an inline string, no one outside the running code can see what the system is being asked to look for."
+      }
+    },
+    {
+      "id": "codebook-in-context",
+      "num": "04",
+      "title": "Codebook lives in context",
+      "category": "no-ml",
+      "spec": "Codebook lives in context. The conciliator sees the whole current codebook and decides create-vs-merge per new code, with rationale. This caps v0 scale (by design) and is the explicit trigger point for later retrieval (§9).",
+      "source": "MASSHINE_v0_SPEC.md §2.4",
+      "research": "Role specialization vs. single-agent CoT: role agents for coding/critique/theming (diversity matters), single orchestrator for control flow. The conciliator is the role agent whose entire job is the create-vs-merge judgment — and whose written rationale is what makes each merge decision auditable.",
+      "researchSource": "research.md, §2 'Role specialization' / 'Codebook merging'",
+      "deviation": "The literature's proven recipe for codebook de-duplication is embedding-based: GATOS embeds new codes, retrieves k-nearest (k=5), then prompts create-vs-merge; LOGOS merges at cosine threshold 0.65 in batches of 100. The spec consciously does NOT take this path at v0 — the conciliator reads the whole codebook instead, which caps scale by design. The embedding recipe is the documented fallback when the §9 trigger fires, not the design.",
+      "transcript": {
+        "quote": "No, no. German was our main language, like in office or different places, you almost had to learn how to speak German to get along with them.",
+        "source": "DP-40 GRANDE",
+        "why": "This follows her 'Actually Slovanian, and we had to take German' and the interviewer's interjected 'Not Hungarian.' — an earlier draft of this example spliced those three turns into one quote. A new code 'Slovanian as home language' arriving at the conciliator: the current codebook may already have 'Slovanian spoken at home' (semantic) and 'multilingual childhood' (latent). The conciliator has to read all three and decide whether to create, merge, or flag minority. Embeddings would do this in 30ms; the LLM does it in 2s and writes a paragraph justifying the call. The paragraph is the audit trail."
+      }
+    },
+    {
+      "id": "divergence",
+      "num": "05",
+      "title": "Divergence preserved, never voted out",
+      "category": "divergence",
+      "spec": "Divergence preserved: N coder personas (default 2, config up to 3 — prompt variants only); no voting; rejected-merge / unmerged codes flagged minority=true, never deleted.",
+      "source": "MASSHINE_v0_SPEC.md §2.5",
+      "research": "The deepest tension is structural and unavoidable: reflexive TA treats coder subjectivity as a generative resource and rejects inter-rater reliability, while LLM engineering patterns (self-consistency, majority vote, LLM-as-judge, consensus debate) are built to eliminate variance as noise. The coder–critic–conciliator–theorist–surprise-detector framing should deliberately preserve and exploit divergence (CHALET's disagreement-as-discovery, Thematic-LM's identity-perspective coder agents) rather than collapse it.",
+      "researchSource": "research.md, TL;DR #2",
+      "transcript": {
+        "quote": "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job.",
+        "source": "DP-40 GRANDE",
+        "why": "Persona A reads this as a semantic fact (children did this work). Persona B reads it as a latent friction (the speaker is naming a moment of contained resistance). Voting would collapse these to one. Preserving both — and the rationale each gives — is what makes the theme 'Childhood inside the agrarian household' substantive rather than a category."
+      }
+    },
+    {
+      "id": "surprise-flag",
+      "num": "06",
+      "title": "SURPRISE_AUTO_ACCEPT = False ships now",
+      "category": "checkpoints",
+      "spec": "SURPRISE_AUTO_ACCEPT = False constant ships now; detector itself does not.",
+      "source": "MASSHINE_v0_SPEC.md §2.6",
+      "research": "Measuring 'surprise' / novel themes: No standard metric exists; the 'Wiring the Why' survey notes operationalization is highly variable and fragmented. Concrete options: CHALET's human–LLM disagreement-as-discovery (leveraging irreconcilable disagreement cases for collaborative inductive coding, leading to grounded conceptual discoveries beyond the initial codebook).",
+      "researchSource": "research.md, §3 'Measuring surprise'",
+      "transcript": {
+        "quote": "And there was a castle right across the street from the hospital, which is now tuberculosis sanitarium. They don't have no castles no more.",
+        "source": "DP-40 GRANDE",
+        "why": "An unexpected temporal aside. A surprise detector (when it ships) might flag the 'no castles anymore' as a candidate novel theme about the dissolution of the Austro-Hungarian rural order. The detector is the only step we are pre-deciding to never auto-accept, because novelty is the easiest failure mode to hallucinate."
+      }
+    },
+    {
+      "id": "no-kappa",
+      "num": "07",
+      "title": "No κ, ever; recovery metrics labeled synthetic_only",
+      "category": "no-kappa",
+      "spec": "All recovery metrics labeled synthetic_only. No κ anywhere.",
+      "source": "MASSHINE_v0_SPEC.md §2.7",
+      "research": "The IRR debate is the single most important methodological landmine. Braun & Clarke argue against inter-rater reliability for reflexive TA because it presupposes a 'correct' coding and treats subjectivity as bias to be eliminated; in their own FAQ they state that because there is 'no one accurate way to code data, the logic behind inter-rater reliability (and multi-independent coders) disappears.' Yet nearly every LLM coding paper reports Cohen's κ / Krippendorff's α / Gwet's AC1 against a human 'gold standard.'",
+      "researchSource": "research.md, Key Findings #3",
+      "transcript": {
+        "quote": "Well, we had to have refugees from the Italian side, and the extra room that we had that was like, it could have been a summer kitchen. Well, we had to give that to the refugees and everybody had to share their home with the refugees.",
+        "source": "DP-40 GRANDE",
+        "why": "Two reasonable coders could read this very differently. One: 'War-time requisition of domestic space.' Two: 'The household as a unit of solidarity during crisis.' κ would force a single answer and treat the divergence as error. RTA treats it as evidence the speaker is doing more than one thing at once."
+      }
+    },
+    {
+      "id": "checkpoints",
+      "num": "08",
+      "title": "Checkpoints are CLI prompts",
+      "category": "checkpoints",
+      "spec": "Checkpoints are CLI prompts; --auto skips them but writes an AutoDecision per skipped gate. (The full block/queue/auto dial is later.)",
+      "source": "MASSHINE_v0_SPEC.md §2.8",
+      "research": "Every reviewed system retains humans as final interpreters; 'reflexivity' in DeTAILS degenerated into verifying AI outputs rather than interrogating analytic assumptions. Treat the machine's 'reflexive memos' as prompts for human reflexivity, not substitutes.",
+      "researchSource": "research.md, Caveats",
+      "transcript": {
+        "quote": "Well, when my mother got the fellow to kill the pig, well, I had to hold the pan there and catch the blood, because they made the blood sausage out of that. Of course, they worked with it to make it good, and then they made the blood sausage and usually they fried the liver right away, good and fresh. That was really good.",
+        "source": "DP-40 GRANDE",
+        "why": "The speaker moves from the aversive ('I didn't like it') to the appetizing ('That was really good') within a single paragraph. A checkpoint that surfaces this transition lets a human note that the 'I didn't like it' is followed by a complete reabsorption into the family's pleasure in the food. That is an interpretive move a code cannot make alone."
+      }
+    },
+    {
+      "id": "ground-truth-firewall",
+      "num": "09",
+      "title": "Ground-truth firewall",
+      "category": "file-based",
+      "spec": "Ground-truth firewall: synth/groundtruth/ never enters any prompt; one canary test enforces it.",
+      "source": "MASSHINE_v0_SPEC.md §2.9",
+      "research": "GATOS simulated datasets with known embedded themes (personas → contexts via Llama-3.1-70b) and tested whether the workflow recovered them. Build a synthetic Ellis-Island-like corpus with planted themes to measure recovery and false-discovery rates before trusting the real corpus.",
+      "researchSource": "research.md, §3 'Synthetic validation'",
+      "transcript": {
+        "quote": "[The planted-themes manifest names a theme as 'multilingual childhood.' The transcript contains the passage about Slovanian and German — but the system must not be told, in any prompt, that 'multilingual childhood' is a planted theme.]",
+        "source": "synth/groundtruth/manifest.json (system-side, not in the transcript corpus)",
+        "why": "If the planted-themes manifest leaks into a coder prompt, the recovery rate becomes a measurement of instruction-following, not of analytic capability. The canary test is the only thing standing between a real run and a self-fulfilling evaluation."
+      }
+    },
+    {
+      "id": "structure-first",
+      "num": "10",
+      "title": "Structure before segments",
+      "category": "structure",
+      "spec": "Structure before segments. Every transcript gets a StructureDoc (LLM pass: sections with exact char boundaries + one-line descriptive gists) before flattening into Excerpts; every local call receives map + position + segment, never a floating excerpt. The StructureDoc is strictly descriptive — boundaries and gists only, no candidate codes, no analytic language (a structure-prompt lint enforces this) — because it pre-frames everything downstream and any interpretation in it would propagate into every code.",
+      "source": "MASSHINE_v0_SPEC.md §2.10",
+      "research": "Phase 1 — Familiarization. In RTA this is deep immersion that builds the researcher's interpretive sensibility; it is irreducibly human. Computational practice splits here: the Chalmers SE study and the arXiv 'LLM-Assisted Thematic Analysis' framework keep Phase 1 exclusively human (researchers read and re-read to build 'contextual awareness and theoretical sensitivity'). A non-coding 'familiarization' agent pass that produces per-transcript and corpus-level summaries, salient-observation memos, and candidate analytic questions — explicitly framed as scaffolding for the human researcher's own immersion, NOT a replacement.",
+      "researchSource": "research.md, §1 'Phase 1 — Familiarization'",
+      "transcript": {
+        "quote": "And we stayed there till my father sent for us. He sent for us ime—well, about in a year, two years after. But then the First World War broke out just when my mother was ready. We had everything ready.",
+        "source": "EI-1257 HIRSCH",
+        "why": "A floating excerpt of this passage would lose the chronology: the father leaves (~1912) → the family relocates to Piotrkow, to the mother's family → he sends for them a year or two later → the war breaks out just as they are ready → they stay through the war → the 1920 departure. A StructureDoc section titled 'Relocation and the delay of departure' carries that chronology; a floating excerpt doesn't. The first draft of this very example spliced two passages and inverted this chronology — live proof of what floating excerpts do."
+      }
+    }
+  ]
+}

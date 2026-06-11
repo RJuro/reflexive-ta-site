@@ -1,0 +1,126 @@
+{
+  "title": "The pipeline",
+  "intro": "Twelve nodes: ten steps, two human-in-the-loop pauses, one audit at the end. Every stage writes JSON to disk; the run directory is the provenance trail. Models: MASSHINE_MODEL_CODER (temp 0.7), MASSHINE_MODEL_STRONG for themes (temp 0), MASSHINE_MODEL_JUDGE — a different model family than the coder, order randomized.",
+  "nodes": [
+    {
+      "id": "synth",
+      "num": "0",
+      "name": "Synthesize",
+      "type": "step",
+      "in": "Planted-themes manifest",
+      "out": "12 synthetic transcripts",
+      "editable": false
+    },
+    {
+      "id": "structure",
+      "num": "1",
+      "name": "StructureDoc",
+      "type": "step",
+      "in": "Raw transcript text",
+      "out": "Sections (char_start..end) + one-line gists",
+      "editable": true
+    },
+    {
+      "id": "segment",
+      "num": "2",
+      "name": "Segment",
+      "type": "step",
+      "in": "StructureDoc",
+      "out": "Excerpts with section_id + position (k of n)",
+      "editable": false
+    },
+    {
+      "id": "code",
+      "num": "3",
+      "name": "Code (N personas)",
+      "type": "step",
+      "in": "Excerpt + structure map + position",
+      "out": "Codes (semantic ± latent) + CoT rationale + verbatim span",
+      "editable": false
+    },
+    {
+      "id": "verify",
+      "num": "4",
+      "name": "Verify span",
+      "type": "step",
+      "in": "Code + excerpt",
+      "out": "Verified span OR quarantine",
+      "editable": false
+    },
+    {
+      "id": "reconcile",
+      "num": "5",
+      "name": "Reconcile",
+      "type": "step",
+      "in": "Codes vs StructureDoc",
+      "out": "Drift Memo (advisory, never blocks)",
+      "editable": true
+    },
+    {
+      "id": "merge",
+      "num": "6",
+      "name": "Conciliator merge",
+      "type": "merge",
+      "in": "New code + full current codebook",
+      "out": "MergeDecision (create | merge | minority)",
+      "editable": true
+    },
+    {
+      "id": "checkpoint-cb",
+      "num": "7",
+      "name": "Checkpoint: codebook",
+      "type": "pause",
+      "in": "Codebook + StructureDocs",
+      "out": "HumanDecision (edit / approve)",
+      "editable": true
+    },
+    {
+      "id": "themes",
+      "num": "8",
+      "name": "Themes",
+      "type": "step",
+      "in": "Final codebook",
+      "out": "CandidateTheme (central-concept statement)",
+      "editable": false
+    },
+    {
+      "id": "checkpoint-themes",
+      "num": "9",
+      "name": "Checkpoint: themes",
+      "type": "pause",
+      "in": "Candidate themes",
+      "out": "HumanDecision (split / merge / discard)",
+      "editable": true
+    },
+    {
+      "id": "recover",
+      "num": "10",
+      "name": "Recover (judge)",
+      "type": "step",
+      "in": "Candidate themes + planted themes (judge-blind)",
+      "out": "Mapping + recovery rate (synthetic_only)",
+      "editable": false
+    },
+    {
+      "id": "audit",
+      "num": "11",
+      "name": "Audit + report",
+      "type": "step",
+      "in": "All artifacts + every AgentRun",
+      "out": "runs/<id>/report.md with G1–G4 gate table",
+      "editable": false
+    }
+  ],
+  "extension_map": [
+    { "trigger": "Codebook approaches the context budget", "addition": "LLM-written codebook digest first; embedding retrieval only if the digest fails", "source": "spec §9" },
+    { "trigger": "Corpus grows past ~50 transcripts", "addition": "Batching + ITS saturation signal (pure counting, still no ML); per-transcript StructureDocs roll up into a corpus-level structure doc consulted by merge and themes", "source": "spec §9" },
+    { "trigger": "Long multi-hour interviews (Ellis Island)", "addition": "StructureDoc gains hierarchy (sections → subsections); flattening logic unchanged", "source": "spec §9" },
+    { "trigger": "Themes feel bucket-like", "addition": "Split theorist/critic into separate agents", "source": "spec §9 / research Stage 2" },
+    { "trigger": "Checkpoint friction", "addition": "Web workbench behind the same HumanDecision interface", "source": "spec §9" }
+  ],
+  "scale_story": [
+    { "stage": "v0 (now)", "corpus": "12 synthetic transcripts, 6 planted themes (4 semantic, 2 latent)", "purpose": "Prove the skeleton: gates G1–G4, every artifact human-readable", "source": "spec §3" },
+    { "stage": "Stage 2", "corpus": "~50 Ellis Island transcripts, in parallel with the human RTA benchmark", "purpose": "Blind rubric-based expert preference + provenance-traceability scoring — explicitly not Cohen's κ", "source": "research, Recommendations" },
+    { "stage": "Stage 3", "corpus": "1,343 transcripts, map-reduce batching + saturation monitoring", "purpose": "Scale + surprise detection (CHALET-style disagreement), paired with an adversarial hallucination critic", "source": "research, Recommendations" }
+  ]
+}

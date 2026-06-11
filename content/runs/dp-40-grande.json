@@ -1,0 +1,231 @@
+{
+  "id": "dp-40-grande",
+  "title": "DP-40 GRANDE — Mary Yankovik Grande",
+  "subtitle": "Yugoslavia, 1920 · age 10",
+  "paragraphs": [
+    { "id": "p1", "speaker": "PHILLIPS", "text": "Tell me what your home was like. What did it look like?" },
+    { "id": "p2", "speaker": "GRANDE",  "text": "It was an average peasant home. It was three rooms, living room and kitchen in the middle and a small room on the side. And then facing what would be, I guess, the east side was half, was a barn where the cattle were." },
+    { "id": "p3", "speaker": "PHILLIPS", "text": "So the cattle were actually, they were part of the house. The barn was part of the house." },
+    { "id": "p4", "speaker": "GRANDE",  "text": "Yes." },
+    { "id": "p5", "speaker": "PHILLIPS", "text": "Explain that to us, what was that like." },
+    { "id": "p6", "speaker": "GRANDE",  "text": "Well, it was all one building and there were, later on they made that as all one room, but at that time we had a half a room was like for the barn, for the cows, or when my brother had horses it was there. And then there was a manure pile just to the side of it. And the majority of people had it similar like that." },
+    { "id": "p7", "speaker": "PHILLIPS", "text": "Why were the houses and the barns constructed together like that?" },
+    { "id": "p8", "speaker": "GRANDE",  "text": "It's been historical, as far as I know. I don't know any different. They don't do it now any more like that, but they used to." },
+    { "id": "p9", "speaker": "PHILLIPS", "text": "And what was it like for a little girl to be living so close to the animals? Did you enjoy that, or were you--" },
+    { "id": "p10", "speaker": "GRANDE", "text": "Oh, yes. I enjoyed it because they were part of my life. In fact, I had a pet cow that I loved very much. And then the pigs were, the pig sty was just across from the kitchen door, just a little ways away. So all the animals were right close to the house. It was just a regular home life between the animals. You wouldn't bring them in the house, but you had them outside." },
+    { "id": "p11", "speaker": "PHILLIPS", "text": "And you had names for the pigs?" },
+    { "id": "p12", "speaker": "GRANDE", "text": "Sometimes." },
+    { "id": "p13", "speaker": "PHILLIPS", "text": "Did you like the pigs?" },
+    { "id": "p14", "speaker": "GRANDE", "text": "Oh, yeah. They used to slaughter them in winter and save some meat, cured it, for the summer. And some of it was for right away. Not too much fresh, but mostly cured." },
+    { "id": "p15", "speaker": "PHILLIPS", "text": "Did you used to help do that?" },
+    { "id": "p16", "speaker": "GRANDE", "text": "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job." },
+    { "id": "p17", "speaker": "PHILLIPS", "text": "Tell me what it was like for you during the war. Do you have any memories of that?" },
+    { "id": "p18", "speaker": "GRANDE", "text": "Well, we had to have refugees from the Italian side, and the extra room that we had that was like, it could have been a summer kitchen. Well, we had to give that to the refugees and everybody had to share their home with the refugees. And, of course, they spoke quite a bit Italian, but we managed to understand each other pretty good." },
+    { "id": "p19", "speaker": "PHILLIPS", "text": "Do you know, or do you remember, whether it was the government that forced you to take the refugees, or the people in the community just did it?" },
+    { "id": "p20", "speaker": "GRANDE", "text": "It was more or less a government decision that everybody would take some refugees. And we went down by the river which was about a good half-a-mile or further to wash clothes on the rocks. I don't know if you ever heard of it or not, but that was, and then my mother would take them sometimes over to the hospital which was the other way. It wasn't as far. The only thing, she didn't like to go there because there was too much bloody stuff in there." },
+    { "id": "p21", "speaker": "PHILLIPS", "text": "And there was two hospitals. One on one side of the river was for men, and the one on the other side of the river was for women. They didn't have them all combined together like they have over here now. They have them like that now too over there. But at that time there it was each separate. And there was a castle right across the street from the hospital, which is now tuberculosis sanitarium. They don't have no castles no more. So there's quite a bit of changes any more, too." }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "type": "structure",
+      "title": "StructureDoc · S1: The house and the animals",
+      "paragraph_ids": ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"],
+      "content": {
+        "section_id": "S1",
+        "char_start": 1820,
+        "char_end": 2680,
+        "gist": "Description of the home: a three-room peasant house with the barn attached; the speaker distinguishes historical practice from current, and notes the shared layout across the village."
+      }
+    },
+    {
+      "id": "c1",
+      "type": "code",
+      "title": "Persona A · code on p6",
+      "paragraph_ids": ["p6"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Barns integrated into domestic architecture",
+      "quote": "at that time we had a half a room was like for the barn, for the cows, or when my brother had horses it was there",
+      "rationale": "Surface description of peasant housing typology. The speaker distinguishes the historical layout from the current, and notes that 'the majority of people had it similar like that' — a village-level generalization, not just a personal one."
+    },
+    {
+      "id": "c2",
+      "type": "code",
+      "title": "Persona B · code on p10",
+      "paragraph_ids": ["p10"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "Continuity of agrarian life — animals as kin, not property",
+      "quote": "I enjoyed it because they were part of my life. In fact, I had a pet cow that I loved very much",
+      "rationale": "Latent reading: the pet cow establishes an affective relation with an animal that will be killed and eaten. The contradiction is the interpretive claim — the speaker is naming a category mistake that the household has to live inside."
+    },
+    {
+      "id": "s2",
+      "type": "structure",
+      "title": "StructureDoc · S2: Slaughter and child labor",
+      "paragraph_ids": ["p9", "p10", "p11", "p12", "p13", "p14", "p15", "p16"],
+      "content": {
+        "section_id": "S2",
+        "char_start": 2680,
+        "char_end": 3380,
+        "gist": "The animals are pets and food at the same time. The speaker moves from enjoying the animals to describing their slaughter, then to her own reluctant participation as a child."
+      }
+    },
+    {
+      "id": "c3",
+      "type": "code",
+      "title": "Persona A · code on p16",
+      "paragraph_ids": ["p16"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Child participation in slaughter",
+      "quote": "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job.",
+      "rationale": "Surface: the speaker participated in slaughter. The phrase 'I had to' signals obligation. The 'I didn't like it' is an aside. 'Part of my job' is the normalizing close."
+    },
+    {
+      "id": "c4",
+      "type": "code",
+      "title": "Persona B · code on p16",
+      "paragraph_ids": ["p16"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "Friction between obligation and reluctance in a child's labor",
+      "quote": "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job.",
+      "rationale": "Latent: the same sentence contains both the obligation ('I had to', 'part of my job') and the resistance ('I didn't like it'). The interpretive claim is the friction itself — a child learning to contain a feeling inside the language of duty."
+    },
+    {
+      "id": "m1",
+      "type": "merge",
+      "title": "Conciliator · create on p16",
+      "paragraph_ids": ["p16"],
+      "action": "create",
+      "label": "Friction between obligation and reluctance",
+      "note": "Persona B's latent code arrives at a codebook that already holds Persona A's 'Child participation in slaughter' (c3) from the same excerpt. The conciliator declines to merge: both enter the codebook, linked by the shared span.",
+      "rationale": "They are not duplicates: A names what happened, B names what the sentence does — holds duty and aversion in one breath. Collapsing them would erase exactly the reading RTA is designed to preserve. The shared span links them; the codebook keeps both."
+    },
+    {
+      "id": "hd1",
+      "type": "human",
+      "title": "Checkpoint: codebook · HumanDecision",
+      "paragraph_ids": ["p16"],
+      "decision": "edit",
+      "label": "Rename: 'Child participation in slaughter' → 'Children's labor in home slaughter'",
+      "note": "Researcher note at the codebook checkpoint: 'participation' undersells the obligation; the codes under this label all carry \"had to\".",
+      "feed_forward": "The theorist prompt receives the edited label and the researcher's note verbatim (spec T5). The candidate theme below is constructed over the edited codebook — the rename is visible in the theme statement's emphasis on labor and obligation."
+    },
+    {
+      "id": "t1",
+      "type": "theme",
+      "title": "Candidate theme",
+      "paragraph_ids": ["p2", "p6", "p10", "p16"],
+      "label": "Childhood inside the agrarian household",
+      "statement": "Children's labor is how adulthood is learned in this household: tasks mix obligation with reluctance, and the 'I had to / I didn't like it / part of my job' structure is the moment where normalization and resistance meet in a single sentence. The pet cow that is also dinner is the same meeting at the level of the household's relation to its animals."
+    },
+    {
+      "id": "s3",
+      "type": "structure",
+      "title": "StructureDoc · S3: The war and the requisition of domestic space",
+      "paragraph_ids": ["p17", "p18", "p19", "p20", "p21"],
+      "content": {
+        "section_id": "S3",
+        "char_start": 4400,
+        "char_end": 5800,
+        "gist": "During the war, the household is required to take in refugees from the Italian side. The 'extra room' — a space that could have been a summer kitchen — is given to them. The mother begins to do extra labor: she takes the refugees to the river to wash clothes, and sometimes to the hospital. The section closes with a temporal collapse: a castle across from the hospital is now a tuberculosis sanitarium."
+      }
+    },
+    {
+      "id": "c5",
+      "type": "code",
+      "title": "Persona A · code on p18",
+      "paragraph_ids": ["p18"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Refugees housed in the 'extra room'",
+      "quote": "the extra room that we had that was like, it could have been a summer kitchen. Well, we had to give that to the refugees and everybody had to share their home with the refugees",
+      "rationale": "Surface: the household loses a piece of its private space to a wartime requisition. The 'extra room' is described as a near-summer-kitchen, a space of possibility; it is now given away. 'Had to' signals obligation, not hospitality."
+    },
+    {
+      "id": "c6",
+      "type": "code",
+      "title": "Persona B · code on p18",
+      "paragraph_ids": ["p18"],
+      "persona": "B",
+      "code_type": "semantic",
+      "label": "Sharing the home with refugees as obligation",
+      "quote": "we had to give that to the refugees and everybody had to share their home with the refugees",
+      "rationale": "Surface restatement: the room is given to the refugees because everybody had to share. Same passage, same level, same claim as c5 — different vocabulary."
+    },
+    {
+      "id": "m2",
+      "type": "merge",
+      "title": "Conciliator · merge on p18",
+      "paragraph_ids": ["p18"],
+      "action": "merge",
+      "label": "Domestic space requisitioned for refugees",
+      "note": "Codes c5 and c6 say the same thing in different words — same passage, same level, same claim. This is what a genuine merge looks like.",
+      "rationale": "Both codes report the surface fact that the household's spare room was given to refugees under obligation. Neither makes a claim the other doesn't; a reader who accepts one accepts the other. Merging two paraphrases loses no reading — both excerpt anchors are kept on the merged code."
+    },
+    {
+      "id": "c6b",
+      "type": "code",
+      "title": "Persona B · second code on p18",
+      "paragraph_ids": ["p18"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "Hospitality as a state-requisitioned resource",
+      "quote": "we had to have refugees from the Italian side",
+      "rationale": "Latent: 'we had to have' is grammatical hospitality turned into involuntary obligation. The household is not opening its doors; the doors are being opened for it, by a state. The phrase carries the same friction as 'I had to catch the blood' — obligation and resistance named in a single breath."
+    },
+    {
+      "id": "m2b",
+      "type": "merge",
+      "title": "Conciliator · minority flag on p18",
+      "paragraph_ids": ["p18"],
+      "action": "minority",
+      "label": "State-requisitioned hospitality (latent, kept)",
+      "note": "Code c6b (B, latent) is kept as a minority entry — it makes a claim the merged semantic code does not.",
+      "rationale": "c6b is not a paraphrase of the merged code: it claims the grammar of 'we had to have' shows the state opening the household's doors. One persona, one reading — flagged minority=true and retained, never deleted."
+    },
+    {
+      "id": "c7",
+      "type": "code",
+      "title": "Persona A · code on p20",
+      "paragraph_ids": ["p20"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Mother as the labor of integration",
+      "quote": "my mother would take them sometimes over to the hospital which was the other way. It wasn't as far. The only thing, she didn't like to go there because there was too much bloody stuff in there.",
+      "rationale": "Surface: the mother does the work of bringing the refugees into the local institutions — river for washing, hospital for care. 'She didn't like to go there' is the same aside that the speaker makes about herself catching the blood."
+    },
+    {
+      "id": "c8",
+      "type": "code",
+      "title": "Persona B · code on p21",
+      "paragraph_ids": ["p21"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "The temporal collapse of the rural order",
+      "quote": "And there was a castle right across the street from the hospital, which is now tuberculosis sanitarium. They don't have no castles no more.",
+      "rationale": "Latent: the speaker compresses the Austro-Hungarian order and the post-war order into a single sentence. The castle becomes a sanitarium; the 'Austrian people' (the higher-ups, mentioned earlier) are gone. The interpretive claim is that the household's own dissolution is part of a larger dissolution that the speaker is narrating in passing."
+    },
+    {
+      "id": "m3",
+      "type": "merge",
+      "title": "Conciliator · create ×2 across S3",
+      "paragraph_ids": ["p20", "p21"],
+      "action": "create",
+      "label": "Two distinct codes enter — no merge",
+      "note": "Codes c7 (the mother's labor of integration) and c8 (the temporal collapse of the rural order) both enter the codebook as separate entries.",
+      "rationale": "These codes share a section, not a claim: c7 is about household-scale labor, c8 about regime-scale dissolution. 'Keeping the codebook lean' is not a goal that licenses losing a reading — merging codes because they share a section is how a codebook stops being a faithful map of the data (see pressure test, node 6)."
+    },
+    {
+      "id": "t2",
+      "type": "theme",
+      "title": "Candidate theme",
+      "paragraph_ids": ["p18", "p20", "p21"],
+      "label": "The wartime household as a state-requisitioned space",
+      "statement": "During the war, the household's 'extra room' is taken by a state decision; the mother takes on the labor of integrating the refugees into local institutions; and the rural order that framed the household — the castle, the higher-ups, the separation of the hospitals by river and gender — is collapsed in a single aside. The household's dissolution is the regime's dissolution, narrated in the same breath."
+    }
+  ]
+}

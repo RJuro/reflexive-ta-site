@@ -1,0 +1,103 @@
+{
+  "title": "Pipeline pressure test",
+  "subtitle": "What fails at each stage, what the audit catches, what a human would do",
+  "intro": "Twelve cards, one per pipeline node. Click to expand. Each card is keyed to evidence in research.md and to the spec's exit gates.",
+  "cards": [
+    {
+      "id": "synth",
+      "num": "0",
+      "name": "Synthesize",
+      "failure": "Generator simulates 6 planted themes but exhibits them too literally — the 'latent' themes get named in the text instead of shown. The pipeline recovers 6/6 themes with a perfect score, and the number tells us nothing about real-world RTA.",
+      "audit": "Canary test that 'groundtruth/' is never present in any prompt. Inspect synthesized transcripts for analytic vocabulary (theme names, code labels).",
+      "human": "Treat synthetic recovery as a necessary but not sufficient gate. Run on at least one real corpus before trusting any number."
+    },
+    {
+      "id": "structure",
+      "num": "1",
+      "name": "StructureDoc",
+      "failure": "LLM proposes sections whose char_start..char_end does not tile the transcript (gaps or overlaps). Downstream: every 'section k of n' position becomes nonsense, and the coder prompt loses its anchor.",
+      "audit": "String-verify that concatenating all sections in order reproduces the transcript exactly, with no gap and no overlap. Lint gists for analytic vocabulary (no 'theme', 'code', 'pattern', 'meaning').",
+      "human": "A non-coding familiarization step — read the StructureDoc like a table of contents. Reject any section that summarizes the section rather than describes it."
+    },
+    {
+      "id": "segment",
+      "num": "2",
+      "name": "Segment",
+      "failure": "Excerpts lose their section context. The coder receives a floating paragraph with no position and no gist, and has to guess what the section is about from the excerpt alone.",
+      "audit": "Every Excerpt carries a non-null section_id. Every (k of n) tuple is valid for its section's length.",
+      "human": "Read a sample of excerpts. If you can't tell what part of the interview they came from without re-reading, the position metadata is broken."
+    },
+    {
+      "id": "code",
+      "num": "3",
+      "name": "Code (N personas)",
+      "failure": "(1) Hallucinated quote: coder paraphrases the excerpt and the verbatim span string-match fails. (2) Latent code treated as a restatement of the semantic code — no interpretive lift. (3) Two personas produce identical codes, defeating the divergence RTA values.",
+      "audit": "Exact-match span gate before any code enters the codebook. Per-persona unique-code yield logged in the ledger — a persona that contributes 0 unique codes is dead weight.",
+      "human": "Sample 5–10 codes per persona. Ask: 'If I removed this code, would I lose a reading?' If no, the persona is collapsed to consensus."
+    },
+    {
+      "id": "verify",
+      "num": "4",
+      "name": "Verify span",
+      "failure": "Span passes string-match but is off by one word, or includes a speaker tag that wasn't in the original. String-match is necessary, not sufficient.",
+      "audit": "Span starts/ends at word boundaries (no partial words). Span does not include 'PHILLIPS:' / speaker tags that belong to the next turn.",
+      "human": "Click 10 random quotes in the report. Are they words the person actually said in that order?"
+    },
+    {
+      "id": "reconcile",
+      "num": "5",
+      "name": "Reconcile",
+      "failure": "Drift memos are written but ignored. A section is coded against the arc of a different section, but no checkpoint surfaces this until the themes step.",
+      "audit": "Every reconcile step writes a Memo (even if 'no drift'). Memos are surfaced at the codebook checkpoint, not buried.",
+      "human": "Read the drift memos before approving the codebook. The Memos are the only signal that the structure pre-frame misled a coder."
+    },
+    {
+      "id": "merge",
+      "num": "6",
+      "name": "Conciliator merge",
+      "failure": "Conciliator merges two genuinely distinct codes because they share a word, or fails to merge two paraphrases of the same code because of surface vocabulary. Either way, the codebook stops being a faithful map of the data.",
+      "audit": "Every merge decision includes a written rationale. Minority (unmerged) codes are flagged, never deleted. The ratio of merge to create is itself a signal — too much merge = lossiness; too little = noise.",
+      "human": "Sample 20 merge decisions. Would you have made the same call? If the rationale sounds like a paraphrase of the codes rather than a judgment, the conciliator is broken."
+    },
+    {
+      "id": "checkpoint-cb",
+      "num": "7",
+      "name": "Checkpoint: codebook",
+      "failure": "Checkpoint is skipped via --auto. The human never sees the codebook, and the theme prompt inherits whatever biases the conciliator introduced.",
+      "audit": "An AutoDecision is written for every skipped checkpoint. The next step (themes) sees a marker that no human reviewed.",
+      "human": "Treat the codebook checkpoint as non-skippable in v0. Themes from an un-reviewed codebook are uninterpretable."
+    },
+    {
+      "id": "themes",
+      "num": "8",
+      "name": "Themes",
+      "failure": "Theorist produces cluster labels (e.g. 'food and farming') instead of central-concept statements. Themes become buckets, the failure mode Braun & Clarke warn against.",
+      "audit": "Structural validator: each theme has a central_concept_statement that is a claim, not a category. Validator checks length, tense, and that the statement could be falsified by data.",
+      "human": "Read the central-concept statement out loud. If it could be a slide title, it's a bucket. If it could be a thesis sentence, it's a theme."
+    },
+    {
+      "id": "checkpoint-themes",
+      "num": "9",
+      "name": "Checkpoint: themes",
+      "failure": "Human approves themes without checking the code-to-theme mapping. A theme with three codes is silently dropped because the report only displays the strongest six.",
+      "audit": "Theme → codes → excerpts → char spans must resolve. No orphans. The report's appendix shows every theme, not just the headline ones.",
+      "human": "Trace one theme end-to-end: definition → codes → excerpt → char span in the original transcript. If the trace breaks, the theme is not grounded."
+    },
+    {
+      "id": "recover",
+      "num": "10",
+      "name": "Recover (judge)",
+      "failure": "Judge is the same model family as the coder → self-preference bias (GPT-4 favors itself by ~10%). Judge is given candidate and planted themes in a fixed order → position bias (~10%). Recovery rate is reported without the synthetic_only label.",
+      "audit": "Judge is a different provider/family than the coder (env: MASSHINE_MODEL_JUDGE). Order is randomized per pair. Recovery rate is always labeled synthetic_only.",
+      "human": "Do not optimize for the recovery number. Optimize for the failure modes the recovery run exposes."
+    },
+    {
+      "id": "audit",
+      "num": "11",
+      "name": "Audit + report",
+      "failure": "Audit is run on the same machine state that produced the artifacts. If the codebook is corrupt, the audit confirms it.",
+      "audit": "Audit reads from disk only — never from in-memory state. The run directory is git-committed before audit runs.",
+      "human": "Treat audit exit-code 1 as a hard stop. A green report with a red audit is worse than a red report with a green audit."
+    }
+  ]
+}

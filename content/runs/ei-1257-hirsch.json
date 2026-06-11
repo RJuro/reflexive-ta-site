@@ -1,0 +1,241 @@
+{
+  "id": "ei-1257-hirsch",
+  "title": "EI-1257 HIRSCH — Jean Hirsch",
+  "subtitle": "Poland, 1920 · age 9",
+  "paragraphs": [
+    { "id": "h1", "speaker": "HIRSCH", "text": "I was actually born in Lodz." },
+    { "id": "h2", "speaker": "HIRSCH", "text": "Lodz, Poland. And I'll tell you, June—June 6th, 1911." },
+    { "id": "h3", "speaker": "HIRSCH", "text": "Well, when my m—father left for America, I must have been a year old." },
+    { "id": "h4", "speaker": "HIRSCH", "text": "So my mother and my sister and brother, we moved to Piotrkow because that's where her family lived." },
+    { "id": "h5", "speaker": "HIRSCH", "text": "She had her sisters there and her brother and a father and mother. And she wanted to be with her own family when my father left. So that's how we got to Piotrkow. And my mother got a job as a cook for orph—Jewish orphan children." },
+    { "id": "h6", "speaker": "HIRSCH", "text": "And we stayed with her and we ate what the orphans ate, but we had our own room with my mother." },
+    { "id": "h7", "speaker": "HIRSCH", "text": "And we stayed there till my father sent for us. He sent for us ime—well, about in a year, two years after. But then the First World War broke out just when my mother was ready. We had everything ready. The war broke out, the First World War, and my mother didn't want to take three little children and go all by herself. So we stayed through the war." },
+    { "id": "h8a", "speaker": "HIRSCH", "text": "And that's why we came in 1920. My father sent for us right after but, you know, it takes time to get ready and go." },
+    { "id": "h8b", "speaker": "HIRSCH", "text": "So by that time, as I said, that's why it was 1920 by the time we came." },
+    { "id": "h8c", "speaker": "HIRSCH", "text": "But I could have come here earlier—" },
+    { "id": "h8d", "speaker": "LEVINE", "text": "Yeah." },
+    { "id": "h8e", "speaker": "HIRSCH", "text": "—if not for the First World War." },
+    { "id": "h9",  "speaker": "HIRSCH", "text": "Max Tolep." },
+    { "id": "h10a","speaker": "HIRSCH", "text": "T-O-L-E-P. But in Europe it was T-O-L-U-B. But in this country—" },
+    { "id": "h10b","speaker": "LEVINE", "text": "Oh." },
+    { "id": "h10c","speaker": "HIRSCH", "text": "—it was spelled T-O-L-E-P because he had a brother here. And when we came, all my English cousins were spelling T-O-L-E-P, so we changed it to T-O-L-E-P. After all, we were the same family." },
+    { "id": "h11", "speaker": "HIRSCH", "text": "Well, it so happened that my father and his uncle, his brother, and his sister, they all got married about the same time. And they were all supposed to leave for America, get going and go to America. But my mother said, \"I can't leave my parents.\" So my poor father stayed." },
+    { "id": "h12", "speaker": "HIRSCH", "text": "And he stayed till, as I said, I think 19—as I said, I was born in 1911—I think 1912 or, you know, '13, something like that. And then he said, \"I had enough.\" His brother and sister were here already. \"I'm going to America. When I'm settled, I'll call—send for you and the children.\"" }
+  ],
+  "steps": [
+    {
+      "id": "h-s1",
+      "type": "structure",
+      "title": "StructureDoc · S1: Origin and relocation",
+      "paragraph_ids": ["h1", "h2", "h3", "h4", "h5", "h6"],
+      "content": {
+        "section_id": "S1",
+        "char_start": 1450,
+        "char_end": 2300,
+        "gist": "Birthplace corrected from Piotrkow to Lodz. Father leaves for America when the speaker is about a year old. The family relocates to Piotrkow to be with the mother's family. The mother takes a job as a cook for Jewish orphan children; the family lives at the orphanage but keeps a separate room."
+      }
+    },
+    {
+      "id": "h-c1",
+      "type": "code",
+      "title": "Persona A · code on h1",
+      "paragraph_ids": ["h1", "h2"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Speaker correction of biographical detail",
+      "quote": "I was actually born in Lodz.",
+      "rationale": "The interviewer has stated the speaker is from Piotrkow; the speaker corrects this on the tape. The word 'actually' marks the moment of correction — surface-level biographical fact, but the speaker treats the distinction as worth asserting."
+    },
+    {
+      "id": "h-c2",
+      "type": "code",
+      "title": "Persona B · code on h5",
+      "paragraph_ids": ["h5"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "Kinship as the post-departure survival strategy",
+      "quote": "she wanted to be with her own family when my father left",
+      "rationale": "Latent reading: the mother is not merely relocating; she is reorganizing the household around the maternal family in anticipation of the father's absence. The phrase 'her own family' is doing interpretive work — the speaker is naming a gendered solidarity that the family will rely on for years."
+    },
+    {
+      "id": "h-s2",
+      "type": "structure",
+      "title": "StructureDoc · S2: The orphanage household",
+      "paragraph_ids": ["h5", "h6"],
+      "content": {
+        "section_id": "S2",
+        "char_start": 2100,
+        "char_end": 2480,
+        "gist": "The mother works as a cook for Jewish orphans; the family lives at the orphanage, eats what the orphans eat, but keeps its own room. A line between kinship and institution is drawn in the same sentence."
+      }
+    },
+    {
+      "id": "h-c3",
+      "type": "code",
+      "title": "Persona A · code on h6",
+      "paragraph_ids": ["h6"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Living arrangements at the orphanage",
+      "quote": "we ate what the orphans ate, but we had our own room with my mother",
+      "rationale": "Surface description of the household. Two clauses: the family shares food with the orphans; the family is nonetheless a separate unit. The 'but' is the structural pivot of the sentence."
+    },
+    {
+      "id": "h-c4",
+      "type": "code",
+      "title": "Persona B · code on h6",
+      "paragraph_ids": ["h6"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "The 'but' as the boundary between household and institution",
+      "quote": "we ate what the orphans ate, but we had our own room with my mother",
+      "rationale": "Latent: the speaker uses the same sentence to assert both inclusion (shared meals) and exclusion (separate room). The 'but' is the interpretive claim — kinship is what makes the difference, not the food. The mother is the unit, not the institution."
+    },
+    {
+      "id": "h-m1",
+      "type": "merge",
+      "title": "Conciliator · minority flag on h6",
+      "paragraph_ids": ["h6"],
+      "action": "minority",
+      "label": "The 'but' as boundary (latent, kept)",
+      "note": "Code h-c4 (B, latent) is kept as a minority entry alongside h-c3. A merge would erase the interpretive lift; a vote would silence B. Flag as minority=true, retain the rationale.",
+      "rationale": "h-c3 names what the sentence reports (shared meals, separate room); h-c4 names what the sentence does (draws the household boundary at the mother). Same span, different analytic levels — not duplicates. Both stay in the codebook, linked by the shared span; the minority flag marks that only one persona made the latent claim."
+    },
+    {
+      "id": "h-s3",
+      "type": "structure",
+      "title": "StructureDoc · S3: The war and the delay",
+      "paragraph_ids": ["h7"],
+      "content": {
+        "section_id": "S3",
+        "char_start": 2480,
+        "char_end": 2950,
+        "gist": "The father sends for the family. They are ready to leave. The First World War breaks out at that moment. The mother refuses to take three small children across the ocean alone; they stay through the war."
+      }
+    },
+    {
+      "id": "h-c5",
+      "type": "code",
+      "title": "Persona A · code on h7",
+      "paragraph_ids": ["h7"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Departure delayed by the First World War",
+      "quote": "the First World War broke out just when my mother was ready. We had everything ready.",
+      "rationale": "Surface chronology: planned departure is interrupted by the war. 'We had everything ready' is the speaker's emphasis on the narrowness of the window — a single sentence from departure to delay."
+    },
+    {
+      "id": "h-c6",
+      "type": "code",
+      "title": "Persona B · code on h7",
+      "paragraph_ids": ["h7"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "The mother's refusal as the deferred migration",
+      "quote": "my mother didn't want to take three little children and go all by herself",
+      "rationale": "Latent: the war is the named cause of delay, but the named agent of delay is the mother's judgment. The interpretive claim is that the speaker attributes agency to the mother — the war is the occasion, the mother is the decision. A semantic code would name the war; the latent code names who said no."
+    },
+    {
+      "id": "h-m2",
+      "type": "merge",
+      "title": "Conciliator · minority flag on h7",
+      "paragraph_ids": ["h7"],
+      "action": "minority",
+      "label": "Latent reading: mother's agency",
+      "note": "Code h-c6 (B, latent) is kept as a minority entry. A merge with h-c5 would erase the agency claim; a vote would silence B. Flag as minority=true, retain the rationale.",
+      "rationale": "This is the divergence-preservation decision in action. h-c5 and h-c6 are not duplicates — they read the same text at different levels and attribute the delay to different agents (the war / the mother). Merging would collapse the interpretive difference. The minority flag preserves both entries; the report will surface both readings."
+    },
+    {
+      "id": "h-t1",
+      "type": "theme",
+      "title": "Candidate theme",
+      "paragraph_ids": ["h4", "h5", "h6", "h7"],
+      "label": "Kinship as the unit of survival in transit",
+      "statement": "Across this migration narrative, the household's ability to survive the years of waiting rests on the mother's relationships with her own family and on the boundary she draws between her children and the institution they live beside. The war is the named cause of the delay; the mother is the agent who decides to delay. Kinship, not the migration plan, is what holds the family together through the years between departure and arrival."
+    },
+    {
+      "id": "h-s4",
+      "type": "structure",
+      "title": "StructureDoc · S4: The name and the family it joins",
+      "paragraph_ids": ["h8a", "h8b", "h8c", "h8e", "h9", "h10a", "h10c", "h11", "h12"],
+      "content": {
+        "section_id": "S4",
+        "char_start": 2950,
+        "char_end": 4100,
+        "gist": "The father is named Max Tolep. In Europe, the family name was Tolub; in America, it became Tolep. The change was made by the brother who was already in America, and the rest of the family adopted the American spelling 'after all, we were the same family.' The father's own departure is told in his own words — 'I had enough' — and the mother's words, 'I can't leave my parents,' are quoted directly."
+      }
+    },
+    {
+      "id": "h-c7",
+      "type": "code",
+      "title": "Persona A · code on h10",
+      "paragraph_ids": ["h10a", "h10c"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Family name changed at immigration",
+      "quote": "it was spelled T-O-L-E-P because he had a brother here. And when we came, all my English cousins were spelling T-O-L-E-P, so we changed it to T-O-L-E-P.",
+      "rationale": "Surface: the family name was altered to match the spelling already in use by the American branch. The change is not imposed by the state; it is adopted by the family to align with relatives already there."
+    },
+    {
+      "id": "h-c8",
+      "type": "code",
+      "title": "Persona B · code on h10",
+      "paragraph_ids": ["h10c"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "Belonging is performed through spelling",
+      "quote": "After all, we were the same family.",
+      "rationale": "Latent: the speaker justifies the spelling change with a claim of family identity — 'we were the same family.' The interpretive claim is that the change is a performance of belonging, a way of making the new family legible to the old one and vice versa. The spelling is the surface; the family is the substance that the spelling is made to carry."
+    },
+    {
+      "id": "h-m3",
+      "type": "merge",
+      "title": "Conciliator · rejected merge on h10",
+      "paragraph_ids": ["h10a", "h10c"],
+      "action": "create",
+      "label": "Merge considered, declined — both codes enter",
+      "note": "The conciliator considered merging h-c7 and h-c8 (same passage, overlapping spans) and declined. Both enter the codebook as separate entries.",
+      "rationale": "The latent code is not the semantic code made explicit. h-c7 asserts a fact: the spelling was changed to match the American branch. h-c8 asserts a claim h-c7 does not make: that the spelling change performs belonging — 'After all, we were the same family' is offered as justification, not description. A reader could accept h-c7 and reject h-c8. Codes a reader can accept independently are separate codes."
+    },
+    {
+      "id": "h-c9",
+      "type": "code",
+      "title": "Persona A · code on h11",
+      "paragraph_ids": ["h11", "h12"],
+      "persona": "A",
+      "code_type": "semantic",
+      "label": "Direct quotation of both parents' departure decisions",
+      "quote": "But my mother said, \"I can't leave my parents.\" So my poor father stayed.",
+      "rationale": "Surface: the speaker quotes both parents in their own words — the mother's refusal here, and two sentences later the father's \"I had enough.\" Neither is summarized; both are presented as direct speech. 'My poor father' is the speaker's aside. (An earlier draft of this code spliced the two quotes with an ellipsis — the verify gate quarantines exactly that.)"
+    },
+    {
+      "id": "h-c10",
+      "type": "code",
+      "title": "Persona B · code on h12",
+      "paragraph_ids": ["h12"],
+      "persona": "B",
+      "code_type": "latent",
+      "label": "The mother as the agent of refusal — second instance",
+      "quote": "my mother said, \"I can't leave my parents.\" So my poor father stayed.",
+      "rationale": "Latent: the second time the mother is named as the agent of a delay (the first was the war-delay in S3). The interpretive claim is that the mother's refusals are what shaped the family's path. 'My poor father' carries the speaker's sympathy for the man caught between his wife's family and his own."
+    },
+    {
+      "id": "h-m4",
+      "type": "merge",
+      "title": "Conciliator · minority flag on h11/h12",
+      "paragraph_ids": ["h11", "h12"],
+      "action": "minority",
+      "label": "Mother-as-agent, second occurrence (latent, kept)",
+      "note": "Code h-c10 (B, latent) is kept as a minority entry alongside h-c9 — the second time B has made the mother-as-agent claim in this transcript (first: h-c6 in S3).",
+      "rationale": "A repeated minority reading is a signal, not noise: the same persona has now made the same interpretive claim across two sections. That recurrence is exactly what the theorist needs to see — 'keeping the codebook lean' by merging it away would delete the pattern before the theme pass could find it."
+    },
+    {
+      "id": "h-t2",
+      "type": "theme",
+      "title": "Candidate theme",
+      "paragraph_ids": ["h10a", "h10c", "h11", "h12"],
+      "label": "The family that is made by spelling and by refusal",
+      "statement": "The family that arrives in America is not the family that left Europe; it is a family that has been re-spelled and re-decided at every step. The name change (Tolub to Tolep) is a performance of belonging to the family already in America. The mother's two refusals — 'I can't leave my parents' and the war-delay — are the agency that shaped the family's path. The father departs when 'I had enough'; the mother stays when 'I can't.' The family is the sum of these decisions, narrated in the speaker's own words."
+    }
+  ]
+}

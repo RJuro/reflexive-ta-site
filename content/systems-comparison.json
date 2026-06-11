@@ -1,0 +1,113 @@
+{
+  "dimensions": [
+    { "id": "multi-agent", "label": "Multi-agent" },
+    { "id": "embeddings", "label": "Embeddings" },
+    { "id": "human-checkpoints", "label": "Human checkpoints" },
+    { "id": "irr", "label": "Reports IRR (κ / α)" },
+    { "id": "synthetic-validation", "label": "Synthetic ground-truth validation" },
+    { "id": "central-concept", "label": "Theme = central concept (not bucket)" },
+    { "id": "latent", "label": "Explicit latent codes" },
+    { "id": "audit-trail", "label": "Verbatim-span audit trail" }
+  ],
+  "systems": [
+    {
+      "id": "us",
+      "name": "MASSHINE v0 (proposed)",
+      "us": true,
+      "values": {
+        "multi-agent": "2–3 personas",
+        "embeddings": "no",
+        "human-checkpoints": "2 (codebook, themes)",
+        "irr": "no (intentional)",
+        "synthetic-validation": "yes (12 transcripts, 6 planted themes)",
+        "central-concept": "yes (theorist pass)",
+        "latent": "yes (explicit code type)",
+        "audit-trail": "yes (string-verified spans)"
+      }
+    },
+    {
+      "id": "gatos",
+      "name": "GATOS (2024/2026)",
+      "values": {
+        "multi-agent": "summarize→cluster",
+        "embeddings": "yes (kNN, k=5)",
+        "human-checkpoints": "ad-hoc (UI)",
+        "irr": "no",
+        "synthetic-validation": "yes (Llama-3.1 personas)",
+        "central-concept": "partial (cluster labels)",
+        "latent": "no",
+        "audit-trail": "partial (codes + quotes)"
+      }
+    },
+    {
+      "id": "chalet",
+      "name": "CHALET (2024)",
+      "values": {
+        "multi-agent": "yes (attribution dimensions)",
+        "embeddings": "no",
+        "human-checkpoints": "disagreement-triggered",
+        "irr": "no",
+        "synthetic-validation": "no",
+        "central-concept": "yes (case-level discoveries)",
+        "latent": "yes (cognitive/emotional/behavioral)",
+        "audit-trail": "yes (case-bound)"
+      }
+    },
+    {
+      "id": "abductivai",
+      "name": "AbductivAI (2025)",
+      "values": {
+        "multi-agent": "persona-coded (CV-based)",
+        "embeddings": "no",
+        "human-checkpoints": "after 10–50% of data",
+        "irr": "yes (Cohen's κ, Krippendorff, Delphi)",
+        "synthetic-validation": "no (323 abstracts, no benchmark)",
+        "central-concept": "yes (abductive categories)",
+        "latent": "yes (Phase 5.5 CoT-Review)",
+        "audit-trail": "yes (CoT rationales)"
+      }
+    },
+    {
+      "id": "thematic-lm",
+      "name": "Thematic-LM (2025)",
+      "values": {
+        "multi-agent": "coder/aggregator/reviewer/theme-coder",
+        "embeddings": "no",
+        "human-checkpoints": "final human authority, none in-pipeline",
+        "irr": "no",
+        "synthetic-validation": "no",
+        "central-concept": "partial (theme-coder pass)",
+        "latent": "partial (identity-perspective coders)",
+        "audit-trail": "yes (≤20 quotes per code)"
+      }
+    },
+    {
+      "id": "tama",
+      "name": "TAMA (2025)",
+      "values": {
+        "multi-agent": "coder / reviewer / refiner",
+        "embeddings": "no",
+        "human-checkpoints": "final human authority; in-pipeline review is an eval agent",
+        "irr": "no (Coverage/Actionability/Distinctiveness/Relevance)",
+        "synthetic-validation": "no",
+        "central-concept": "no (refined clusters)",
+        "latent": "no",
+        "audit-trail": "yes (excerpt provenance)"
+      }
+    },
+    {
+      "id": "details",
+      "name": "DeTAILS (2025)",
+      "values": {
+        "multi-agent": "single LLM + human drag-and-drop",
+        "embeddings": "no (LLM batch clustering)",
+        "human-checkpoints": "codebook editing UI",
+        "irr": "no",
+        "synthetic-validation": "no (Reddit, 18 researchers)",
+        "central-concept": "partial (degrades to verification)",
+        "latent": "no",
+        "audit-trail": "yes (six-phase artifacts)"
+      }
+    }
+  ]
+}

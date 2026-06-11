@@ -1,0 +1,22 @@
+{
+  "runs": [
+    {
+      "id": "dp-40-grande",
+      "file": "dp-40-grande.json",
+      "title": "DP-40 GRANDE — Mary Yankovik Grande",
+      "subtitle": "Yugoslavia, 1920 · age 10"
+    },
+    {
+      "id": "ei-1257-hirsch",
+      "file": "ei-1257-hirsch.json",
+      "title": "EI-1257 HIRSCH — Jean Hirsch",
+      "subtitle": "Poland, 1920 · age 9"
+    },
+    {
+      "id": "ei-338-brozinskas",
+      "file": "ei-338-brozinskas.json",
+      "title": "EI-338 BROZINSKAS — Justina Brozinskas",
+      "subtitle": "Lithuania, 1912 · age 16 · interviewed 1993 at age 98"
+    }
+  ]
+}

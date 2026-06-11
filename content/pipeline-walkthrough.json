@@ -1,0 +1,96 @@
+{
+  "intro": "One paragraph from Mary Grande's 1989 interview, transformed at each stage of the pipeline. The paragraph — a child catching blood at a pig slaughter — appears in the right place at every step.",
+  "stages": [
+    {
+      "num": "0",
+      "name": "Raw text",
+      "summary": "A paragraph from the transcript, untouched.",
+      "editable": false,
+      "data": {
+        "type": "text",
+        "text": "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job.",
+        "meta": "124 chars · DP-40 GRANDE · paragraph 16"
+      }
+    },
+    {
+      "num": "1",
+      "name": "StructureDoc",
+      "summary": "The LLM places this paragraph inside a section it has named, with a descriptive gist.",
+      "editable": true,
+      "data": {
+        "type": "structure",
+        "label": "S2 · Slaughter and child labor",
+        "gist": "The animals are pets and food at the same time. The speaker moves from enjoying the animals to describing their slaughter, then to her own reluctant participation as a child.",
+        "meta": "char 2680–3380 · gists are descriptive only, no analytic language"
+      }
+    },
+    {
+      "num": "2",
+      "name": "Excerpt",
+      "summary": "The paragraph is flattened to an excerpt with a section anchor and a position.",
+      "editable": false,
+      "data": {
+        "type": "excerpt",
+        "label": "§S2 · position 5 of 6",
+        "text": "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job.",
+        "meta": "1 paragraph · the coder sees section + position + excerpt, never a floating paragraph"
+      }
+    },
+    {
+      "num": "3",
+      "name": "Codes (N=2)",
+      "summary": "Two personas — different reading sensibilities (prompt variants), not different code types. Each emits a semantic code and, where warranted, a latent one; here A's semantic and B's latent readings are shown. Both anchored to the same quote; both written with a chain-of-thought rationale.",
+      "editable": false,
+      "data": {
+        "type": "codes",
+        "codes": [
+          {
+            "persona": "A",
+            "type": "semantic",
+            "label": "Child participation in slaughter"
+          },
+          {
+            "persona": "B",
+            "type": "latent",
+            "label": "Friction between obligation and reluctance"
+          }
+        ]
+      }
+    },
+    {
+      "num": "4",
+      "name": "Verify span",
+      "summary": "The exact-match gate. If the quote doesn't appear verbatim in the source, the code is quarantined, not stored.",
+      "editable": false,
+      "data": {
+        "type": "verify",
+        "result": "pass",
+        "quote": "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job.",
+        "meta": "string match ✓ · both codes pass"
+      }
+    },
+    {
+      "num": "5",
+      "name": "Conciliator: create vs merge",
+      "summary": "Each new code is compared against the whole current codebook. The conciliator decides create, merge, or minority — with a written rationale. Divergent readings are kept, not voted out.",
+      "editable": true,
+      "data": {
+        "type": "merge",
+        "action": "create",
+        "label": "Friction between obligation and reluctance",
+        "rationale": "Persona B's latent code arrives at a codebook that already holds Persona A's 'Child participation in slaughter' from the same excerpt. They are not duplicates: A names what happened, B names what the sentence does — holds duty and aversion in one breath. Collapsing them would erase the reading RTA is designed to preserve. Both enter the codebook; the shared span links them."
+      }
+    },
+    {
+      "num": "6",
+      "name": "Theme",
+      "summary": "A single theorist pass over the final codebook writes a central-concept statement — a claim, not a category label.",
+      "editable": false,
+      "data": {
+        "type": "theme",
+        "label": "Childhood inside the agrarian household",
+        "statement": "Children in this household learn adulthood through tasks that mix obligation with reluctance; the 'I had to / I didn't like it / part of my job' structure is the moment where normalization and resistance meet in a single sentence, and the pet cow that is also dinner is the same meeting at the level of the household's relation to its animals."
+      }
+    }
+  ]
+}
