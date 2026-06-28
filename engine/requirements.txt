@@ -1,0 +1,4 @@
+fastapi
+uvicorn
+openai
+spacy>=3.7

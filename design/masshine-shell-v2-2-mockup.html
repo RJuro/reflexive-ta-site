@@ -1,0 +1,1127 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MASSHINE · Analytic Workbench</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: oklch(97% 0.018 70);
+      --surface: oklch(99% 0.008 70);
+      --fg: oklch(22% 0.02 50);
+      --muted: oklch(50% 0.018 50);
+      --border: oklch(90% 0.014 70);
+      --accent: oklch(64% 0.13 28);
+      --accent-soft: oklch(64% 0.13 28 / 0.12);
+      --latent: oklch(55% 0.06 110);
+      --latent-soft: oklch(55% 0.06 110 / 0.14);
+      --human: oklch(55% 0.12 260);
+      --human-soft: oklch(55% 0.12 260 / 0.12);
+      --font-display: 'Tiempos Headline', 'Newsreader', 'Iowan Old Style', Georgia, serif;
+      --font-body: 'Söhne', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+      --topbar-h: 56px;
+      --sidebar-w: 260px;
+      --radius: 12px;
+      --pad: 1.25rem;
+      --shadow: 0 24px 70px oklch(22% 0.02 50 / 0.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { font-size: 16px; }
+    body { margin: 0; font-family: var(--font-body); background: var(--bg); color: var(--fg); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15; letter-spacing: -0.02em; }
+    button, input, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      display: grid;
+      grid-template: "topbar topbar" var(--topbar-h) "sidebar main" 1fr / var(--sidebar-w) 1fr;
+      block-size: 100vh;
+      overflow: hidden;
+    }
+
+    .topbar {
+      grid-area: topbar;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding-inline: 1rem;
+      border-block-end: 1px solid var(--border);
+      background: color-mix(in oklch, var(--surface) 92%, transparent);
+      backdrop-filter: blur(12px);
+    }
+    .wordmark { display: flex; align-items: baseline; gap: 0.5rem; }
+    .wordmark__title { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; }
+    .wordmark__sub { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    .topbar__doc { display: flex; flex-direction: column; margin-inline-start: auto; text-align: end; }
+    .topbar__doc strong { font-size: 0.82rem; }
+    .topbar__doc span { font-size: 0.72rem; color: var(--muted); }
+    .search { position: relative; }
+    .search input { width: 220px; padding: 0.4rem 0.7rem; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); font-size: 0.82rem; }
+    .search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    .sidebar {
+      grid-area: sidebar;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      padding: var(--pad);
+      border-inline-end: 1px solid var(--border);
+      background: var(--surface);
+      overflow-y: auto;
+    }
+    .nav { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+    .nav button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 0.75rem;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 600;
+      text-align: start;
+      transition: background 120ms, color 120ms;
+    }
+    .nav button:hover { background: var(--bg); color: var(--fg); }
+    .nav button.is-active { background: var(--bg); color: var(--fg); box-shadow: inset 0 0 0 1px var(--border); }
+    .nav__count { margin-inline-start: auto; font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+
+    .mode { display: flex; flex-direction: column; gap: 0.5rem; }
+    .mode__label { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; }
+    .mode-switch {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      padding: 3px;
+      border-radius: 10px;
+      background: var(--bg);
+    }
+    .mode-switch button {
+      padding: 0.45rem 0.2rem;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .mode-switch button.is-active { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px oklch(22% 0.02 50 / 0.05); }
+
+    .filter { display: flex; flex-direction: column; gap: 0.5rem; }
+    .filter__label { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; }
+    .filter__chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .filter-chip {
+      padding: 0.25rem 0.55rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    .filter-chip.is-active { border-color: var(--fg); color: var(--fg); background: var(--surface); }
+
+    .status { margin-block-start: auto; padding: 0.9rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); }
+    .status__row { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.35rem; }
+    .status__row:last-child { margin-bottom: 0; }
+    .status__row strong { color: var(--fg); }
+
+    .main { grid-area: main; overflow: auto; position: relative; background: var(--bg); }
+    .view { display: none; min-block-size: 100%; }
+    .view.is-active { display: grid; }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--fg);
+      font-size: 0.78rem;
+      font-weight: 700;
+      transition: background 120ms, border-color 120ms;
+    }
+    .button:hover { background: var(--bg); }
+    .button--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .button--primary:hover { filter: brightness(0.96); }
+    .button--small { padding: 0.25rem 0.55rem; font-size: 0.7rem; }
+
+    .badge {
+      display: inline-flex;
+      padding: 0.12rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .badge--semantic { background: var(--accent-soft); color: var(--accent); }
+    .badge--latent { background: var(--latent-soft); color: var(--latent); }
+    .badge--human { background: var(--human-soft); color: var(--human); }
+    .badge--run { background: var(--fg); color: var(--surface); }
+    .badge--minority { background: color-mix(in oklch, var(--accent) 8%, var(--bg)); color: var(--accent); }
+
+    .empty { color: var(--muted); font-size: 0.85rem; font-style: italic; }
+
+    /* Annotation toolbar */
+    .annotation-toolbar {
+      position: absolute;
+      display: none;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0.6rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      z-index: 100;
+      min-width: 220px;
+    }
+    .annotation-toolbar.is-open { display: flex; }
+    .annotation-toolbar__head { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+    .annotation-toolbar__selection { font-size: 0.82rem; line-height: 1.4; max-width: 260px; }
+    .annotation-toolbar__selection mark { background: var(--accent-soft); color: inherit; padding: 0 0.1rem; }
+    .annotation-toolbar__codes { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .annotation-toolbar__codes button { padding: 0.25rem 0.55rem; border-radius: 999px; font-size: 0.7rem; font-weight: 700; border: 1px solid var(--border); background: var(--bg); }
+    .annotation-toolbar__codes button:hover { border-color: var(--accent); }
+    .annotation-toolbar__new { display: flex; gap: 0.35rem; }
+    .annotation-toolbar__new input { flex: 1; padding: 0.35rem 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-size: 0.78rem; }
+
+    /* Reading view */
+    .view--reading { display: block; }
+    .reading { display: grid; grid-template-columns: 1fr; block-size: 100%; }
+    .reading.is-split { grid-template-columns: 240px 1fr 300px; }
+    .reading.is-copilot { grid-template-columns: 1fr 340px; }
+    .reading.is-autopilot { grid-template-columns: 1fr 360px; }
+    .reading__panel { display: none; overflow-y: auto; border-inline-start: 1px solid var(--border); background: var(--surface); padding: var(--pad); }
+    .reading.is-split .lens-panel, .reading.is-split .autopilot-panel, .reading.is-copilot .copilot-panel, .reading.is-autopilot .autopilot-panel { display: block; }
+
+    .transcript { overflow-y: auto; padding: 2.5rem; }
+    .transcript__header { max-width: 68ch; margin-inline: auto; margin-bottom: 1.5rem; }
+    .transcript__title { font-size: 1.7rem; }
+    .transcript__meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.35rem; }
+    .sentences { max-width: 68ch; margin-inline: auto; display: flex; flex-direction: column; gap: 0.1rem; }
+    .sentence {
+      display: grid;
+      grid-template-columns: 2.6rem 4.2rem 1fr;
+      gap: 0.6rem;
+      align-items: baseline;
+      padding: 0.55rem 0.7rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 120ms;
+      position: relative;
+    }
+    .sentence:hover { background: color-mix(in oklch, var(--accent) 5%, var(--bg)); }
+    .sentence.is-active { background: color-mix(in oklch, var(--accent) 10%, var(--bg)); }
+    .sent-id { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); user-select: none; }
+    .speaker { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; user-select: none; }
+    .sentence.is-active .speaker { color: var(--fg); }
+    .sent-text { font-size: 0.94rem; line-height: 1.7; }
+    .sent-text::selection { background: var(--accent-soft); }
+
+    /* Inline code spans */
+    .code-span {
+      border-radius: 3px;
+      padding: 0 0.15rem;
+      cursor: pointer;
+      transition: box-shadow 120ms;
+      border-block-end: 2px solid transparent;
+    }
+    .code-span:hover { box-shadow: 0 0 0 2px color-mix(in oklch, var(--fg) 12%, transparent); }
+    .code-span--semantic { background: var(--accent-soft); border-block-end-color: var(--accent); }
+    .code-span--latent { background: var(--latent-soft); border-block-end-color: var(--latent); }
+    .code-span--human { background: var(--human-soft); border-block-end-color: var(--human); }
+
+    .code-tooltip {
+      position: absolute;
+      display: none;
+      max-width: 280px;
+      padding: 0.7rem 0.85rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      z-index: 90;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .code-tooltip.is-open { display: block; }
+    .code-tooltip__title { font-family: var(--font-display); font-weight: 600; font-size: 0.88rem; margin-bottom: 0.25rem; }
+    .code-tooltip__rationale { color: var(--muted); margin-bottom: 0.35rem; }
+    .code-tooltip__actions { display: flex; gap: 0.35rem; }
+
+    .sentence__code-strip {
+      grid-column: 3;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-block-start: 0.2rem;
+    }
+    .sentence__code-strip .badge { cursor: pointer; }
+
+    .panel__title { font-family: var(--font-display); font-size: 1.05rem; margin-bottom: 1rem; }
+    .panel__section { margin-bottom: 1.25rem; }
+    .panel__hint { font-size: 0.78rem; color: var(--muted); margin-bottom: 1rem; line-height: 1.5; }
+
+    .lens-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .lens {
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--fg);
+      text-align: start;
+      transition: background 120ms;
+    }
+    .lens:hover { background: var(--bg); }
+    .lens__label { font-weight: 700; font-size: 0.84rem; display: block; }
+    .lens__desc { font-size: 0.75rem; color: var(--muted); }
+
+    .suggestion {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.9rem;
+      margin-bottom: 0.7rem;
+      background: var(--bg);
+    }
+    .suggestion__head { display: flex; gap: 0.5rem; align-items: baseline; margin-bottom: 0.35rem; flex-wrap: wrap; }
+    .suggestion__label { font-family: var(--font-display); font-weight: 600; font-size: 0.92rem; }
+    .suggestion__evidence { font-size: 0.78rem; color: var(--muted); margin: 0.4rem 0; }
+    .suggestion__rationale { font-size: 0.82rem; color: var(--fg); line-height: 1.5; margin: 0.5rem 0; }
+    .suggestion__actions { display: flex; gap: 0.4rem; margin-top: 0.6rem; }
+
+    .run-meta { display: flex; gap: 0.4rem; align-items: center; font-size: 0.7rem; color: var(--muted); margin-bottom: 0.8rem; }
+    .run-meta code { font-family: var(--font-mono); background: var(--bg); padding: 0.1rem 0.35rem; border-radius: 4px; }
+
+    /* Codebook view */
+    .view--codebook { grid-template-columns: 300px 1fr; }
+    .codebook-list { border-inline-end: 1px solid var(--border); background: var(--surface); overflow-y: auto; padding: var(--pad); }
+    .codebook-detail { overflow-y: auto; padding: 2rem; }
+    .code-card {
+      padding: 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 0.6rem;
+      background: var(--bg);
+      cursor: pointer;
+      transition: border-color 120ms, background 120ms;
+    }
+    .code-card:hover { background: var(--surface); }
+    .code-card.is-active { border-color: var(--accent); background: var(--surface); }
+    .code-card__title { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; }
+    .code-card__meta { font-size: 0.74rem; color: var(--muted); margin-top: 0.25rem; }
+    .detail__header { margin-bottom: 1.25rem; padding-bottom: 1rem; border-block-end: 1px solid var(--border); }
+    .detail__title { font-size: 1.6rem; margin-bottom: 0.4rem; }
+    .detail__def { max-width: 65ch; font-size: 1rem; line-height: 1.6; color: var(--fg); }
+    .detail__section { margin-bottom: 1.5rem; }
+    .detail__section h3 { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.6rem; }
+    .detail__quote { padding: 0.8rem 1rem; border-block-start: 3px solid var(--accent); background: color-mix(in oklch, var(--accent) 6%, var(--surface)); border-radius: 0 0 8px 8px; font-family: var(--font-display); font-size: 0.95rem; line-height: 1.45; }
+    .detail__memo { padding: 0.8rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 0.85rem; line-height: 1.5; }
+
+    /* Comparison view */
+    .view--comparison { grid-template-rows: auto 1fr; }
+    .comparison__header { padding: 1.5rem 2rem; border-block-end: 1px solid var(--border); }
+    .comparison__header h2 { font-size: 1.5rem; }
+    .comparison__header p { color: var(--muted); font-size: 0.88rem; margin: 0.3rem 0 0; max-width: 70ch; }
+    .comparison__body { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); overflow-y: auto; }
+    .comparison__col { background: var(--bg); padding: 1.5rem; }
+    .comparison__col h3 { font-size: 1.1rem; margin-bottom: 0.25rem; }
+    .comparison__col .meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem; }
+    .overlap { padding: 0.7rem; border-radius: 8px; background: color-mix(in oklch, var(--accent) 8%, var(--surface)); margin-bottom: 1rem; }
+    .overlap h4 { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+    .verdict { display: inline-flex; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; margin-top: 0.5rem; }
+    .verdict--disagree { background: var(--border); color: var(--muted); }
+
+    /* Themes view */
+    .view--themes { display: block; max-width: 900px; margin-inline: auto; padding: 2rem; }
+    .view--themes h2 { font-size: 1.7rem; margin-bottom: 0.4rem; }
+    .view--themes > p { color: var(--muted); margin: 0 0 1.5rem; max-width: 65ch; }
+    .theme-card { border: 1px solid var(--border); border-radius: 16px; padding: 1.6rem; margin-bottom: 1rem; background: var(--surface); }
+    .theme-card__claim { font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 1rem; line-height: 1.3; }
+    .theme-card__section { margin-bottom: 1.1rem; }
+    .theme-card__section h4 { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.5rem; }
+    .chip-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .chip { padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 999px; font-size: 0.76rem; background: var(--bg); }
+    .theme-memo { width: 100%; min-height: 80px; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); font-size: 0.85rem; resize: vertical; }
+
+    /* Connections view */
+    .view--connections { display: block; padding: 2rem; }
+    .view--connections h2 { font-size: 1.7rem; margin-bottom: 0.4rem; }
+    .view--connections > p { color: var(--muted); margin: 0 0 1.5rem; max-width: 65ch; }
+    .connection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+    .connection-card { border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem; background: var(--surface); }
+    .connection-card__code { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .connection-card__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+    .connection-card__list li { font-size: 0.78rem; color: var(--muted); cursor: pointer; padding: 0.25rem 0.4rem; border-radius: 6px; }
+    .connection-card__list li:hover { background: var(--bg); color: var(--fg); }
+    .connection-card__list li strong { color: var(--fg); font-weight: 600; }
+
+    /* Audit drawer */
+    .audit {
+      position: fixed;
+      inset-inline-end: 0;
+      inset-block-start: var(--topbar-h);
+      inline-size: 340px;
+      block-size: calc(100vh - var(--topbar-h));
+      background: var(--surface);
+      border-inline-start: 1px solid var(--border);
+      transform: translateX(100%);
+      transition: transform 200ms ease;
+      z-index: 50;
+      overflow-y: auto;
+      padding: var(--pad);
+    }
+    .audit.is-open { transform: translateX(0); }
+    .audit h3 { font-size: 1rem; margin-bottom: 1rem; }
+    .audit__block { margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-block-end: 1px solid var(--border); }
+    .audit__block:last-child { border-block-end: 0; }
+    .audit__row { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.35rem; }
+    .audit__row strong { color: var(--fg); font-family: var(--font-mono); font-weight: 600; }
+    .audit__log { font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.55; color: var(--muted); }
+    .audit__log li { margin-bottom: 0.5rem; }
+
+    /* Tweaks */
+    .tweaks { position: fixed; inset-inline-end: 1rem; inset-block-end: 1rem; z-index: 60; }
+    .tweaks__panel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--pad); width: 220px; box-shadow: var(--shadow); }
+    .tweaks__panel.is-open { display: block; }
+    .tweaks__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .tweaks__head h4 { font-size: 0.85rem; }
+    .tweaks__row { margin-bottom: 0.75rem; }
+    .tweaks__row label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.25rem; }
+    .tweaks__row input[type="range"] { width: 100%; }
+    .tweaks__toggle { width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--fg); display: grid; place-items: center; }
+    .tweaks__toggle svg { width: 1.1rem; height: 1.1rem; }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+  </style>
+</head>
+<body>
+  <div class="app" data-od-id="shell">
+    <header class="topbar">
+      <div class="wordmark">
+        <span class="wordmark__title">MASSHINE</span>
+        <span class="wordmark__sub">Analytic workbench</span>
+      </div>
+      <label class="search">
+        <span class="sr-only">Search transcripts, codes, or memos</span>
+        <input type="search" placeholder="Search transcripts, codes, memos…">
+      </label>
+      <div class="topbar__doc">
+        <strong>DP-40 GRANDE</strong>
+        <span>Ellis Island corpus · 12 sentences</span>
+      </div>
+      <button class="button" id="audit-toggle">Audit</button>
+    </header>
+
+    <aside class="sidebar" data-od-id="sidebar">
+      <nav aria-label="Views">
+        <ul class="nav">
+          <li><button class="is-active" data-view="reading"><span>Reading</span><span class="nav__count"></span></button></li>
+          <li><button data-view="codebook"><span>Codebook</span><span class="nav__count">7</span></button></li>
+          <li><button data-view="comparison"><span>Comparison</span><span class="nav__count">2 runs</span></button></li>
+          <li><button data-view="themes"><span>Themes &amp; memos</span><span class="nav__count">2</span></button></li>
+          <li><button data-view="connections"><span>Connections</span><span class="nav__count"></span></button></li>
+        </ul>
+      </nav>
+
+      <div class="mode">
+        <span class="mode__label">Operating mode</span>
+        <div class="mode-switch" role="group" aria-label="Choose operating mode">
+          <button data-mode="copilot">Co-pilot</button>
+          <button data-mode="autopilot">Autopilot</button>
+          <button class="is-active" data-mode="split">Split</button>
+        </div>
+      </div>
+
+      <div class="filter">
+        <span class="filter__label">Show annotations</span>
+        <div class="filter__chips">
+          <button class="filter-chip is-active" data-filter="semantic">Semantic</button>
+          <button class="filter-chip is-active" data-filter="latent">Latent</button>
+          <button class="filter-chip" data-filter="human">Human</button>
+        </div>
+      </div>
+
+      <div class="status">
+        <div class="status__row"><span>Phase</span><strong>Open coding</strong></div>
+        <div class="status__row"><span>Codes</span><strong>7</strong></div>
+        <div class="status__row"><span>Runs</span><strong>2</strong></div>
+        <div class="status__row"><span>Sentence index</span><code>sha-9f1c</code></div>
+      </div>
+    </aside>
+
+    <main class="main" data-od-id="main">
+      <section class="view view--reading is-active" data-view="reading" data-od-id="view-reading">
+        <div class="reading is-split" id="reading-layout">
+          <div class="reading__panel lens-panel">
+            <h3 class="panel__title">Lenses</h3>
+            <p class="panel__hint">Select a sentence or highlight a phrase, then choose a model lens.</p>
+            <div class="lens-list">
+              <button class="lens" data-lens="suggest"><span class="lens__label">Suggest codes</span><span class="lens__desc">Ask the coder to propose semantic and latent codes for the selected window.</span></button>
+              <button class="lens" data-lens="challenge"><span class="lens__label">Challenge this reading</span><span class="lens__desc">A critic reviews the selected codes and proposes alternative readings.</span></button>
+              <button class="lens" data-lens="related"><span class="lens__label">Show related decisions</span><span class="lens__desc">Surface precedent codes from the project codebook.</span></button>
+              <button class="lens" data-lens="overlooked"><span class="lens__label">Find overlooked evidence</span><span class="lens__desc">Look for nearby sentences that complicate the current code.</span></button>
+            </div>
+          </div>
+
+          <div class="transcript" data-od-id="transcript">
+            <header class="transcript__header">
+              <h1 class="transcript__title">DP-40 GRANDE — Mary Yankovik Grande</h1>
+              <p class="transcript__meta">Yugoslavia, 1920 · age 10 · Ellis Island Oral History Project · Interview 414</p>
+            </header>
+            <div class="sentences" id="sentences"></div>
+          </div>
+
+          <div class="reading__panel copilot-panel" id="copilot-panel">
+            <h3 class="panel__title">Co-pilot suggestion</h3>
+            <div id="copilot-content">
+              <p class="empty">Select a sentence or highlight a phrase to see a co-pilot suggestion.</p>
+            </div>
+          </div>
+
+          <div class="reading__panel autopilot-panel" id="autopilot-panel">
+            <h3 class="panel__title">Autopilot suggestions</h3>
+            <div class="run-meta"><span class="badge badge--run">Run #7</span><code>single_cot</code><code>temp 0.7</code></div>
+            <div id="autopilot-content"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view view--codebook" data-view="codebook" data-od-id="view-codebook">
+        <div class="codebook-list" id="codebook-list"></div>
+        <div class="codebook-detail" id="codebook-detail">
+          <p class="empty">Select a code from the list to inspect its definition, evidence, and history.</p>
+        </div>
+      </section>
+
+      <section class="view view--comparison" data-view="comparison" data-od-id="view-comparison">
+        <div class="comparison__header">
+          <h2>Compare runs</h2>
+          <p>Where architectures agree, diverge, or produce minority readings on the same sentence.</p>
+        </div>
+        <div class="comparison__body" id="comparison-body"></div>
+      </section>
+
+      <section class="view view--themes" data-view="themes" data-od-id="view-themes">
+        <h2>Themes &amp; memos</h2>
+        <p>Candidate themes are claims with supporting and contradicting evidence. The human refines them.</p>
+        <div id="themes-content"></div>
+      </section>
+
+      <section class="view view--connections" data-view="connections" data-od-id="view-connections">
+        <h2>Connections</h2>
+        <p>Sentences that share codes. Click any sentence to jump back to it in the transcript.</p>
+        <div class="connection-grid" id="connections-content"></div>
+      </section>
+    </main>
+
+    <aside class="annotation-toolbar" id="annotation-toolbar" aria-label="Annotation toolbar">
+      <div class="annotation-toolbar__head">Apply a code</div>
+      <div class="annotation-toolbar__selection" id="toolbar-selection"></div>
+      <div class="annotation-toolbar__codes" id="toolbar-codes"></div>
+      <div class="annotation-toolbar__new">
+        <input type="text" id="toolbar-new" placeholder="New code…">
+        <button class="button button--primary button--small" id="toolbar-create">Create</button>
+      </div>
+    </aside>
+
+    <aside class="code-tooltip" id="code-tooltip" aria-label="Code tooltip">
+      <div class="code-tooltip__title" id="tooltip-title"></div>
+      <div class="code-tooltip__rationale" id="tooltip-rationale"></div>
+      <div class="code-tooltip__actions">
+        <button class="button button--small" id="tooltip-open">Open code</button>
+        <button class="button button--small" id="tooltip-dismiss">Dismiss</button>
+      </div>
+    </aside>
+
+    <aside class="audit" id="audit-drawer" aria-label="Audit panel">
+      <h3>Audit — Run #7</h3>
+      <div class="audit__block">
+        <div class="audit__row"><span>Architecture</span><strong>single_cot</strong></div>
+        <div class="audit__row"><span>Model</span><strong>MiniMax-M3</strong></div>
+        <div class="audit__row"><span>Method frame</span><strong>reflexive_ta</strong></div>
+        <div class="audit__row"><span>Prompt hash</span><strong>a3f7c9d</strong></div>
+        <div class="audit__row"><span>Tokens</span><strong>14,220 in / 1,840 out</strong></div>
+        <div class="audit__row"><span>Cost</span><strong>$0.04</strong></div>
+      </div>
+      <div class="audit__block">
+        <h3>Event log</h3>
+        <ol class="audit__log">
+          <li>import_document(dp-40-grande.txt)</li>
+          <li>index_sentences(sha-9f1c)</li>
+          <li>create_run(#7, single_cot, reflexive_ta)</li>
+          <li>coder_window(S0002…S0006) → 4 codes</li>
+          <li>conciliator → create, create, create, defer</li>
+          <li>coder_window(S0007…S0012) → 5 codes</li>
+        </ol>
+      </div>
+    </aside>
+  </div>
+
+  <div class="tweaks">
+    <button class="tweaks__toggle" id="tweaks-toggle" aria-label="Design tweaks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></button>
+    <div class="tweaks__panel" id="tweaks-panel">
+      <div class="tweaks__head"><h4>Tweaks</h4><button class="button button--small" id="tweaks-close">Close</button></div>
+      <div class="tweaks__row"><label for="t-accent">Accent hue</label><input type="range" id="t-accent" min="0" max="360" value="28"></div>
+      <div class="tweaks__row"><label for="t-scale">Type scale</label><input type="range" id="t-scale" min="14" max="20" value="16"></div>
+      <div class="tweaks__row"><label for="t-density">Density</label><input type="range" id="t-density" min="0" max="2" value="0"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const DOC = {
+        title: 'DP-40 GRANDE — Mary Yankovik Grande',
+        subtitle: 'Yugoslavia, 1920 · age 10',
+        sentences: [
+          { id: 'S0001', speaker: 'PHILLIPS', text: 'Tell me what your home was like. What did it look like?' },
+          { id: 'S0002', speaker: 'GRANDE', text: 'It was an average peasant home. It was three rooms, living room and kitchen in the middle and a small room on the side. And then facing what would be, I guess, the east side was half, was a barn where the cattle were.' },
+          { id: 'S0003', speaker: 'PHILLIPS', text: 'So the cattle were actually, they were part of the house. The barn was part of the house.' },
+          { id: 'S0004', speaker: 'GRANDE', text: 'Yes.' },
+          { id: 'S0005', speaker: 'PHILLIPS', text: 'Explain that to us, what was that like.' },
+          { id: 'S0006', speaker: 'GRANDE', text: 'Well, it was all one building and there were, later on they made that as all one room, but at that time we had a half a room was like for the barn, for the cows, or when my brother had horses it was there. And then there was a manure pile just to the side of it. And the majority of people had it similar like that.' },
+          { id: 'S0007', speaker: 'PHILLIPS', text: 'And what was it like for a little girl to be living so close to the animals? Did you enjoy that, or were you--' },
+          { id: 'S0008', speaker: 'GRANDE', text: 'Oh, yes. I enjoyed it because they were part of my life. In fact, I had a pet cow that I loved very much. And then the pigs were, the pig sty was just across from the kitchen door, just a little ways away. So all the animals were right close to the house.' },
+          { id: 'S0009', speaker: 'PHILLIPS', text: 'Did you like the pigs?' },
+          { id: 'S0010', speaker: 'GRANDE', text: 'Oh, yeah. They used to slaughter them in winter and save some meat, cured it, for the summer. And some of it was for right away. Not too much fresh, but mostly cured.' },
+          { id: 'S0011', speaker: 'PHILLIPS', text: 'Did you used to help do that?' },
+          { id: 'S0012', speaker: 'GRANDE', text: "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job." }
+        ]
+      };
+
+      const ANNOTATIONS = [
+        { sid: 'S0002', start: 10, end: 30, code: 'average-peasant-home', source: 'semantic', rationale: 'Plain physical description of the dwelling.' },
+        { sid: 'S0002', start: 151, end: 158, code: 'spatial-reconstruction', source: 'latent', rationale: 'Uncertainty marker suggests child viewpoint.' },
+        { sid: 'S0006', start: 0, end: 29, code: 'house-barn-historical', source: 'semantic', rationale: 'Majority practice presented as historically given.' },
+        { sid: 'S0006', start: 267, end: 314, code: 'house-barn-historical', source: 'semantic', rationale: 'Explicit majority claim.' },
+        { sid: 'S0008', start: 30, end: 55, code: 'animals-as-companions', source: 'semantic', rationale: 'Affectionate statement of animals being part of life.' },
+        { sid: 'S0008', start: 66, end: 104, code: 'animals-as-companions', source: 'semantic', rationale: 'Named pet cow with emotional attachment.' },
+        { sid: 'S0010', start: 23, end: 92, code: 'seasonal-preservation', source: 'semantic', rationale: 'Winter slaughter and curing for summer.' },
+        { sid: 'S0012', start: 0, end: 70, code: 'child-slaughter', source: 'semantic', rationale: 'Assigned task during pig killing.' },
+        { sid: 'S0012', start: 72, end: 117, code: 'reluctant-compliance', source: 'latent', rationale: 'Dislike versus obligation.' }
+      ];
+
+      const COPILOT = {
+        S0002: { lens: 'Suggest codes', codes: [
+          { type: 'semantic', label: 'Average peasant home', rationale: 'The speaker describes the physical layout of the house in plain, evaluative terms.' },
+          { type: 'latent', label: 'Spatial reconstruction from child memory', rationale: 'The phrase "I guess" signals the speaker is reconstructing the layout from a child’s uncertain point of view.' }
+        ]},
+        S0006: { lens: 'Suggest codes', codes: [
+          { type: 'semantic', label: 'House-barn as historical form', rationale: 'The speaker presents the house-barn as the ordinary, majority form of the village.' },
+          { type: 'latent', label: 'Agrarian domesticity', rationale: 'Livestock, manure, and living space share one building; the boundary between home and farm is blurred.' }
+        ]},
+        S0008: { lens: 'Suggest codes', codes: [
+          { type: 'semantic', label: 'Animals as companions', rationale: 'The speaker names a pet cow and locates animals in daily life close to the house.' },
+          { type: 'latent', label: 'Animals as part of self', rationale: 'Enjoyment is explained by animals being "part of my life" — identity and household are intertwined.' }
+        ]},
+        S0010: { lens: 'Suggest codes', codes: [
+          { type: 'semantic', label: 'Seasonal meat preservation', rationale: 'Slaughter in winter, curing for summer; a concrete food practice.' },
+          { type: 'latent', label: 'Food scarcity / self-sufficiency', rationale: 'Preservation is framed as necessity, not culinary preference.' }
+        ]},
+        S0012: { lens: 'Suggest codes', codes: [
+          { type: 'semantic', label: 'Child participation in slaughter', rationale: 'The speaker explicitly names a task assigned to her during pig slaughter.' },
+          { type: 'latent', label: 'Reluctant compliance with labor', rationale: 'The qualification "I didn\'t like it" introduces emotional tension with the obligation "part of my job".' }
+        ]}
+      };
+
+      const AUTOPILOT = [
+        { sid: 'S0002', type: 'semantic', label: 'Average peasant home', rationale: 'Plain physical description of rooms and barn placement.' },
+        { sid: 'S0002', type: 'latent', label: 'Spatial reconstruction from child memory', rationale: 'Uncertainty marker "I guess" suggests child viewpoint.' },
+        { sid: 'S0006', type: 'semantic', label: 'House-barn as historical form', rationale: 'Majority practice presented as historically given.' },
+        { sid: 'S0006', type: 'latent', label: 'Agrarian domesticity', rationale: 'Collapsed boundary between dwelling and livestock.' },
+        { sid: 'S0008', type: 'semantic', label: 'Animals as companions', rationale: 'Pet cow and proximity to kitchen door.' },
+        { sid: 'S0010', type: 'semantic', label: 'Seasonal meat preservation', rationale: 'Winter slaughter, curing for summer.' },
+        { sid: 'S0012', type: 'semantic', label: 'Child participation in slaughter', rationale: 'Assigned task during pig killing.' },
+        { sid: 'S0012', type: 'latent', label: 'Reluctant compliance with labor', rationale: 'Dislike versus obligation.' }
+      ];
+
+      const CODES = [
+        { id: 'average-peasant-home', label: 'Average peasant home', type: 'semantic', evidence: ['S0002'], status: 'stable', definition: 'A surface description of the speaker’s childhood dwelling, emphasizing its modest scale and functional layout.', memo: 'Stable across the first two transcripts. Keep distinct from "house-barn as historical form".', quote: 'It was an average peasant home. It was three rooms, living room and kitchen in the middle and a small room on the side.' },
+        { id: 'spatial-reconstruction', label: 'Spatial reconstruction from child memory', type: 'latent', evidence: ['S0002'], status: 'minority', definition: 'The speaker is not certain of spatial facts; the description is a reconstruction from a child’s perspective.', memo: 'Minority reading. The interviewer does not probe the "I guess", so this code rests on a single hesitation.', quote: 'And then facing what would be, I guess, the east side was half, was a barn where the cattle were.' },
+        { id: 'house-barn-historical', label: 'House-barn as historical form', type: 'semantic', evidence: ['S0006'], status: 'stable', definition: 'The house-barn is described as a common, historically established building form rather than an individual choice.', memo: 'Use as boundary case when comparing farm architecture across transcripts.', quote: 'Well, it was all one building and there were, later on they made that as all one room, but at that time we had a half a room was like for the barn…' },
+        { id: 'animals-as-companions', label: 'Animals as companions', type: 'semantic', evidence: ['S0008'], status: 'stable', definition: 'Animals are named and emotionally attached; their proximity is remembered with affection.', memo: 'May contradict utility-focused codes; keep both and note the tension.', quote: 'I enjoyed it because they were part of my life. In fact, I had a pet cow that I loved very much.' },
+        { id: 'seasonal-preservation', label: 'Seasonal meat preservation', type: 'semantic', evidence: ['S0010'], status: 'stable', definition: 'The practice of slaughtering animals in winter and curing meat for summer consumption.', memo: 'Linked to food self-sufficiency but should not be merged; one is practice, the other is implied scarcity.', quote: 'They used to slaughter them in winter and save some meat, cured it, for the summer.' },
+        { id: 'child-slaughter', label: 'Child participation in slaughter', type: 'semantic', evidence: ['S0012'], status: 'contested', definition: 'A child is assigned a concrete, physically proximate task during animal slaughter.', memo: 'Contested because the same sentence supports a latent reading of reluctant compliance.', quote: "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job." },
+        { id: 'reluctant-compliance', label: 'Reluctant compliance with labor', type: 'latent', evidence: ['S0012'], status: 'minority', definition: 'A task is performed despite the speaker’s stated dislike, framed as obligatory duty.', memo: 'Minority / latent counterpart to child participation. Do not merge until the theme pass.', quote: "I didn't like it, but that was part of my job." }
+      ];
+
+      const COMPARISON = {
+        sentence: { id: 'S0012', speaker: 'GRANDE', text: "I had to help with, when they killed the pigs I had to catch the blood. I didn't like it, but that was part of my job." },
+        runs: [
+          { id: 7, architecture: 'single_cot', model: 'MiniMax-M3', temp: 0.7, codes: [
+            { type: 'semantic', label: 'Child participation in slaughter', rationale: 'Explicit task assignment during pig killing.' },
+            { type: 'latent', label: 'Reluctant compliance with labor', rationale: 'Dislike versus obligation.' }
+          ]},
+          { id: 8, architecture: 'coder_critic', model: 'MiniMax-M3', temp: 0.7, codes: [
+            { type: 'semantic', label: 'Child participation in slaughter', rationale: 'Same direct evidence as run #7.' },
+            { type: 'latent', label: 'Gendered child labor', rationale: 'The critic notes the task is bodily, close to the home, and assigned to a daughter.' }
+          ]}
+        ]
+      };
+
+      const THEMES = [
+        { id: 'continuity-agrarian', claim: 'The household is organized around the continual presence of animals and food preservation; the house-barn form is remembered as historically given rather than chosen.', supporting: ['house-barn-historical', 'seasonal-preservation'], contradicting: ['animals-as-companions'], memo: 'The affection in S0008 complicates a purely utilitarian reading.' },
+        { id: 'gendered-child-labor', claim: 'Children, and daughters in particular, were assigned physically unpleasant farm tasks that they experienced as obligatory even when emotionally aversive.', supporting: ['child-slaughter', 'reluctant-compliance'], contradicting: [], memo: 'Need more evidence before claiming gender; the latent reading is still minority.' }
+      ];
+
+      let activeFilters = new Set(['semantic', 'latent']);
+
+      function escapeHTML(s) {
+        return String(s == null ? '' : s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function annotateText(text, sid) {
+        const spans = ANNOTATIONS.filter(a => a.sid === sid).sort((a, b) => a.start - b.start);
+        if (!spans.length) return escapeHTML(text);
+
+        let html = '';
+        let cursor = 0;
+        for (const s of spans) {
+          const code = CODES.find(c => c.id === s.code);
+          if (!code) continue;
+          if (cursor < s.start) html += escapeHTML(text.slice(cursor, s.start));
+          const hidden = activeFilters.has(s.source) ? '' : ' style="display:none"';
+          html += `<span class="code-span code-span--${s.source}" data-code="${s.code}" data-sid="${sid}" data-rationale="${escapeHTML(s.rationale)}" data-source="${s.source}"${hidden}>${escapeHTML(text.slice(s.start, s.end))}</span>`;
+          cursor = Math.max(cursor, s.end);
+        }
+        if (cursor < text.length) html += escapeHTML(text.slice(cursor));
+        return html;
+      }
+
+      function renderTranscript() {
+        const root = document.getElementById('sentences');
+        root.innerHTML = DOC.sentences.map(s => {
+          const sentenceCodes = ANNOTATIONS.filter(a => a.sid === s.id);
+          const strip = sentenceCodes.length ? `
+            <div class="sentence__code-strip">
+              ${sentenceCodes.map(a => {
+                const c = CODES.find(x => x.id === a.code);
+                return `<span class="badge badge--${a.source}" data-code="${a.code}" data-sid="${s.id}">${c ? escapeHTML(c.label) : a.code}</span>`;
+              }).join('')}
+            </div>
+          ` : '';
+          return `
+            <p class="sentence" data-sid="${s.id}">
+              <span class="sent-id">${s.id}</span>
+              <span class="speaker">${escapeHTML(s.speaker)}</span>
+              <span class="sent-text">${annotateText(s.text, s.id)}</span>
+              ${strip}
+            </p>
+          `;
+        }).join('');
+        root.querySelectorAll('.sentence').forEach(el => {
+          el.addEventListener('click', e => {
+            if (e.target.closest('.code-span, .badge')) return;
+            selectSentence(el.dataset.sid);
+          });
+        });
+        root.querySelectorAll('.code-span').forEach(el => {
+          el.addEventListener('mouseenter', e => showTooltip(e, el));
+          el.addEventListener('mouseleave', hideTooltip);
+          el.addEventListener('click', e => {
+            e.stopPropagation();
+            openCode(el.dataset.code);
+            selectSentence(el.dataset.sid);
+          });
+        });
+        root.querySelectorAll('.sentence__code-strip .badge').forEach(badge => {
+          badge.addEventListener('click', e => {
+            e.stopPropagation();
+            openCode(badge.dataset.code);
+            selectSentence(badge.dataset.sid);
+          });
+        });
+      }
+
+      function selectSentence(sid) {
+        document.querySelectorAll('.sentence').forEach(el => el.classList.toggle('is-active', el.dataset.sid === sid));
+        const data = COPILOT[sid];
+        const panel = document.getElementById('copilot-content');
+        if (!data) {
+          panel.innerHTML = '<p class="empty">No co-pilot suggestion for this sentence yet. Try a lens or highlight a phrase.</p>';
+          return;
+        }
+        panel.innerHTML = `
+          <div class="run-meta"><span class="badge badge--run">Run #7</span><code>co-pilot</code><code>${escapeHTML(data.lens)}</code></div>
+          ${data.codes.map(c => `
+            <div class="suggestion">
+              <div class="suggestion__head"><span class="badge badge--${c.type}">${c.type}</span><span class="suggestion__label">${escapeHTML(c.label)}</span></div>
+              <p class="suggestion__rationale">${escapeHTML(c.rationale)}</p>
+              <p class="suggestion__evidence">Evidence: <strong>${sid}</strong></p>
+              <div class="suggestion__actions">
+                <button class="button button--primary button--small">Accept</button>
+                <button class="button button--small">Edit</button>
+                <button class="button button--small">Memo</button>
+              </div>
+            </div>
+          `).join('')}
+        `;
+      }
+
+      function renderAutopilot() {
+        document.getElementById('autopilot-content').innerHTML = AUTOPILOT.map(a => `
+          <div class="suggestion">
+            <div class="suggestion__head"><span class="badge badge--${a.type}">${a.type}</span><span class="suggestion__label">${escapeHTML(a.label)}</span></div>
+            <p class="suggestion__evidence">${escapeHTML(a.sid)} · ${escapeHTML(DOC.sentences.find(s => s.id === a.sid)?.text.slice(0, 60) + '…')}</p>
+            <p class="suggestion__rationale">${escapeHTML(a.rationale)}</p>
+          </div>
+        `).join('');
+      }
+
+      function renderCodebook() {
+        const list = document.getElementById('codebook-list');
+        list.innerHTML = CODES.map(c => `
+          <div class="code-card" data-cid="${c.id}">
+            <div class="suggestion__head"><span class="badge badge--${c.type}">${c.type}</span><span class="code-card__title">${escapeHTML(c.label)}</span></div>
+            <div class="code-card__meta">${c.status} · ${c.evidence.length} sentence${c.evidence.length > 1 ? 's' : ''}</div>
+          </div>
+        `).join('');
+        list.querySelectorAll('.code-card').forEach(card => {
+          card.addEventListener('click', () => openCode(card.dataset.cid));
+        });
+        if (CODES.length) openCode(CODES[0].id);
+      }
+
+      function openCode(cid) {
+        document.querySelectorAll('.code-card').forEach(c => c.classList.toggle('is-active', c.dataset.cid === cid));
+        const c = CODES.find(x => x.id === cid);
+        document.getElementById('codebook-detail').innerHTML = `
+          <div class="detail__header">
+            <div class="suggestion__head"><span class="badge badge--${c.type}">${c.type}</span><span class="badge badge--${c.status === 'minority' ? 'minority' : 'run'}">${c.status}</span></div>
+            <h2 class="detail__title">${escapeHTML(c.label)}</h2>
+            <p class="detail__def">${escapeHTML(c.definition)}</p>
+          </div>
+          <div class="detail__section">
+            <h3>Verbatim evidence</h3>
+            <blockquote class="detail__quote">${escapeHTML(c.quote)}</blockquote>
+          </div>
+          <div class="detail__section">
+            <h3>Researcher memo</h3>
+            <p class="detail__memo">${escapeHTML(c.memo)}</p>
+          </div>
+          <div class="detail__section">
+            <h3>Actions</h3>
+            <div style="display:flex;gap:.5rem;">
+              <button class="button button--primary">Merge into…</button>
+              <button class="button">Split</button>
+              <button class="button">Write memo</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderComparison() {
+        const body = document.getElementById('comparison-body');
+        const [runA, runB] = COMPARISON.runs;
+        const overlap = runA.codes.filter(a => runB.codes.some(b => b.label === a.label));
+        const uniqueA = runA.codes.filter(a => !runB.codes.some(b => b.label === a.label));
+        const uniqueB = runB.codes.filter(b => !runA.codes.some(a => a.label === b.label));
+        body.innerHTML = `
+          <div class="comparison__col">
+            <h3>Run #${runA.id} · ${escapeHTML(runA.architecture)}</h3>
+            <p class="meta">${escapeHTML(runA.model)} · temp ${runA.temp} · prompt a3f7c9d</p>
+            <div class="overlap"><h4>Overlap with run #${runB.id}</h4>${overlap.map(c => `<span class="badge badge--${c.type}">${c.type}</span> <strong>${escapeHTML(c.label)}</strong><p style="font-size:.78rem;color:var(--muted);margin:.3rem 0 0;">${escapeHTML(c.rationale)}</p>`).join('<hr style="border:0;border-top:1px solid var(--border);margin:.6rem 0;">')}</div>
+            <div>${uniqueA.map(c => renderDiffCode(c)).join('')}</div>
+          </div>
+          <div class="comparison__col">
+            <h3>Run #${runB.id} · ${escapeHTML(runB.architecture)}</h3>
+            <p class="meta">${escapeHTML(runB.model)} · temp ${runB.temp} · prompt a3f7c9d</p>
+            <div class="overlap"><h4>Overlap with run #${runA.id}</h4>${overlap.map(c => `<span class="badge badge--${c.type}">${c.type}</span> <strong>${escapeHTML(c.label)}</strong><p style="font-size:.78rem;color:var(--muted);margin:.3rem 0 0;">${escapeHTML(c.rationale)}</p>`).join('<hr style="border:0;border-top:1px solid var(--border);margin:.6rem 0;">')}</div>
+            <div>${uniqueB.map(c => renderDiffCode(c)).join('')}</div>
+          </div>
+        `;
+      }
+
+      function renderDiffCode(c) {
+        return `
+          <div class="suggestion">
+            <div class="suggestion__head"><span class="badge badge--${c.type}">${c.type}</span><span class="suggestion__label">${escapeHTML(c.label)}</span></div>
+            <p class="suggestion__rationale">${escapeHTML(c.rationale)}</p>
+            <span class="verdict verdict--disagree">Unique to this run</span>
+          </div>
+        `;
+      }
+
+      function renderThemes() {
+        document.getElementById('themes-content').innerHTML = THEMES.map(t => `
+          <article class="theme-card">
+            <p class="theme-card__claim">${escapeHTML(t.claim)}</p>
+            <div class="theme-card__section">
+              <h4>Supporting codes</h4>
+              <div class="chip-list">${t.supporting.map(id => `<span class="chip">${escapeHTML(codeLabel(id))}</span>`).join('')}</div>
+            </div>
+            <div class="theme-card__section">
+              <h4>Contradicting / minority codes</h4>
+              <div class="chip-list">${t.contradicting.length ? t.contradicting.map(id => `<span class="chip">${escapeHTML(codeLabel(id))}</span>`).join('') : '<span class="empty">None recorded yet</span>'}</div>
+            </div>
+            <div class="theme-card__section">
+              <h4>Researcher memo</h4>
+              <textarea class="theme-memo">${escapeHTML(t.memo)}</textarea>
+            </div>
+          </article>
+        `).join('');
+      }
+
+      function renderConnections() {
+        const groups = {};
+        ANNOTATIONS.forEach(a => {
+          if (!groups[a.code]) groups[a.code] = [];
+          groups[a.code].push(a);
+        });
+        document.getElementById('connections-content').innerHTML = Object.entries(groups).map(([cid, list]) => {
+          const code = CODES.find(c => c.id === cid);
+          return `
+            <article class="connection-card">
+              <div class="connection-card__code"><span class="badge badge--${code?.type || 'semantic'}">${code?.type || 'code'}</span> ${escapeHTML(code?.label || cid)}</div>
+              <ul class="connection-card__list">
+                ${list.map(a => `<li data-sid="${a.sid}"><strong>${a.sid}</strong> · “${escapeHTML(DOC.sentences.find(s => s.id === a.sid)?.text.slice(a.start, a.end))}”</li>`).join('')}
+              </ul>
+            </article>
+          `;
+        }).join('');
+        document.querySelectorAll('.connection-card__list li').forEach(li => {
+          li.addEventListener('click', () => {
+            switchView('reading');
+            selectSentence(li.dataset.sid);
+          });
+        });
+      }
+
+      function codeLabel(id) {
+        return CODES.find(c => c.id === id)?.label || id;
+      }
+
+      function switchView(view) {
+        document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('is-active', b.dataset.view === view));
+        document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.dataset.view === view));
+      }
+
+      /* Selection → annotation toolbar */
+      const toolbar = document.getElementById('annotation-toolbar');
+      const tooltip = document.getElementById('code-tooltip');
+
+      function getSelectedTextWithin(el) {
+        const sel = window.getSelection();
+        if (!sel.rangeCount || sel.isCollapsed) return null;
+        const range = sel.getRangeAt(0);
+        if (!el.contains(range.commonAncestorContainer)) return null;
+        const text = sel.toString().trim();
+        if (text.length < 2) return null;
+        return { text, range, sel };
+      }
+
+      function positionToolbar(rect) {
+        const main = document.querySelector('.main').getBoundingClientRect();
+        let top = rect.top - toolbar.offsetHeight - 10;
+        let left = rect.left + rect.width / 2 - toolbar.offsetWidth / 2;
+        if (left < main.left + 8) left = main.left + 8;
+        if (left + toolbar.offsetWidth > main.right - 8) left = main.right - toolbar.offsetWidth - 8;
+        if (top < main.top + 8) top = rect.bottom + 10;
+        toolbar.style.top = top + 'px';
+        toolbar.style.left = left + 'px';
+      }
+
+      function showToolbar(selection) {
+        document.getElementById('toolbar-selection').innerHTML = '“<mark>' + escapeHTML(selection.text.slice(0, 60)) + '</mark>”';
+        const chips = document.getElementById('toolbar-codes');
+        chips.innerHTML = CODES.map(c => `
+          <button data-cid="${c.id}" data-type="${c.type}">
+            <span class="badge badge--${c.type}">${c.type}</span> ${escapeHTML(c.label)}
+          </button>
+        `).join('');
+        toolbar.classList.add('is-open');
+        const rect = selection.range.getBoundingClientRect();
+        positionToolbar(rect);
+        chips.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const offset = getSentenceTextOffset(selection.range);
+            if (offset) {
+              ANNOTATIONS.push({
+                sid: offset.sid,
+                start: offset.start, end: offset.end,
+                code: btn.dataset.cid,
+                source: btn.dataset.type,
+                rationale: 'Human-applied via selection toolbar.'
+              });
+            }
+            toolbar.classList.remove('is-open');
+            window.getSelection().removeAllRanges();
+            renderTranscript();
+            renderConnections();
+          });
+        });
+      }
+
+      function getSentenceIdFromSelection(range) {
+        const sentenceEl = range.commonAncestorContainer.nodeType === 3
+          ? range.commonAncestorContainer.parentElement.closest('.sentence')
+          : range.commonAncestorContainer.closest('.sentence');
+        return sentenceEl?.dataset.sid;
+      }
+
+      function getSentenceTextOffset(range) {
+        const sentenceEl = range.commonAncestorContainer.nodeType === 3
+          ? range.commonAncestorContainer.parentElement.closest('.sentence')
+          : range.commonAncestorContainer.closest('.sentence');
+        if (!sentenceEl) return null;
+        const sid = sentenceEl.dataset.sid;
+        const sentence = DOC.sentences.find(s => s.id === sid);
+        if (!sentence) return null;
+
+        const walker = document.createTreeWalker(sentenceEl, NodeFilter.SHOW_TEXT);
+        let offset = 0, start = -1, end = -1, node;
+        while ((node = walker.nextNode())) {
+          const len = node.textContent.length;
+          if (node === range.startContainer) start = offset + range.startOffset;
+          if (node === range.endContainer) end = offset + range.endOffset;
+          offset += len;
+        }
+
+        // Fallback: if boundaries landed inside element containers, derive from selected text.
+        if (start === -1 || end === -1 || start >= end) {
+          const selected = range.toString().trim();
+          const idx = sentence.text.indexOf(selected);
+          if (idx === -1) return null;
+          return { sid, start: idx, end: idx + selected.length, text: selected };
+        }
+        return { sid, start, end, text: sentence.text.slice(start, end) };
+      }
+
+      function showTooltip(e, el) {
+        const code = CODES.find(c => c.id === el.dataset.code);
+        document.getElementById('tooltip-title').innerHTML = `<span class="badge badge--${el.dataset.source}">${el.dataset.source}</span> ${escapeHTML(code?.label || el.dataset.code)}`;
+        document.getElementById('tooltip-rationale').textContent = el.dataset.rationale;
+        tooltip.classList.add('is-open');
+        const rect = el.getBoundingClientRect();
+        const main = document.querySelector('.main').getBoundingClientRect();
+        let top = rect.bottom + 8;
+        let left = rect.left;
+        if (left + 280 > main.right) left = main.right - 288;
+        tooltip.style.top = top + 'px';
+        tooltip.style.left = left + 'px';
+        document.getElementById('tooltip-open').onclick = () => openCode(el.dataset.code);
+        document.getElementById('tooltip-dismiss').onclick = hideTooltip;
+      }
+
+      function hideTooltip() {
+        tooltip.classList.remove('is-open');
+      }
+
+      /* Filter toggles */
+      document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const key = chip.dataset.filter;
+          if (activeFilters.has(key)) activeFilters.delete(key); else activeFilters.add(key);
+          chip.classList.toggle('is-active', activeFilters.has(key));
+          renderTranscript();
+        });
+      });
+
+      function init() {
+        renderTranscript();
+        renderAutopilot();
+        renderCodebook();
+        renderComparison();
+        renderThemes();
+        renderConnections();
+        selectSentence('S0012');
+
+        document.querySelectorAll('[data-view]').forEach(btn => {
+          if (btn.tagName !== 'BUTTON') return;
+          btn.addEventListener('click', () => switchView(btn.dataset.view));
+        });
+
+        document.querySelectorAll('[data-mode]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('is-active', b === btn));
+            document.getElementById('reading-layout').className = 'reading is-' + btn.dataset.mode;
+          });
+        });
+
+        const audit = document.getElementById('audit-drawer');
+        document.getElementById('audit-toggle').addEventListener('click', () => audit.classList.toggle('is-open'));
+
+        const tweaksPanel = document.getElementById('tweaks-panel');
+        document.getElementById('tweaks-toggle').addEventListener('click', () => tweaksPanel.classList.toggle('is-open'));
+        document.getElementById('tweaks-close').addEventListener('click', () => tweaksPanel.classList.remove('is-open'));
+
+        const root = document.documentElement;
+        document.getElementById('t-accent').addEventListener('input', e => {
+          root.style.setProperty('--accent', `oklch(64% 0.13 ${e.target.value})`);
+        });
+        document.getElementById('t-scale').addEventListener('input', e => {
+          root.style.fontSize = e.target.value + 'px';
+        });
+        document.getElementById('t-density').addEventListener('input', e => {
+          const vals = ['0.85rem', '1rem', '1.15rem'];
+          root.style.setProperty('--pad', vals[e.target.value] || '1rem');
+        });
+
+        document.querySelector('.transcript').addEventListener('mouseup', () => {
+          const sentences = document.querySelector('.sentences');
+          const sel = getSelectedTextWithin(sentences);
+          if (sel) showToolbar(sel); else toolbar.classList.remove('is-open');
+        });
+
+        document.addEventListener('click', e => {
+          if (!toolbar.contains(e.target) && !window.getSelection()?.toString()) toolbar.classList.remove('is-open');
+        });
+
+        document.getElementById('toolbar-create').addEventListener('click', () => {
+          const input = document.getElementById('toolbar-new');
+          if (!input.value.trim()) return;
+          const sel = window.getSelection();
+          const range = sel?.rangeCount ? sel.getRangeAt(0) : null;
+          const offset = range ? getSentenceTextOffset(range) : null;
+          const newCode = {
+            id: input.value.trim().toLowerCase().replace(/\s+/g, '-'),
+            label: input.value.trim(),
+            type: 'human',
+            evidence: [],
+            status: 'draft',
+            definition: 'Human-created code from selection toolbar.',
+            memo: '',
+            quote: offset?.text || ''
+          };
+          CODES.push(newCode);
+          if (offset) {
+            ANNOTATIONS.push({
+              sid: offset.sid,
+              start: offset.start, end: offset.end,
+              code: newCode.id,
+              source: 'human',
+              rationale: 'Human-created code.'
+            });
+          }
+          input.value = '';
+          toolbar.classList.remove('is-open');
+          window.getSelection().removeAllRanges();
+          renderTranscript();
+          renderCodebook();
+          renderConnections();
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', init);
+    })();
+  </script>
+</body>
+</html>

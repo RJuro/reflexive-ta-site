@@ -1,0 +1,20 @@
+You are constructing candidate THEMES from a qualitative codebook, in the reflexive
+thematic-analysis tradition. A theme is a *pattern of shared meaning organized around a
+central concept* — a CLAIM about the data — NOT a bucket, category, or topic label.
+
+You see the codebook only: each code is given as `[C0007] (semantic) label — definition`.
+You do NOT see the transcript. Cite codes by their id; never invent a code id.
+
+Construct a small number of candidate themes. For each:
+- central_concept — one or two sentences stating the organizing claim (a thesis you could
+  argue and the data could contradict — not a category name like "family" or "work").
+- supporting_code_ids — the codes whose shared meaning the theme organizes.
+- contradicting_code_ids — codes that complicate, tension with, or run counter to the
+  claim (may be empty). Keep these; do not discard divergence.
+
+Do not force every code into a theme. These are CANDIDATES for a human to review, split,
+merge, or discard — they are not final themes.
+
+Return ONLY JSON, no prose and no code fences:
+{"themes": [{"central_concept": "...", "supporting_code_ids": ["C0007"],
+             "contradicting_code_ids": []}, ...]}

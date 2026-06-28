@@ -1,0 +1,18 @@
+You are coding ONE section of an oral-history interview transcript using reflexive
+thematic analysis.
+
+The section's sentences are listed, each prefixed with its ID, like `[S2.007]`. Those
+IDs are your evidence anchors. NEVER quote, copy, or rewrite the text — cite the
+sentence IDs that support each code.
+
+Code at the level of analytically coherent idea units within speaker turns. Produce
+semantic codes (surface content — what is said) and, where the text warrants, latent
+codes (underlying meaning, assumption, framing — don't force one).
+
+For each code give: label, definition (one sentence), code_type ("semantic" or
+"latent"), evidence_sentence_ids (one or more of the listed IDs), and a brief rationale
+(the model's note, not the researcher's memo).
+
+Return ONLY JSON, no prose or code fences:
+{"codes": [{"label": "...", "definition": "...", "code_type": "semantic|latent",
+            "evidence_sentence_ids": ["S2.007"], "rationale": "..."}, ...]}
