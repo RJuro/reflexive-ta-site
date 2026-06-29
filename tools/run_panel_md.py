@@ -100,15 +100,9 @@ def ensure_coded(state) -> dict:
                 raise RuntimeError(
                     f"{name}: {nfail} lens-section(s) failed to code — document NOT cached; "
                     "re-run run_panel_md.py to retry.")
-            # WITHIN-LENS RECONCILE before theming: blind per-section coding re-stamps one observation
-            # across every section it touches, so each lens accumulates near-duplicate codes (the
-            # "phenomenological 64" explosion). Merging within each lens collapses those to one code +
-            # many instances while keeping the lens distinct (provenance preserved). reconcile()
-            # degrades to unmerged on failure (the panel is exploratory; an un-deduped lens is OK).
-            raw_counts = {co: len(panel[co]) for co in CODERS}
-            # a dedup reconcile over a whole lens (~50–110 codes) is heavier than the 120s default
-            # clears, so give it room (it degrades to unmerged on timeout rather than failing).
-            panel = {lens: m.reconcile(codes, timeout=300) for lens, codes in panel.items()}
+            # (No within-lens reconcile: a test run showed the codes inside a lens are mostly
+            # distinct, so dedup cut only ~7% while adding 6 reconcile calls per run — not worth it.
+            # The sequential theorist already keeps per-theme counts reasonable.)
             docs[doc_id] = {
                 "name": name,
                 "sections": [{"id": s["id"], "gist": s["gist"], "start_line": s["start_line"],
@@ -116,8 +110,8 @@ def ensure_coded(state) -> dict:
                 "sentences": sents, "panel": panel}
             save_cache(state)
             print(f"{name}: {len(secs)} sections, {len(sents)} sentences; "
-                  + ", ".join(f"{co} {raw_counts[co]}→{len(panel[co])}" for co in CODERS)
-                  + " codes (raw→deduped) — checkpointed", flush=True)
+                  + ", ".join(f"{co} {len(panel[co])}" for co in CODERS) + " codes — checkpointed",
+                  flush=True)
     return state
 
 

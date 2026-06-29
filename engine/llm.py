@@ -44,32 +44,45 @@ def _client(timeout: float | None = None, retries: int | None = None) -> OpenAI:
     base, key = os.environ.get("MASSHINE_BASE_URL"), os.environ.get("MASSHINE_API_KEY")
     if not (base and key):
         raise RuntimeError("set MASSHINE_BASE_URL and MASSHINE_API_KEY (see engine/.env)")
-    # ponytail: a healthy thinking-on M3 call runs ~1 min (manual runs confirm this), so the DEFAULT
-    # cap is 120s (2 min) — generous for structure/coder/reconcile; a call that exceeds it is a
-    # PROBLEM to surface and resume from, not a wait to sit through (the pipeline is resumable, so
-    # failing fast + re-running beats a long hang). The ONE accepted exception is the theorist, which
-    # reads a whole transcript with thinking on (~150–300s) and passes its own longer per-call timeout.
+    # ponytail: with streaming (see chat_json) this is an IDLE timeout — httpx applies the read
+    # timeout per chunk, so it bounds SILENCE between tokens, not total call time. A healthy
+    # thinking-on call streams steadily; ~120s with no token means it's actually hung. This removes
+    # the per-call duration caps we kept re-tuning (a long <think> trace no longer trips it) while
+    # still killing a true hang, and tells "slow" apart from "failed". Workers catch failures so one
+    # bad call degrades instead of crashing the run.
     return OpenAI(base_url=base, api_key=key, timeout=timeout or 120.0,
                   max_retries=1 if retries is None else retries)
 
 
 def chat_json(system: str, user: str, timeout: float | None = None,
               retries: int | None = None) -> dict:
-    """One structured call → parsed JSON. Default sampling (we don't set temperature).
-    Thinking stays ON (M3's default) — the reasoning trace is the interpretive lift.
-    `timeout`/`retries` override the per-call ceiling for heavy calls (e.g. the theorist)."""
-    resp = _client(timeout, retries).chat.completions.create(
+    """One structured call → parsed JSON, STREAMED. Default sampling (we don't set temperature);
+    thinking stays ON (M3's default). Streaming makes `timeout` an IDLE timeout (see _client): the
+    call runs as long as tokens keep arriving and aborts only after `timeout` seconds of silence, so
+    a long <think> trace no longer trips a cap and a true hang still dies. The streamed deltas are
+    concatenated; `<think>…</think>` is stripped before the JSON is parsed."""
+    parts: list[str] = []
+    usage = None
+    stream = _client(timeout, retries).chat.completions.create(
         model=model(),
         messages=[{"role": "system", "content": system},
                   {"role": "user", "content": user}],
+        stream=True,
+        stream_options={"include_usage": True},  # usage rides the final chunk
     )
-    u = getattr(resp, "usage", None)
+    for chunk in stream:
+        if getattr(chunk, "usage", None):
+            usage = chunk.usage
+        for choice in (chunk.choices or []):
+            piece = getattr(getattr(choice, "delta", None), "content", None)
+            if piece:
+                parts.append(piece)
     with _USAGE_LOCK:
         _USAGE["calls"] += 1
-        if u:
-            _USAGE["prompt_tokens"] += getattr(u, "prompt_tokens", 0) or 0
-            _USAGE["completion_tokens"] += getattr(u, "completion_tokens", 0) or 0
-    return json.loads(_json_from(resp.choices[0].message.content))
+        if usage:
+            _USAGE["prompt_tokens"] += getattr(usage, "prompt_tokens", 0) or 0
+            _USAGE["completion_tokens"] += getattr(usage, "completion_tokens", 0) or 0
+    return json.loads(_json_from("".join(parts)))
 
 
 def _json_from(text: str) -> str:

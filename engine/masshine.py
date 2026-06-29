@@ -685,16 +685,16 @@ def _resolve_step_themes(raw: list, prior: list[dict], valid_codes: set, all_cod
 
 def theorize_walk(doc_order: list[str], doc_codes_map: dict, all_codes: dict,
                   transcripts: dict, valid_sents_map: dict, origin: dict | None = None,
-                  timeout: float | None = 420.0, raw_cache: dict | None = None,
+                  timeout: float | None = None, raw_cache: dict | None = None,
                   save_raw=None) -> tuple[list[dict], list[tuple], list[str]]:
     """Walk interviews in order, building themes incrementally (one LLM call per interview). DB-free:
     the caller supplies each interview's transcript block + valid sentence ids. Returns
     (final_themes, snapshots, failures) where snapshots[i] = (doc_id, themes-after-that-interview)
     and `failures` lists any interviews whose theme step errored (e.g. timed out) and so were NOT
     integrated — a dropped interview must be LOUD, never silently swallowed into a clean-looking
-    output. The theorist gets a LONGER per-call timeout than the 120s default (it reads a whole
-    transcript with thinking on, which legitimately runs ~150–300s) and no retry — a step that still
-    exceeds it fails loudly and resumes on re-run rather than hanging.
+    output. Calls stream with an IDLE timeout (no cap on total duration — see llm.chat_json), so the
+    theorist's long thinking no longer trips a per-call ceiling; the step uses no retry, and a genuine
+    hang (idle silence) still fails loudly and resumes on re-run.
 
     RESUMABLE: if `raw_cache` maps a doc_id → that step's raw model output, the step is REPLAYED from
     it (no API call) and re-resolved deterministically; `save_raw(doc_id, raw)` is called after a
@@ -745,7 +745,7 @@ def theorize_walk(doc_order: list[str], doc_codes_map: dict, all_codes: dict,
 
 
 def theorize_project_sequential(doc_order: list[str], project_codebook: dict, transcripts: dict,
-                                valid_sents_map: dict, timeout: float | None = 420.0,
+                                valid_sents_map: dict, timeout: float | None = None,
                                 raw_cache: dict | None = None, save_raw=None
                                 ) -> tuple[list[dict], dict, list[tuple], list[str]]:
     """Standard pipeline: sequential, transcript-grounded theming over the RECONCILED PROJECT
@@ -767,7 +767,7 @@ def theorize_project_sequential(doc_order: list[str], project_codebook: dict, tr
 
 
 def theorize_panel_sequential(doc_order: list[str], panel_by_doc: dict, transcripts: dict,
-                              valid_sents_map: dict, timeout: float | None = 420.0,
+                              valid_sents_map: dict, timeout: float | None = None,
                               raw_cache: dict | None = None, save_raw=None
                               ) -> tuple[list[dict], dict, dict, list[tuple], list[str]]:
     """Panel pipeline: sequential theming over the three lenses' codes, paradigm-blind, with
