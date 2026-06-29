@@ -40,23 +40,25 @@ def model() -> str:
     return os.environ.get("MASSHINE_MODEL", "MiniMax-M3")
 
 
-def _client() -> OpenAI:
+def _client(timeout: float | None = None, retries: int | None = None) -> OpenAI:
     base, key = os.environ.get("MASSHINE_BASE_URL"), os.environ.get("MASSHINE_API_KEY")
     if not (base and key):
         raise RuntimeError("set MASSHINE_BASE_URL and MASSHINE_API_KEY (see engine/.env)")
-    # ponytail: cap per-call time so one truly stalled request can't eat the SDK's
-    # 10-min default. But thinking-on M3 calls legitimately run ~60s (more under
-    # parallel load), so 60s was strangling healthy calls — they'd hit the cap, retry,
-    # and time out again. 300s clears a real ~1-min call with headroom while still
-    # bounding a genuine hang. Worker code catches failures so one bad call degrades
-    # (skipped) instead of crashing the document.
-    return OpenAI(base_url=base, api_key=key, timeout=300.0, max_retries=1)
+    # ponytail: a healthy thinking-on M3 call runs ~1 min (manual runs confirm this), so the DEFAULT
+    # cap is 120s (2 min) — generous for structure/coder/reconcile; a call that exceeds it is a
+    # PROBLEM to surface and resume from, not a wait to sit through (the pipeline is resumable, so
+    # failing fast + re-running beats a long hang). The ONE accepted exception is the theorist, which
+    # reads a whole transcript with thinking on (~150–300s) and passes its own longer per-call timeout.
+    return OpenAI(base_url=base, api_key=key, timeout=timeout or 120.0,
+                  max_retries=1 if retries is None else retries)
 
 
-def chat_json(system: str, user: str) -> dict:
+def chat_json(system: str, user: str, timeout: float | None = None,
+              retries: int | None = None) -> dict:
     """One structured call → parsed JSON. Default sampling (we don't set temperature).
-    Thinking stays ON (M3's default) — the reasoning trace is the interpretive lift."""
-    resp = _client().chat.completions.create(
+    Thinking stays ON (M3's default) — the reasoning trace is the interpretive lift.
+    `timeout`/`retries` override the per-call ceiling for heavy calls (e.g. the theorist)."""
+    resp = _client(timeout, retries).chat.completions.create(
         model=model(),
         messages=[{"role": "system", "content": system},
                   {"role": "user", "content": user}],

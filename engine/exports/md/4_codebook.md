@@ -1,912 +1,548 @@
 # Project codebook (across both interviews)
 
-227 codes after the across-document reconcile. IDs are stable.
+136 codes after the across-document reconcile. IDs are stable.
 
-### C0001 · (semantic) Mother-daughter migrant pair
-Migration is framed as a joint undertaking by the speaker and her mother, with no other immediate family named.
-*evidence:* 6 excerpt(s) across dp-40-grande-m
+### C0001 · (semantic) Kin-based resettlement infrastructure
+Reliance on existing family members (mother's sister) as an initial foothold and staging point in the new region.
+*evidence:* 12 excerpt(s) across dp-40-grande-m, ei-845-rodwin
 
-### C0002 · (semantic) Mother's history as a remarried widow
-The mother had been widowed, had two sons, remarried, and then had additional children including the narrator.
-*evidence:* 6 excerpt(s) across dp-40-grande-m, ei-845-rodwin
-
-### C0003 · (semantic) Father's emigration to the United States
-The father left the home country for the U.S. to seek a livelihood, creating an absent-father household.
-*evidence:* 14 excerpt(s) across dp-40-grande-m, ei-845-rodwin
-
-### C0004 · (semantic) Extended kinship network upon arrival
-Rodwin recalls that the family had many relatives already established in America at the time of arrival.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
-
-### C0005 · (latent) Pre-existing transnational network
-The helper is described as having come from the United States and as someone the mother already knew, implying a community link spanning origin and destination before departure.
+### C0002 · (semantic) Selective and staged family emigration
+The family could not move as a unit; only the mother and narrator left initially, with a brother planned to follow later after his own obligations were resolved.
 *evidence:* 10 excerpt(s) across dp-40-grande-m, ei-845-rodwin
 
-### C0006 · (semantic) Uncertainty about transit details
-The narrator hedges or admits not remembering specifics of the route (the helper's purchases, exact ports).
+### C0003 · (semantic) Place of origin anchored to shifting imperial borders
+The speaker locates her village within a political geography that has changed (Austria-Hungary then Yugoslavia), tying personal identity to the dissolution of the prewar empire.
+*evidence:* 4 excerpt(s) across dp-40-grande-m
+
+### C0004 · (semantic) Material precarity and theft during transit
+Travelers arrived at a port with diminished belongings, having lost part of their clothing, leaving them without essentials for the remainder of the voyage.
+*evidence:* 5 excerpt(s) across dp-40-grande-m
+
+### C0005 · (semantic) Transnational family coordination across borders
+Emigration is organized as a distributed effort between an absent father in the destination country and a mother handling logistics in the origin country, with letters and prepaid tickets initiating the process.
 *evidence:* 6 excerpt(s) across dp-40-grande-m
 
-### C0007 · (semantic) Infant death of a sister
-A sister died at approximately one year of age, reducing the sibling group.
-*evidence:* 7 excerpt(s) across dp-40-grande-m, ei-845-rodwin
+### C0006 · (semantic) Anticipatory joy centered on paternal reunion
+The child's emotional orientation toward emigration is dominated by eagerness to meet the father, eclipsing awareness of what is being left behind.
+*evidence:* 8 excerpt(s) across dp-40-grande-m
 
-### C0008 · (semantic) Establishment of a London bakery
-After settling in London, the family opened another bakery.
-*evidence:* 10 excerpt(s) across ei-845-rodwin
-
-### C0009 · (latent) Fragmentary and uncertain early childhood memory
-The halting, word-searching quality of Rodwin's recollections of arrival signals the unreliable, reconstructive nature of very early childhood memory.
-*evidence:* 17 excerpt(s) across ei-845-rodwin
-
-### C0010 · (semantic) Maternal subsistence farming and barter economy
-Mother's role as farmer who raised cattle and engaged in bartering as the family's livelihood strategy.
+### C0007 · (semantic) Paternal itinerant labor in extractive industries
+Father's pattern of moving among mining sites across states (Aspen, Tooele, Sunnyside) tied to coal-mine employment.
 *evidence:* 7 excerpt(s) across dp-40-grande-m
 
-### C0011 · (semantic) Bakery identity and naming
-The family bakery was named Floun's and located on Essex Street across from the family home.
-*evidence:* 18 excerpt(s) across ei-845-rodwin
+### C0008 · (semantic) Relocation triggered by paternal health decline
+Mobility decisions are forced by the working-age father's deteriorating health, ending the mining-town chapter.
+*evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0012 · (semantic) Company housing and ethnic clustering
-The family rented a four-room company double house shared with another family of similar national/ethnic background, reflecting how mining companies housed workers and clustered them by ethnicity.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
+### C0009 · (semantic) Peer-mediated English acquisition
+Initial English vocabulary is picked up informally from co-ethnic neighbor children rather than taught in school.
+*evidence:* 4 excerpt(s) across dp-40-grande-m
 
-### C0013 · (semantic) Birth-order positioning as London-born
-Speaker identifies himself as next-to-youngest among the London-born children.
-*evidence:* 13 excerpt(s) across ei-845-rodwin
-
-### C0014 · (semantic) Family composition and sibling count
-The household comprised the mother and four surviving children, after the birth of a younger sister.
-*evidence:* 6 excerpt(s) across dp-40-grande-m, ei-845-rodwin
-
-### C0015 · (semantic) Depression's localized timing for the family
-Speaker locates the worst of the Depression as occurring after her arrival in Colorado and shortly after her marriage, framing it as a temporal marker tied to her own life course.
+### C0010 · (latent) Compressed school entry and accelerated grade placement
+Rapid enrollment after arrival and placement above the expected grade level, assuming equivalence with US peers.
 *evidence:* 5 excerpt(s) across dp-40-grande-m
 
-### C0016 · (semantic) Child labor in pig slaughter and blood collection
-The narrator as a child was assigned the task of holding a pan to catch the pig's blood, a duty she did not enjoy but understood as her job.
-*evidence:* 5 excerpt(s) across dp-40-grande-m
-
-### C0017 · (semantic) Theft of belongings in transit
-Part of the family's clothing was stolen while they were in Trieste.
-*evidence:* 5 excerpt(s) across dp-40-grande-m
-
-### C0018 · (semantic) Post-WWI fragmented sea voyage
-The narrator explains that because the voyage occurred right after World War One, the ship called at multiple European ports (London, Paris, others).
-*evidence:* 5 excerpt(s) across dp-40-grande-m
-
-### C0019 · (semantic) Close proximity of animals to domestic living space
-The pig sty was just across from the kitchen door, and animals were kept just outside the home as part of daily life.
+### C0011 · (semantic) Staged, multi-port post-war transatlantic passage
+The voyage was not direct but involved an intermediate land stay and a ship that called at multiple ports, characteristic of disrupted early-1920s shipping.
 *evidence:* 6 excerpt(s) across dp-40-grande-m
 
-### C0020 · (semantic) Austrian settlers as local elite
-Austrian residents in the Slovanian-speaking village were positioned as 'higher-ups' and 'well-to-do', marking them as a socially dominant minority.
-*evidence:* 7 excerpt(s) across dp-40-grande-m
-
-### C0021 · (semantic) Relocation to Colorado prompted by father's failing health
-After about six and a half years in Sunnyside, the family moved to Colorado when the father's health deteriorated.
-*evidence:* 5 excerpt(s) across dp-40-grande-m
-
-### C0022 · (semantic) Self-identification and maiden name
-Speaker introduces herself by her married surname and reconstructs her birth surname (Yankovik).
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0023 · (semantic) Geographic origin in shifting-border region
-Origin is given as a village near Novo Mesto, situated within a territory that has shifted from Austria-Hungary to Yugoslavia.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0024 · (latent) Geopolitical remapping as personal backdrop
-The reframing of the homeland from Austria-Hungary to 'now Yugoslavia' implicitly situates the narrator's early life within empire-to-nation-state transitions.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0025 · (semantic) Departure date as anchored memory
-A specific calendar date (12 August 1920) is given for leaving the home country.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0026 · (semantic) Trieste as first transit halt
-Italy (specifically Trieste) is identified as the initial stop after leaving the home country.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0027 · (semantic) Acquaintance-mediated rescue in transit
-A man known to the mother, able to speak American English, intervened (reportedly in London) to purchase replacement clothing.
+### C0012 · (semantic) Reliance on a returning diaspora acquaintance for rescue
+Mother and daughter depended on a man known to the mother — apparently a returnee from America — to intervene and restore what had been lost.
 *evidence:* 4 excerpt(s) across dp-40-grande-m
 
-### C0028 · (semantic) Ship named America
-The vessel carrying the narrator and her mother is identified by the speaker (with hedged certainty) as being named 'America.'
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0029 · (latent) Vulnerability of women and children in transit
-The narrative frames the narrator (as a child) and her mother as dependent on a male acquaintance to recover stolen clothing and obtain replacements.
+### C0013 · (latent) American English fluency as diasporic capital
+The helpful acquaintance's value is explicitly located in his ability to 'speak American,' a competence tied to prior American residence that positioned him as an intermediary.
 *evidence:* 3 excerpt(s) across dp-40-grande-m
 
-### C0030 · (semantic) Peasant home as modest three-room dwelling
-Self-identification of the family home as an 'average peasant home' of three rooms with a central living/kitchen space and a side room.
+### C0014 · (latent) Female kin unit navigating migration with constrained agency
+A mother-and-daughter pair undertakes the voyage together; their capacity to act in transit depends on the initiative of a male acquaintance, suggesting gendered structures of early-twentieth-century female migration.
+*evidence:* 5 excerpt(s) across dp-40-grande-m
+
+### C0015 · (latent) Transnational paternal absence and mother-headed farm
+The father's long-standing presence in the United States leaves the mother as the de facto operator of the rural household and farm, structuring the home the speaker describes.
 *evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0031 · (semantic) Architectural integration of dwelling and barn
-The barn housing cattle and horses was structurally attached to the home as part of one building, with a manure pile immediately adjacent.
+### C0016 · (semantic) Integrated human-livestock dwelling as regional norm
+The peasant house and barn are built as a single structure with animals immediately adjacent to domestic rooms, a layout the speaker describes as historically typical of the community.
+*evidence:* 12 excerpt(s) across dp-40-grande-m
+
+### C0017 · (semantic) Children's emotional proximity to farm animals
+Livestock are framed not as utility objects but as everyday companions of childhood, with naming, affection, and the animals figured as part of 'regular home life'.
+*evidence:* 14 excerpt(s) across dp-40-grande-m
+
+### C0018 · (semantic) Seasonal slaughter and cured-meat provisioning cycle
+Pigs are killed in winter, the meat is salt-cured, weighted, and smoked to provide preserved food through the following summer, embedding the household in an annual preservation calendar.
+*evidence:* 8 excerpt(s) across dp-40-grande-m
+
+### C0019 · (semantic) Children's obligatory participation in slaughter and butchery
+Children are expected to perform necessary but unpleasant tasks during animal slaughter — such as catching blood for blood sausage — as a normal part of their household labor.
+*evidence:* 8 excerpt(s) across dp-40-grande-m
+
+### C0020 · (semantic) Diversified mixed-livestock subsistence economy
+The household draws food and exchange value from a portfolio of animals — cows for milk, cheese, and barter; pigs for fresh and preserved meat; chickens for eggs and meat — rather than reliance on a single commodity.
+*evidence:* 5 excerpt(s) across dp-40-grande-m
+
+### C0021 · (semantic) Mother as farm operator and processor of food
+The mother is the central agent who manages the farm, arranges hired labor for slaughter, and oversees the chain of preservation and cooking.
+*evidence:* 4 excerpt(s) across dp-40-grande-m
+
+### C0022 · (latent) Affective insider framing of farm life against outsider's utilitarian reading
+While the speaker describes the home-and-barn arrangement as ordinary and beloved, the interviewer reframes it instrumentally as 'getting your money's worth'; the speaker's emphatic 'Oh, yes' resists that commodifying lens.
 *evidence:* 6 excerpt(s) across dp-40-grande-m
 
-### C0032 · (semantic) Communal tradition of attached barn housing
-The combined house-barn arrangement was the norm for most people in the community, not unique to this family.
+### C0023 · (semantic) State-mandated domestic hospitality for refugees
+Government policy required civilian households to surrender private space (e.g., summer kitchens) to host refugees, translating state refugee policy into coerced household sharing.
+*evidence:* 3 excerpt(s) across dp-40-grande-m
+
+### C0024 · (semantic) Cross-language accommodation with displaced populations
+Hosts and refugees negotiated mutual intelligibility despite speaking different languages, managing communication barriers through pragmatic rather than fluent contact.
 *evidence:* 1 excerpt(s) across dp-40-grande-m
 
-### C0033 · (latent) Historical rootedness of agrarian building practices
-The combined house-barn design was an inherited historical practice that the narrator does not question and that is no longer followed.
-*evidence:* 4 excerpt(s) across dp-40-grande-m
-
-### C0034 · (semantic) Childhood emotional bonds with farm animals
-The narrator as a little girl enjoyed living close to animals and formed affectionate attachments, including a beloved pet cow.
-*evidence:* 4 excerpt(s) across dp-40-grande-m
-
-### C0035 · (latent) Emotional ambivalence toward pigs as both named animals and food
-The pigs were sometimes given names and liked by the narrator, even though they were ultimately slaughtered for food.
-*evidence:* 4 excerpt(s) across dp-40-grande-m
-
-### C0036 · (semantic) Seasonal pig slaughter and winter meat preservation
-Pigs were slaughtered in winter; the meat was mostly cured rather than eaten fresh, with some set aside for immediate use.
+### C0025 · (semantic) Riverine domestic labor under wartime conditions
+Women's routine household work (laundry) required travel to a distant river and washing on rocks, reflecting gendered division of domestic labor in a village without in-home facilities.
 *evidence:* 3 excerpt(s) across dp-40-grande-m
 
-### C0037 · (semantic) Meat curing through salting, pressing, and smoking
-Meat was preserved using salt and water, packed down with rocks, and then smoked.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
+### C0026 · (semantic) Environmental contamination from medical waste into shared water
+Hospital effluent and waste entered the same river used for civilian laundry, creating a public-health hazard tied to the spatial co-location of care and domestic labor sites.
+*evidence:* 4 excerpt(s) across dp-40-grande-m
 
-### C0038 · (semantic) Detailed processing into blood sausage, fresh liver, and smoked sausage
-Blood was made into blood sausage, the liver was fried fresh immediately, and remaining meat was turned into smoked sausage for later use.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
+### C0027 · (latent) Strategic risk navigation in everyday practice
+Households adapted routines to mitigate environmental hazards, here by deliberately washing upstream of the hospital discharge.
+*evidence:* 4 excerpt(s) across dp-40-grande-m
 
-### C0039 · (semantic) Strategic allocation of meat for different occasions
-Different cuts and preparations were reserved for specific times, such as special occasions or when hired help was present.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0040 · (latent) Maximizing utilization of a single animal
-The household extracted maximum value from each pig, producing a wide variety of meat products rather than letting anything go to waste.
+### C0028 · (semantic) Gender-segregated medical infrastructure
+Hospitals were physically and organizationally separated by sex, with men's and women's facilities on opposite sides of the river rather than co-located.
 *evidence:* 5 excerpt(s) across dp-40-grande-m
 
-### C0041 · (semantic) Diversified household food production beyond pork
-The household produced milk, cheese, eggs, chicken, and beef (rarely), drawing on multiple animals rather than relying on any single source.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0042 · (semantic) Wood as primary household heating fuel
-The family relied mainly on wood to heat the home, with coal used only occasionally and in small amounts.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0043 · (semantic) Convenient forest proximity as resource base
-The nearby forest supplied the household's wood, making fuel gathering geographically feasible.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0044 · (semantic) Seasonal preparation and bulk wood hauling
-Wood was gathered and stockpiled in the fall in anticipation of winter needs.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0045 · (semantic) Mother performing manual wood processing alone
-The mother personally sawed and chopped firewood, later aided only marginally by the child.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0046 · (semantic) Wartime disruption of family contact and remittances
-During wartime, men in the U.S. could not communicate with or materially support families back home.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0047 · (semantic) Childhood mortality as a common rural experience
-The death of young children was a frequent occurrence in the village, with causes unknown or unspecified.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0048 · (latent) Normalization of female physical labor and hardship
-The mother's extraordinary strength, farm management, and wood chopping are presented as simply 'normal' for women of that milieu.
+### C0029 · (semantic) Imperial ruling class visible in the local landscape
+Austrian elites (described as well-to-do rather than governmental) occupied prominent local structures such as the castle situated directly across from the hospital.
 *evidence:* 4 excerpt(s) across dp-40-grande-m
 
-### C0049 · (latent) Fatalistic acceptance of infant death
-The vague cause ('childhood problems') and the understated conclusion ('but she died') suggest a resigned, non-medicalized understanding of infant mortality.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0050 · (latent) Collective resilience through shared hardship
-The family endured by doing 'the best we could, just like a lot of others,' framing individual struggle within communal experience.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0051 · (semantic) School commute past cemetery and rail crossing
-Description of the daily walk to school, which was over a mile long and routed past a cemetery and over a railway crossing.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0052 · (latent) Normalization of walking as everyday practice
-Framing of the long walks to school, to neighbors, and for bartering as unremarkable and ordinary rather than burdensome.
-*evidence:* 4 excerpt(s) across dp-40-grande-m
-
-### C0053 · (semantic) Near-miss accident as formative lesson
-An episode of nearly being hit by a train at the lowered crossing, recounted as a lesson learned about paying attention.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0054 · (semantic) Absence of cars shaping mobility and labor
-The lack of vehicles and wagons meant all travel — for school, bartering, and daily chores — had to be done on foot.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0055 · (semantic) Brother's departure leaving mother and child alone
-When the older brother left to stay with an aunt, the narrator and his mother were left as a two-person household for an extended period.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0056 · (semantic) Enthusiasm for postwar emigration to the United States
-After the war, the narrator was excited about the father's plan to come to America, though he is uncertain about his mother's feelings.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0057 · (semantic) Government-mandated hosting of war refugees
-Every household was required by government decision to take in refugees during the war, often surrendering extra rooms such as the summer kitchen.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0058 · (semantic) Cross-lingual accommodation with Italian refugees
-Despite the refugees speaking Italian, the household managed to communicate and understand one another adequately.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0059 · (semantic) River as site of women's domestic laundry labor
-Clothes were washed on rocks by the river roughly half a mile or more from the home, locating domestic labor in a specific natural landscape.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0060 · (semantic) Hospital as an indoor but avoided laundry alternative
-The mother sometimes washed clothes at the hospital shelter but disliked going there because of the bloody medical waste.
+### C0030 · (latent) Imperial linguistic hierarchy
+Slovenian functioned as the domestic language while German was the imposed administrative/official language required for navigating offices and public institutions.
 *evidence:* 5 excerpt(s) across dp-40-grande-m
 
-### C0061 · (semantic) Hospital contamination of river and strategic upstream washing
-Hospital waste flowed into the river, requiring laundresses to position themselves upstream of the facility to avoid soiled water.
+### C0031 · (latent) Erosion of prewar architectural and institutional landscape
+Prewar landmarks such as castles were repurposed into modern institutions (e.g., tuberculosis sanitarium), marking the disappearance of older structures under modernization.
+*evidence:* 3 excerpt(s) across dp-40-grande-m
+
+### C0032 · (semantic) Childhood peripheral awareness of regime change
+Major geopolitical transitions (Austria-Hungary to Yugoslavia, c. 1918–1920) are recalled only vaguely and from a child's vantage, with the Sarajevo assassination framing the war's origins in now-Yugoslav territory.
+*evidence:* 5 excerpt(s) across dp-40-grande-m
+
+### C0033 · (latent) Resigned civilian compliance under war conditions
+Ordinary people endure wartime with muted stoicism — excitement mixed with the recognition that one 'just had to go along' rather than resist.
+*evidence:* 1 excerpt(s) across dp-40-grande-m
+
+### C0034 · (semantic) Wartime consumer restrictions
+Formal wartime prohibitions on purchasing certain goods, signaling state-imposed scarcity.
+*evidence:* 1 excerpt(s) across dp-40-grande-m
+
+### C0035 · (semantic) Rural-urban barter complementarity under scarcity
+With formal markets constrained, countryside households (food surplus) exchange with city households (clothing surplus) across the river, sustaining both communities.
+*evidence:* 5 excerpt(s) across dp-40-grande-m
+
+### C0036 · (semantic) Pre-automotive river-crossing infrastructure
+Trans-local mobility depended on a bridge and horse-drawn wagons, a transport regime the speaker marks as superseded by automobiles.
 *evidence:* 6 excerpt(s) across dp-40-grande-m
 
-### C0062 · (semantic) Gender-segregated hospital infrastructure
-Two hospitals stood on opposite banks of the river, one for men and one for women, rather than a single combined facility.
-*evidence:* 5 excerpt(s) across dp-40-grande-m
-
-### C0063 · (latent) Awareness of landscape and infrastructural change over time
-Reflection that castles no longer exist and that hospitals have been reorganized, signaling awareness of substantial historical transformation.
-*evidence:* 5 excerpt(s) across dp-40-grande-m
-
-### C0064 · (semantic) Slovanian-German bilingualism
-Slovanian was the native/home language while German had to be acquired to interact with Austrians in offices and public spaces.
+### C0037 · (semantic) Bureaucratic navigation of emigration approvals
+The emigration process required the mother to make repeated visits to multiple courts and offices to secure approvals from various authorities, intensified in the final month before departure.
 *evidence:* 4 excerpt(s) across dp-40-grande-m
 
-### C0065 · (semantic) German as administrative lingua franca
-German functioned as the official language of offices and institutional life.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0066 · (semantic) Childhood memory of imperial collapse
-Vague recollection of political meetings around 1918-1920 when Austria-Hungary was overthrown and reorganized as Yugoslavia.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0067 · (semantic) Sarajevo assassination as WWI origin
-Ferdinand's assassination in the Serbian section of what became Yugoslavia is identified as the trigger for World War One.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0068 · (latent) Resigned wartime compliance
-The speaker characterizes the home atmosphere as one of subdued acceptance rather than overt fear or enthusiasm — 'you just had to go along'.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0069 · (semantic) Wartime commodity restrictions
-The war imposed formal restrictions on what could be purchased.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0070 · (semantic) Urban-rural wartime resource asymmetry
-City dwellers across the river lacked food while rural villagers had surplus; geography determined wartime deprivation.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0071 · (semantic) Informal barter economy
-Country people exchanged eggs, chicken, and milk for clothing from city dwellers, substituting direct trade for money.
-*evidence:* 4 excerpt(s) across dp-40-grande-m
-
-### C0072 · (semantic) Pre-automotive river crossing infrastructure
-People crossed the river using a bridge further downstream and horse-drawn wagons for transport of goods.
-*evidence:* 5 excerpt(s) across dp-40-grande-m
-
-### C0073 · (latent) Personal identity anchored to dissolving polities
-The speaker situates his own life trajectory between two now-vanished states — 'I was born in Austria/Hungary and came here from Yugoslavia' — embedding selfhood within successive political entities.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0074 · (semantic) Learning about trip via father's letters and tickets
-The interviewee learned of the planned emigration in the latter part of 1920 through her mother sharing news of letters from the father in America, who also sent the travel tickets.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0075 · (semantic) Mother's bureaucratic process for emigration papers
-The mother had to visit multiple courts, offices, and higher-ups to obtain the approvals and paperwork required to emigrate with her minor child.
-*evidence:* 4 excerpt(s) across dp-40-grande-m
-
-### C0076 · (semantic) Minor status exempting child from paperwork
-Because the interviewee was a minor, her papers were bundled with her mother's; she personally had no independent dealings with authorities.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0077 · (semantic) Last-minute intensification of approval process
-The final month before departure was characterized by the mother constantly traveling to and from various offices to finalize approvals.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0078 · (semantic) Mother's paperwork burden relative to others
-The interviewee notes that while her mother had to make several trips, others had even more onerous processes, framing her family's experience comparatively.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0079 · (semantic) Mandatory military service disrupting family emigration
-The oldest brother was conscripted for a mandatory three-year army term, removing him from the pool of family members who could emigrate.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0080 · (semantic) Brother's accidental death reshaping migration plan
-A brother's death in a wagon accident before reporting for army duty altered the family's plan, allowing another brother to be released early to take over the farm.
-*evidence:* 5 excerpt(s) across dp-40-grande-m
-
-### C0081 · (semantic) Anxious anticipation focused on father reunion
-At age ten, the interviewee felt eager and anxious to meet her father in America rather than sorrowful about leaving.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0082 · (semantic) Absence of anticipated grief over friends
-The interviewee reports she did not think about missing her friends at the time of departure.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0083 · (semantic) Average school performance with required German instruction
-The interviewee describes her school experience as average rather than exceptional and notes she was required to study German for two years in third and fourth grade.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0084 · (semantic) Forgetting German after immigration to non-German environment
-After arriving in America where there were no German-speaking people around, the interviewee gradually lost the German she had studied.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0085 · (latent) Father as absent anchor of the migration project
-The father's prior presence in America frames the entire family migration; the child's emotional pull is oriented entirely toward him rather than toward leaving behind a known world.
-*evidence:* 5 excerpt(s) across dp-40-grande-m
-
-### C0086 · (latent) Gendered division of migration labor
-Migration paperwork and child-rearing logistics fell to the mother alone while the father worked in America, reflecting a patriarchal division of migration responsibilities.
+### C0038 · (latent) Gendered burden of emigration paperwork
+The administrative labor of securing emigration is borne by the mother, with the father abroad and the child too young to participate.
 *evidence:* 6 excerpt(s) across dp-40-grande-m
 
-### C0087 · (latent) Bureaucratic gatekeeping of cross-border movement
-The multiple courts, offices, and officials required for emigration approvals suggest that state authorities actively scrutinized and regulated who could leave.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0088 · (latent) Chance and tragedy as shapers of family migration outcomes
-The brother's fatal accident demonstrates how contingent events — rather than plans alone — determined which family members emigrated and which remained.
+### C0039 · (semantic) Minor's subsumed legal status in family migration
+As a child, the narrator did not independently pursue paperwork; their travel authorization was bundled into the mother's passport and approvals.
 *evidence:* 3 excerpt(s) across dp-40-grande-m
 
-### C0089 · (latent) Childhood temporal orientation toward anticipation over loss
-The ten-year-old's inability to anticipate missing friends reflects a developmental orientation toward the future and immediate excitement rather than reflection on loss.
+### C0040 · (semantic) Compulsory military service as constraint on emigration
+Mandatory three-year army service bound brothers to the home country and shaped which family members could leave and in what order.
+*evidence:* 4 excerpt(s) across dp-40-grande-m
+
+### C0041 · (semantic) Family tragedy reshaping migration trajectory
+A brother's accidental death on the eve of his own army call-up forced another brother to leave military service early to take over the farm, redirecting the family's migration plan.
+*evidence:* 5 excerpt(s) across dp-40-grande-m
+
+### C0042 · (latent) Child's present-orientation at moment of departure
+The narrator did not anticipate missing friends or community, reflecting a developmental inability to project future loss at the point of leaving.
 *evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0090 · (latent) Premigration schooling as non-transferable cultural capital
-German language study acquired in the home country became obsolete in the American context, exemplifying how educational assets can lose their value through migration.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0091 · (semantic) Rail travel to Trieste embarkation
-The overland journey from the home region to the port of Trieste was made by train.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0092 · (semantic) Improvised pre-boarding lodging
-The family stayed in a makeshift 'barn place' rather than a hotel while waiting to board the ship on the 15th.
+### C0043 · (semantic) Language attrition after emigration
+School-acquired German faded after migration because no German-speaking community sustained it in the new environment.
 *evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0093 · (semantic) Discrepancy between paid and assigned ship class
-Although the father paid for first-class passage, the family was initially placed in the lowest deck of the ship.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
+### C0044 · (latent) Retrospective awareness of migration's cultural costs
+With distance, the narrator expresses regret at having lost the German language, indicating a later-in-life reckoning with what emigration cost culturally.
+*evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0094 · (semantic) Fellow passenger intercession enabling upgrade
-An experienced migrant recognized the mother's ticket/card and prompted the family to be moved to a higher class.
+### C0045 · (semantic) Multi-stage transnational transit composition
+The migration journey is assembled from successive legs—train, ocean liner, train, and bus—requiring transfers at hubs such as Chicago and a final railhead before local dispersal.
 *evidence:* 6 excerpt(s) across dp-40-grande-m
 
-### C0095 · (semantic) Shipboard diet as Italian ship standard
-The repetitive fare of fish and macaroni is framed as an expected feature of an Italian-operated vessel.
-*evidence:* 4 excerpt(s) across dp-40-grande-m
-
-### C0096 · (latent) US immigration pressure altering voyage pace
-Communication from the United States about passengers missing a deadline caused the ship to accelerate toward New York.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0097 · (semantic) Migrants with illness repatriated at sea
-Several passengers with eye disease were detained on the ship and then sent back to their countries of origin.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0098 · (semantic) Health inspection and vaccination at US entry
-On arrival in New York, the family was vaccinated again and processed through inspection before being released.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0099 · (semantic) Multi-leg rail transit via Chicago to Utah
-From New York, the family took a train to Chicago and then transferred to a different train heading toward Utah.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0100 · (semantic) First encounter with bananas on the train
-Bananas appeared as a novel food item first noticed during the overland leg of the journey.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0101 · (semantic) Mutual aid across migrant families
-The mother and another woman shared food with a fellow traveler's children whose father had purchased little for them.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0102 · (semantic) Companion migrant group to same Utah town
-Several unrelated families from a similar region traveled together to the same Utah destination.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0103 · (semantic) Reunion with father and final bus leg to Sunnyside
-The family was met by the father in Price, Utah, then traveled by bus twenty-eight miles to Sunnyside.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0104 · (semantic) Father's coal mining livelihood in Utah
-The father's employment in Utah coal mines, around Tooele and Sunnyside, anchored the family's residence there.
+### C0046 · (semantic) Class-based accommodation discrepancy and peer advocacy
+A first-class ticket did not secure a first-class berth; the family was relegated to a lower deck and only moved to second class after a previously-arrived fellow passenger recognized the ticket and intervened.
 *evidence:* 5 excerpt(s) across dp-40-grande-m
 
-### C0105 · (latent) Migration trajectory dictated by father's work site
-The decision to travel directly to Utah, rather than Denver, reflected the location of the father's employment rather than independent family preference.
+### C0047 · (semantic) Institutional food provisioning as class-transcending constraint
+Shipboard meals were repetitive and basic—fish and macaroni—continuing even after the upgrade, reflecting the limits of Italian maritime provisioning rather than ticket class.
+*evidence:* 3 excerpt(s) across dp-40-grande-m
+
+### C0048 · (semantic) Immigrant medical inspection and exclusion regime
+The voyage was interrupted by US-driven inquiries about overdue passengers; travelers with eye disease were detained and sent back; on arrival the family was vaccinated and medically inspected.
+*evidence:* 3 excerpt(s) across dp-40-grande-m
+
+### C0049 · (semantic) Encounter with American consumer novelty
+The first sight of bananas on a US train functions as a sensory marker of arrival in American abundance.
+*evidence:* 1 excerpt(s) across dp-40-grande-m
+
+### C0050 · (semantic) Communal provisioning among co-traveling migrants
+Mothers pooled purchased food to feed the children of a man who had provisioned little for his own kids, evidencing reciprocal in-transit care within the traveling party.
+*evidence:* 3 excerpt(s) across dp-40-grande-m
+
+### C0051 · (semantic) Co-migration of regional origin networks to a common US destination
+Multiple families from the same European area traveled and transferred together across the ocean and the US interior, ultimately resettling in the same Utah town.
 *evidence:* 4 excerpt(s) across dp-40-grande-m
 
-### C0106 · (semantic) Peer-mediated language acquisition
-Initial English learning occurred informally through neighborhood children who spoke broken Slovanian, allowing the speaker to pick up vocabulary little by little.
+### C0052 · (semantic) Final-mile dispersal to a small-town mining settlement
+After the transcontinental leg, the family completed the journey by bus from a railhead to a small mining town, converting an arrival into local resettlement.
 *evidence:* 1 excerpt(s) across dp-40-grande-m
 
-### C0107 · (semantic) Rapid educational entry after immigration
-The speaker began school the Monday immediately following a Thursday arrival in Utah, signaling an almost immediate transition into the U.S. school system.
+### C0053 · (semantic) Company housing with co-ethnic clustering
+Immigrant families housed in employer-owned dwellings alongside other households of similar national origin, enabling early ethnic networks.
 *evidence:* 1 excerpt(s) across dp-40-grande-m
 
-### C0108 · (semantic) Grade placement beyond age expectation
-Because incoming classmates were at similar grade levels, the speaker was placed in the fourth grade rather than first, skipping earlier grades despite limited English.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0109 · (latent) Numeracy transcending language barrier
-Arithmetic was a domain in which the speaker could succeed because numerical work did not require verbal English proficiency.
+### C0054 · (semantic) Navigating language barrier through non-verbal academic domains
+Arithmetic and writing offer an academic foothold because they do not require spoken English.
 *evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0110 · (semantic) Academic excellence in mathematics
-The speaker competed in a county arithmetic contest during the first and second years in Sunnyside, traveling to Price and staying overnight.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0111 · (semantic) Educational acceleration and competitive participation
-The speaker skipped the sixth grade and competed in a running contest in seventh grade, signaling both curricular advancement and extracurricular engagement.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0112 · (semantic) Self-assessed competent but not top student
-The speaker characterizes her school performance as being among the top students but not the single best.
+### C0055 · (latent) Retrospective self-distance from childhood bravado
+Speaker reflects on their younger self with a measure of detachment, contrasting present disposition with past behavior.
 *evidence:* 1 excerpt(s) across dp-40-grande-m
 
-### C0113 · (semantic) Mother's restricted domestic role in mining town
-The mother's life in Sunnyside was confined to housework, laundry, cleaning, and cooking, a marked contrast to her prior animal-keeping agricultural work in Europe.
+### C0056 · (semantic) Redefinition of female labor after emigration
+Mother's shift from managing agricultural animals to domestic housework as the primary form of adjustment to American life.
 *evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0114 · (latent) War trauma shaping reluctance to return
-The mother hoped to return to Europe but avoided doing so because of fears of another war, given that her area suffered worse in WWII than in WWI.
+### C0057 · (latent) War fear overriding repatriation desire
+Mother's wish to return home was ultimately subordinated to fear that a second European war would endanger her.
 *evidence:* 1 excerpt(s) across dp-40-grande-m
 
-### C0115 · (semantic) Family's wartime suffering in the homeland
-The half-brother and his family experienced severe hardship during WWII, with battles fought near their farm and one niece becoming deaf and dumb from cannon noise.
+### C0058 · (semantic) Transnational familial war trauma
+Distant relatives directly harmed by wartime combat, extending the war's reach into the diaspora's emotional world.
 *evidence:* 3 excerpt(s) across dp-40-grande-m
 
-### C0116 · (semantic) Property transfer to homeland kin
-The mother transferred the European property to the half-brother, who lived there until his death in the 1970s.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0117 · (semantic) School as a positive site of belonging
-Despite an inability to speak English initially, the speaker got along well with school peers, learned quickly, and enjoyed school.
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0118 · (semantic) Anchored settlement in Sunnyside, Utah
-At the time of the conversation, the speaker confirms the family was living in Sunnyside, Utah, the mining community where they had spent roughly six and a half years.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0119 · (semantic) Father's progressive health decline and work incapacity
-A serial narrative of father's worsening health forcing him out of successive jobs (smelter, mine) until medical authority ended his working life.
+### C0059 · (semantic) Progressive paternal health decline eroding breadwinner role
+Father's deteriorating health limiting his capacity to work across successive job attempts until total incapacity.
 *evidence:* 4 excerpt(s) across dp-40-grande-m
 
-### C0120 · (semantic) Health-driven family relocation decision
-The move from the home region was framed as a parental calculation that outside work suited father's diminished capacity.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0121 · (semantic) Kinship-mediated migration route
-The journey to Denver unfolded through kin-linked waypoints (sister near Greeley, brother in Aspen) rather than as a direct relocation.
-*evidence:* 4 excerpt(s) across dp-40-grande-m
-
-### C0122 · (latent) Speaker as active agent in the journey
-Speaker notes that she, a young woman, drove the Model T for most of the trip, asserting capability and central role in the move.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0123 · (semantic) Emotional divergence from mother over leaving home
-A direct contrast between mother's pronounced homesickness and the speaker's own lack of it upon leaving the home region.
+### C0060 · (latent) Generational divergence in diasporic longing
+Mother's intense homesickness stands in contrast to the narrator's own comparatively muted emotional response.
 *evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0124 · (latent) Retrospective self-judgment of youthful detachment
-The apologetic framing ('I'm sorry to say') signals present-day reflection that judges the past self's lack of feeling as a moral or emotional failing.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0125 · (semantic) Marriage and urban settlement in Denver
-Marriage in May 1927 in Denver and a continuous Denver residence anchored the speaker's adult life.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0126 · (semantic) Shared regional origins and return visits with husband
-The marriage linked two people from the same original area, and the couple later made repeated return trips by car and plane.
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0127 · (latent) Resilience narrative of hardship resolution
-The trajectory from father's incapacity and migration to 'we both got jobs, and it worked out' produces a tidy retrospective of recovery.
-*evidence:* 1 excerpt(s) across dp-40-grande-m
-
-### C0128 · (latent) Ethnic enclave as adaptive infrastructure
-Underlying assumption that living among fellow immigrants functions as a practical support system for newcomers
+### C0061 · (latent) Property transfer finalizing permanent emigration
+Conveyance of the homeland estate to the brother marks an irrevocable severance from the country of origin.
 *evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0129 · (semantic) Educational investment under scarcity
-Choosing and paying for parochial schooling for daughters despite financial strain
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0130 · (latent) Female entry into paid labor during Depression
-Wife taking on employment as a household response to the husband's insufficient income
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0131 · (semantic) Long-tenure meatpacking employment
-Sustained, physically demanding work cutting pork and beef in a packing house for roughly three decades
-*evidence:* 3 excerpt(s) across dp-40-grande-m
-
-### C0132 · (semantic) Health-driven labor interruption
-Repeated surgeries that removed the speaker (and later her daughter) from the workforce
+### C0062 · (semantic) Arrival coinciding with economic crisis
+The relocation to Colorado and marriage aligned temporally with the onset of severe Depression-era hardship.
 *evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0133 · (semantic) Intergenerational workplace participation
-A daughter following the mother into the same packing house, including the smokehouse
+### C0063 · (semantic) Rapid socioeconomic incorporation into co-ethnic community
+Quick attainment of employment and spousal partnership shortly after arrival, facilitated by an established ethnic community.
+*evidence:* 2 excerpt(s) across dp-40-grande-m
+
+### C0064 · (semantic) Endogamy within shared regional origin
+Marriage between partners drawn from the same locality or region of origin, reinforcing existing migrant networks.
 *evidence:* 1 excerpt(s) across dp-40-grande-m
 
-### C0134 · (semantic) Daughter's professional upward mobility
-Another daughter's achievement of a credentialed professional career as a nurse
+### C0065 · (semantic) Settlement-cluster formation through chain migration
+Ethnic enclaves grow as initial settlers attract and absorb successive newcomers, who prefer to integrate within the existing group.
 *evidence:* 3 excerpt(s) across dp-40-grande-m
 
-### C0135 · (latent) Class mobility across immigrant generations
-Latent contrast between parental meatpacking labor and a daughter's nursing career as evidence of generational advance
+### C0066 · (latent) Latent preference for in-group clustering over dispersion
+An underlying assumption that migrants actively choose co-ethnic proximity for comfort, support, or belonging rather than scattering across the host city.
+*evidence:* 1 excerpt(s) across dp-40-grande-m
+
+### C0067 · (semantic) Persistent transnational connection through return visits
+Sustained engagement with the place of origin via repeated return trips, even decades after emigration.
+*evidence:* 2 excerpt(s) across dp-40-grande-m
+
+### C0068 · (semantic) Long-term settlement permanence
+A stable, uninterrupted residence in the destination city extending from initial arrival through the rest of the life course.
+*evidence:* 1 excerpt(s) across dp-40-grande-m
+
+### C0069 · (semantic) Economic precarity and household strain during the Depression
+The speaker frames the Depression era as financially rough, marked by the husband's irregular income and the out-of-pocket burden of educating children in parochial school.
 *evidence:* 5 excerpt(s) across dp-40-grande-m
 
-### C0136 · (semantic) Naturalization and civic participation
-Formal acquisition of U.S. citizenship in 1932 and consistent voting thereafter
-*evidence:* 2 excerpt(s) across dp-40-grande-m
-
-### C0137 · (latent) Chosen American belonging
-Emotional and identitarian claim on the United States as 'my country' despite European origins
+### C0070 · (semantic) Long-tenure meatpacking labor as economic mainstay
+Sustained, nearly three-decade employment in a packing house doing physically demanding meat-cutting work served as the household's economic anchor.
 *evidence:* 3 excerpt(s) across dp-40-grande-m
 
-### C0138 · (semantic) Absence of Ellis Island memory
-Rodwin reports no memory of Ellis Island processing.
-*evidence:* 7 excerpt(s) across ei-845-rodwin
+### C0071 · (semantic) Intergenerational workplace co-participation in the plant
+Mother and daughter worked in the same packing house, illustrating the transmission of working-class industrial labor across generations within immigrant families.
+*evidence:* 3 excerpt(s) across dp-40-grande-m
 
-### C0139 · (semantic) Interview setting and participant introduction
-Establishment of the interview's location, date, interviewer affiliation, and basic identifying information about the interviewee.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
+### C0072 · (semantic) Health-driven interruption and exit from industrial work
+Physical and medical vulnerability repeatedly disrupts or terminates packing-house employment for both the speaker and her daughter.
+*evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0140 · (semantic) Name change across the life course
-The interviewee's shift from her birth/maiden name (Mary Floun) used in England to her current name (Minnie Rodwin) following immigration.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
+### C0073 · (semantic) Naturalization and habitual civic participation
+Acquiring U.S. citizenship in 1932 and voting in every subsequent election constitutes a practiced, ritualized form of civic belonging.
+*evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0141 · (semantic) Age and birthday confirmation
-Documentation of the interviewee's current age (90) and the recent occasion of her birthday.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
+### C0074 · (latent) Chosen American identity and affective belonging
+The speaker's expressed happiness at returning from Europe and declaration that 'This is my country' reveal an emotionally invested, self-chosen national identification despite immigrant origins.
+*evidence:* 2 excerpt(s) across dp-40-grande-m
 
-### C0142 · (semantic) Birth date discrepancy — lived vs. registered
-The divergence between the interviewee's actual birth date (December 25th, Christmas morning) and her officially registered birth date (February 9th, 1907).
-*evidence:* 10 excerpt(s) across ei-845-rodwin
+### C0075 · (semantic) Staged pioneer migration with father as advance party
+A migration pattern in which one parent (here the father) departs a year ahead of the rest of the family to establish a foothold before bringing them over.
+*evidence:* 9 excerpt(s) across ei-845-rodwin
 
-### C0143 · (semantic) Maternal knowledge of birth circumstances
-The interviewee's reliance on her mother's oral accounts for details about the time and circumstances of her birth.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0144 · (semantic) Maternal occupation at time of birth
-Information about the mother's bakery business at the time of the interviewee's birth in London.
+### C0076 · (semantic) Migration timing tied to family formation
+The mother’s arrival in England is positioned as coinciding with the birth of the children, suggesting migration was timed around family founding.
 *evidence:* 5 excerpt(s) across ei-845-rodwin
 
-### C0145 · (latent) Bureaucratic identity formation
-The way official documentation, rather than lived experience, constructs the recognized personal identity and timeline of the interviewee.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
+### C0077 · (semantic) Pre-migration occupational continuity as economic foothold
+Carrying a homeland trade into the new country provided an immediate basis for the family business and household stability.
+*evidence:* 11 excerpt(s) across ei-845-rodwin
 
-### C0146 · (latent) Immigration as identity transformation
-The implied reframing of personal identity through migration, signaled by the shift from Mary Floun to Minnie Rodwin upon entering the U.S.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
+### C0078 · (semantic) Onomastic transformation across the life course
+A change of personal name from the name borne in childhood or at emigration to the name carried in later life, marking biographical transitions such as immigration or marriage.
+*evidence:* 5 excerpt(s) across ei-845-rodwin
 
-### C0147 · (semantic) Neighbor interaction memory
-Recollection of an Irish woman across the street who called the interviewee by the name 'Mary, Mary' to quiet her.
+### C0079 · (semantic) Divergence between registered date and biographical date
+Instances in which an officially recorded date for a life event differs from the date recalled or reported by the subject or family, registering a gap between bureaucratic documentation and lived/familial memory.
+*evidence:* 7 excerpt(s) across ei-845-rodwin
+
+### C0080 · (latent) Maternal oral tradition as biographical authority
+The practice of treating a mother's remembered account as the primary source for details of one's own origins, including specifics absent from official records and supplying the only access to early-life information.
 *evidence:* 6 excerpt(s) across ei-845-rodwin
 
-### C0148 · (semantic) Material domestic memory — the icebox
-Memory of an outdoor icebox used to store cold goods in the family home.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
+### C0081 · (latent) Ritualized anchoring of subject in time, place, name, and institutional context
+The conventional opening move of an oral history interview in which the interviewer fixes the subject's identity by eliciting current age, originary name, location, birth date, and the conducting institution.
+*evidence:* 6 excerpt(s) across ei-845-rodwin
 
-### C0149 · (latent) Relative material privilege
-Awareness that the family's icebox marked them as better off than many neighbors who lacked such an appliance.
+### C0082 · (semantic) Fragmented early childhood memory and the limits of recollection
+The speaker's pre-verbal-era memories (from age three and a half) surface only as discrete fragments, requiring active probing by the interviewer to elicit any descriptive content at all.
+*evidence:* 6 excerpt(s) across ei-845-rodwin
+
+### C0083 · (semantic) Interpersonal encounter as a vivid early memory anchor
+A discrete, dialogically preserved episode with a neighbor functions as one of the few fully realized memory fragments from this earliest period, suggesting emotionally charged social interactions anchor recollection more than physical settings.
+*evidence:* 6 excerpt(s) across ei-845-rodwin
+
+### C0084 · (latent) Ethnic composition of the neighborhood as salient memory marker
+The Irish identity of the neighbor across the street is singled out and preserved in the speaker's memory, indicating that ethnic/immigrant character of the surrounding community was a notable feature of the remembered landscape.
 *evidence:* 2 excerpt(s) across ei-845-rodwin
 
-### C0150 · (semantic) Mother's given name
-Recall of the mother's first name, Sophie.
+### C0085 · (latent) Misrecognition and the construction of childhood identity
+The neighbor addresses the child by a name that is not hers, revealing either unfamiliarity with the family or the child's liminal, not-fully-known status in the neighborhood, with implications for how identity is socially conferred in early childhood.
+*evidence:* 1 excerpt(s) across ei-845-rodwin
+
+### C0086 · (semantic) Childhood self-defense against perceived unfair criticism
+The speaker's preserved protest ('I was quiet') against the noise accusation shows that the memory is filtered through a residual sense of grievance, with the child remembered as defending her own conduct against adult reproach.
 *evidence:* 3 excerpt(s) across ei-845-rodwin
 
-### C0151 · (semantic) Mother's maiden name and its meaning
-Recall of the mother's unusual maiden name, Vivyeika, and its translation as 'squirrel.'
+### C0087 · (semantic) Material culture as memory anchor and class marker
+A specific domestic object (the icebox) operates simultaneously as a concrete retrieval cue for otherwise inaccessible early memory and as a symbol of the family's modest socioeconomic distinction from neighbors who lacked such an appliance.
+*evidence:* 6 excerpt(s) across ei-845-rodwin
+
+### C0088 · (latent) Tension between documentary record and embodied memory
+The interviewer's invocation of the birth certificate as a known fact about the house, juxtaposed with the speaker's inability to describe that house, foregrounds the gap between official documentation and personal, embodied recollection.
+*evidence:* 4 excerpt(s) across ei-845-rodwin
+
+### C0089 · (semantic) Co-location of family enterprise and household
+The family lived at the same premises as the bakery on Commercial Road, blending domestic and commercial space.
+*evidence:* 2 excerpt(s) across ei-845-rodwin
+
+### C0090 · (semantic) Eastern European origins of both parents
+Both the mother and the father traced their origins to Poland, with the mother specifically from Warsaw, situating the family within a Polish-Jewish diaspora.
+*evidence:* 4 excerpt(s) across ei-845-rodwin
+
+### C0091 · (semantic) Folk etymology of family name as cultural marker
+The mother’s maiden name Vivyeika is glossed by the interviewee as meaning 'squirrel,' preserving a piece of linguistic heritage.
+*evidence:* 4 excerpt(s) across ei-845-rodwin
+
+### C0092 · (semantic) Paternal military service
+The father’s army background is established as a salient biographical feature of his life before settling in England.
+*evidence:* 5 excerpt(s) across ei-845-rodwin
+
+### C0093 · (latent) Memory gaps in biographical recall
+The interviewee repeatedly signals inability to remember specific details of the family’s pre-migration life, particularly around origins and the father’s army service.
+*evidence:* 5 excerpt(s) across ei-845-rodwin
+
+### C0094 · (semantic) Family assembly through transnational migration and remarriage
+The parental household was constituted across borders and through sequential unions, including the mother's prior widowhood and remarriage to the father after his return.
+*evidence:* 3 excerpt(s) across ei-845-rodwin
+
+### C0095 · (semantic) Chronic in-law antagonism
+Persistent harassment from the mother-in-law directed at the mother, disrupting the marital relationship.
+*evidence:* 2 excerpt(s) across ei-845-rodwin
+
+### C0096 · (latent) Displaced grief as moral accusation
+The mother-in-law reframes her son's death as caused by the mother's 'waiting,' transmuting bereavement into blame against the new wife.
+*evidence:* 3 excerpt(s) across ei-845-rodwin
+
+### C0097 · (semantic) Geographic relocation as escape from family conflict
+Moving to a new city as a strategy to remove the family from a hostile in-law's orbit.
+*evidence:* 1 excerpt(s) across ei-845-rodwin
+
+### C0098 · (semantic) Immigrant self-employment via small trade
+Opening a small family business (bakery) as the economic foundation of the reconstituted household in the new city.
+*evidence:* 1 excerpt(s) across ei-845-rodwin
+
+### C0099 · (latent) Caregiving-capacity threshold as migration filter
+Children were left behind because the mother judged she could not adequately care for them, framing who migrates as a function of perceived ability to provide for them.
+*evidence:* 2 excerpt(s) across ei-845-rodwin
+
+### C0100 · (semantic) Grandmother as kin-keeper in country of origin
+Extended kin (grandmother) assumed the parental caregiving role for children who remained in Poland, enabling the parents' departure for London.
+*evidence:* 5 excerpt(s) across ei-845-rodwin
+
+### C0101 · (latent) Photographic mediation of absent kin
+Familial relationships with members not co-present during early life are known and accessed through photographs rather than through embodied memory.
+*evidence:* 5 excerpt(s) across ei-845-rodwin
+
+### C0102 · (semantic) Birth-order self-location within the diaspora sibling cohort
+Personal identity is anchored by position among siblings born in the host country rather than by a single global birth order within the whole family.
+*evidence:* 5 excerpt(s) across ei-845-rodwin
+
+### C0103 · (latent) Planned bounded separation between parents and left-behind children
+The parting of the two sisters from their mother was framed as a temporary arrangement with a defined endpoint rather than as an open-ended rupture.
+*evidence:* 1 excerpt(s) across ei-845-rodwin
+
+### C0104 · (semantic) Military conscription recall as emigration push factor
+The father's recall to the Russian Army functioned as the precipitating threat that made the family choose to leave Europe for the United States.
 *evidence:* 8 excerpt(s) across ei-845-rodwin
 
-### C0152 · (latent) Cultural heritage through naming
-Preservation and transmission of an Eastern-European maternal surname and its vernacular meaning as a marker of ethnic heritage.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0153 · (semantic) Maternal birthplace in Warsaw
-The mother was born in Warsaw, Poland.
-*evidence:* 1 excerpt(s) across ei-845-rodwin
-
-### C0154 · (semantic) Father's military service
-The father had a period of service in the military.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0155 · (semantic) Shared Polish hometown
-Both parents originated from the same town in Poland.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0156 · (semantic) Father's overseas absence
-The father was sent away from Poland for a period of time.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0157 · (semantic) Marriage upon father's return
-The parents married after the father came back from his absence.
-*evidence:* 1 excerpt(s) across ei-845-rodwin
-
-### C0158 · (semantic) Mother-in-law's hostile blame
-The father's mother held the mother responsible for her son's death and persistently harassed her.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0159 · (semantic) Flight to London from family conflict
-The mother left Poland for London driven by the unbearable harassment from her mother-in-law.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0160 · (semantic) Uncertain family chronology
-The interviewee struggles to recall specific details and sequences about the parents' early history.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0161 · (latent) Migration as escape from domestic persecution
-The transcontinental move to London is framed not as opportunity-seeking but as refuge from in-law harassment.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0162 · (latent) Family reconstitution through second marriage
-Both parents entered their union with prior marital histories disrupted by absence and death.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0163 · (semantic) Separation of siblings in Poland
-Two sisters were left behind in Poland rather than migrating with the parents.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0164 · (semantic) Grandmother as surrogate caregiver in Poland
-The maternal/paternal grandmother in Poland assumed care of the two sisters who remained.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0165 · (semantic) Grandmother memory mediated by photographs
-Speaker's knowledge of the grandmother derives from pictures rather than lived encounter.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0166 · (semantic) Twin pregnancy as migration marker
-Mother was pregnant with twin brothers at the time of her departure for London.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0167 · (latent) Maternal caregiving anxiety
-Underlying fear that the mother could not adequately care for all her children shaped migration decisions.
-*evidence:* 1 excerpt(s) across ei-845-rodwin
-
-### C0168 · (latent) Family dispersal across nations
-Family members were distributed across Poland, London, and later the United States.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
-
-### C0169 · (semantic) Continued migration of the surviving sibling unit
-Yettie accompanied the family in the subsequent transatlantic move to the United States.
-*evidence:* 1 excerpt(s) across ei-845-rodwin
-
-### C0170 · (semantic) Military conscription as emigration trigger
-The father's recall to the army serves as the precipitating reason for the family's emigration from Europe.
+### C0105 · (semantic) Family roster that preserves the memory of a deceased sibling
+The enumeration of children includes Yettie, who died, showing that oral family histories integrate lost members into the remembered order of births.
 *evidence:* 5 excerpt(s) across ei-845-rodwin
 
-### C0171 · (semantic) Bakery located in downtown Manhattan
-The American bakery is situated in downtown Manhattan, anchoring the family geographically in New York City.
-*evidence:* 5 excerpt(s) across ei-845-rodwin
+### C0106 · (latent) Confused postwar military obligations across shifting borders
+The 'underground' Russian Army to which the father was recalled reflects how redrawn East European borders left civilian populations subject to ambiguous conscription claims from successor states.
+*evidence:* 8 excerpt(s) across ei-845-rodwin
 
-### C0172 · (semantic) Staged family reunification through tickets
-After roughly a year, the father purchases tickets and sends for the wife and children to join him.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
-
-### C0173 · (latent) Uncertainty over army and national identity
-Speaker and interviewer struggle to identify which army and national affiliation (Polish vs. Russian), reflecting shifting Eastern European borders.
-*evidence:* 13 excerpt(s) across ei-845-rodwin
-
-### C0174 · (latent) Family preservation through strategic male departure
-The father emigrates to escape conscription, implicitly preserving family integrity by removing himself from the threatened jurisdiction.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
-
-### C0175 · (semantic) Placement in Jewish section on ship
-The family was housed in a designated Jewish section of the ship where the chef recognized them from London.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
-
-### C0176 · (semantic) Steerage sleeping arrangements
-Passengers slept in bunk beds in the steerage section at the bottom of the ship, with the child on a top bunk.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
-
-### C0177 · (semantic) Child safety incident aboard ship
-The young child wandered while going to the bathroom and ended up in the water, was retrieved by a woman who removed wet clothes, changed him, gave him something, and returned him.
+### C0107 · (semantic) Ethnic/religious segregation as organizing principle in transit
+Ships and other transit infrastructures assigned passengers to designated sections by ethnicity or religion, here a Jewish section, functioning as a form of diaspora community continuity at sea.
 *evidence:* 4 excerpt(s) across ei-845-rodwin
 
-### C0178 · (semantic) Children performing for tips in steerage
-The children danced and sang in the steerage area while passengers threw money down to them.
-*evidence:* 5 excerpt(s) across ei-845-rodwin
-
-### C0179 · (semantic) Mother prohibits children accepting money
-The mother would not allow the children to keep or pick up the money thrown to them by passengers.
-*evidence:* 5 excerpt(s) across ei-845-rodwin
-
-### C0180 · (latent) Maternal enforcement of dignity over economic opportunism
-The mother's refusal to let children accept thrown money reflects an upbringing priority on dignity and self-respect rather than profiting from performative begging.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0181 · (semantic) Kosher food provision by ship chef
-The chef, who knew the family from London's Jewish community, sent kosher items such as pickle herring down to the family in steerage.
+### C0108 · (semantic) Steerage as cramped, shared, low-status accommodation
+Passengers in the lowest deck ('bottom of the ship') shared crowded quarters with bunk beds, marking class-based spatial segregation.
 *evidence:* 6 excerpt(s) across ei-845-rodwin
 
-### C0182 · (semantic) Continuity of kosher household practice
-The kosher practice observed by the mother on the voyage persisted as a lifelong household rule.
+### C0109 · (semantic) Children performing for tips among passengers
+Young passengers entertained fellow travelers through dancing and singing, receiving thrown coins as informal compensation in a liminal, unregulated economy.
+*evidence:* 6 excerpt(s) across ei-845-rodwin
+
+### C0110 · (latent) Maternal moral gatekeeping of children's earnings
+The mother acted as a normative authority figure, restricting children's access to money earned through informal performance to uphold propriety or dignity.
 *evidence:* 4 excerpt(s) across ei-845-rodwin
 
-### C0183 · (latent) Preservation of Jewish identity during migration transit
-The family actively maintained markers of Jewish identity — communal housing, kosher food, and religious observance — while in transit, treating the ship as an extension of the diaspora community.
+### C0111 · (semantic) Diaspora networks reproducing kosher practice at sea
+Co-religionist crew members (here a chef) leveraged prior acquaintance and shared observance to smuggle or provision kosher food to passengers, sustaining religious dietary law outside the home.
+*evidence:* 7 excerpt(s) across ei-845-rodwin
+
+### C0112 · (semantic) Iconic arrival imagery as memory anchor
+The Statue of Liberty sighting functions as a vivid, enduring collective memory marker of arrival in America, often recalled alongside other sensory impressions.
+*evidence:* 6 excerpt(s) across ei-845-rodwin
+
+### C0113 · (latent) Child vulnerability and informal caregiving in transit
+A fellow passenger intervened when the child soiled himself, undressing, cleaning, and redressing him, illustrating how parenting and caregiving roles were diffused among strangers during travel.
+*evidence:* 4 excerpt(s) across ei-845-rodwin
+
+### C0114 · (latent) Cross-national linguistic identity in parent-child bond
+Persistence of a British/English term of address for the father ('Daddy') over the Yiddish-influenced 'Papa,' signaling the formative influence of the London transit stop on the child's identity.
+*evidence:* 6 excerpt(s) across ei-845-rodwin
+
+### C0115 · (latent) Wife as established tradesperson in immigrant economy
+The wife brought a craft (baking) from the homeland, and the husband shifted into her trade, inverting the typical expectation of male occupational continuity.
+*evidence:* 9 excerpt(s) across ei-845-rodwin
+
+### C0116 · (semantic) Childhood sensory memory of pre-automotive urban landscape
+The horse-drawn delivery wagons register as a vivid first impression of the Lower East Side, marking the city as still partially animal-powered in the child's experience.
+*evidence:* 5 excerpt(s) across ei-845-rodwin
+
+### C0117 · (semantic) Tenement housing pattern on the Lower East Side
+Residence in a four-story walkup tenement at a specific LES address, typical of early-twentieth-century immigrant settlement.
+*evidence:* 7 excerpt(s) across ei-845-rodwin
+
+### C0118 · (latent) Selective childhood memory of the migration journey
+The child retains vivid images of the destination neighborhood but no memory of the Ellis Island processing, illustrating how early trauma or bureaucratic moments are filtered out of recollection.
+*evidence:* 5 excerpt(s) across ei-845-rodwin
+
+### C0119 · (semantic) Communal and pay-per-use tenement infrastructure
+Basic building facilities (toilets, gas) were either shared between apartments or required coin insertion per use, marking the material conditions of recent-arrival housing on the Lower East Side.
 *evidence:* 10 excerpt(s) across ei-845-rodwin
 
-### C0184 · (semantic) Naming the ship Philadelphia
-The respondent names the vessel as the Philadelphia, the ship on which the family crossed.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0185 · (semantic) Arrival in New York harbor
-The respondent dates the arrival to September and describes everyone running to see the Statue of Liberty upon entering the harbor.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0186 · (latent) Collective immigrant arrival experience
-The shared, group movement of steerage passengers rushing to view the Statue of Liberty frames the arrival as a communal rather than individual event.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0187 · (semantic) Geographic dispersal of relatives across New York
-Rodwin's relatives were scattered across different New York locations, including Forty-Second Street and the Bronx.
-*evidence:* 5 excerpt(s) across ei-845-rodwin
-
-### C0188 · (semantic) Retention of paternal memory despite early age
-Rodwin insists he did remember his father, contradicting the interviewer's assumption that he would not.
-*evidence:* 5 excerpt(s) across ei-845-rodwin
-
-### C0189 · (semantic) Anglo-American naming convention for father
-Rodwin explains that the family used 'Daddy' (from London) rather than the American 'Papa' for the father.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0190 · (semantic) Direct settlement on the Lower East Side
-After disembarking, the family went directly to the Lower East Side.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0191 · (semantic) Fragmentary sensory impression of arrival crowds
-Rodwin retains only a vague, people-focused impression associated with the point of arrival.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0192 · (semantic) Childhood sensory memory of the Lower East Side
-Rodwin's earliest impression of the Lower East Side is the sight of horses riding around.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0193 · (latent) Negotiation between British and American linguistic norms
-The retention of 'Daddy' over 'Papa' signals an ongoing cultural negotiation between the family's London origins and American usage.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0194 · (semantic) Horse-and-wagon bakery delivery
-The family bakery used horse-drawn wagons to deliver goods, establishing a small-scale distribution operation.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
-
-### C0195 · (semantic) Occupational gender reversal through marriage
-The mother, originally a baker in Poland, was the source of the family's baking trade, while the father was a tailor who transitioned into baking through her.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
-
-### C0196 · (semantic) Tenement dwelling at 141 Essex Street
-The family lived in a four-story walkup tenement building at a specific LES address.
-*evidence:* 7 excerpt(s) across ei-845-rodwin
-
-### C0197 · (semantic) Shared tenement bathroom facilities
-The apartment had no private bathroom; toilets were located in the hallway and shared between apartments.
-*evidence:* 5 excerpt(s) across ei-845-rodwin
-
-### C0198 · (semantic) Coin-operated gas meters in apartment
-The family paid for gas utility in their apartment by inserting quarters into a meter.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0199 · (latent) Home and business as integrated life space
-The bakery's location directly across from the residence meant work and domestic life were physically inseparable, framed positively by Rodwin as 'a nice time.'
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0200 · (semantic) Older brothers excluded from schooling to work
-The 14-year-old brothers were not enrolled in school and were instead told to stay home and help with the family; the speaker attributes this decision to school authorities.
+### C0120 · (latent) Institutional sanctioning of children's domestic labor over schooling
+School authorities told the immigrant mother to keep her older children home to help her, revealing an institutional tolerance of child contribution to household survival that overrode routine expectations of school enrollment.
 *evidence:* 9 excerpt(s) across ei-845-rodwin
 
-### C0201 · (latent) Institutional endorsement of child family labor
-School or settlement officials actively encouraged older children to forgo education in order to contribute to the immigrant family's economic survival.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
+### C0121 · (semantic) Prior educational socialization in country of origin as a resettlement resource
+The speaker's earlier school attendance from age three in London provided a foundational familiarity with classroom routines and knowledge that preceded and eased her entry into American schooling.
+*evidence:* 17 excerpt(s) across ei-845-rodwin
 
-### C0202 · (semantic) Early start to formal schooling in London
-Rodwin began school at three years old while the family was in London, indicating an earlier and earlier formal educational start than typical for the era.
-*evidence:* 7 excerpt(s) across ei-845-rodwin
+### C0122 · (semantic) Neighborhood amenity proximity as texture of immigrant daily life
+Walkable, immediately accessible local businesses such as the bakery across the street, paired with a positive affective recollection ('we had a nice time'), situate daily routines within a dense, service-rich immigrant neighborhood.
+*evidence:* 5 excerpt(s) across ei-845-rodwin
 
-### C0203 · (semantic) Prior schooling as educational advantage
-Rodwin's earlier start in London meant he arrived at U.S. school already possessing literacy and classroom knowledge, giving him a head start.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
+### C0123 · (semantic) Intergenerational family labor in ethnic enterprise
+Children contributing labor to a family-owned business, especially around culturally specific or seasonal tasks.
+*evidence:* 4 excerpt(s) across ei-845-rodwin
 
-### C0204 · (semantic) Family bakery labor
-Childhood work assisting parents in the family bakery as a formative family activity.
+### C0124 · (semantic) Spousal meeting through shared trade
+Romantic pairing originating in or through the same occupational sector or workplace.
+*evidence:* 4 excerpt(s) across ei-845-rodwin
+
+### C0125 · (latent) Reflexive valuation of family cohesion
+Retrospective framing of family unity as a defining and valued feature of life.
 *evidence:* 3 excerpt(s) across ei-845-rodwin
 
-### C0205 · (semantic) Holiday baking traditions
-Specific seasonal tasks in the bakery involving decorating macaroons with almonds and cherries.
+### C0126 · (semantic) Large-family childbearing pattern
+Bearing many children, characteristic of early-twentieth-century immigrant working-class households.
 *evidence:* 1 excerpt(s) across ei-845-rodwin
 
-### C0206 · (semantic) Meeting husband through bakery occupation
-Spousal connection formed via shared work in the bakery trade, including delivery driving.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0207 · (semantic) Husband's name as biographical anchor
-Naming the husband (Jack) as a way of locating oneself in family history.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0208 · (semantic) Family togetherness as formative experience
-A sense that the family was 'always together' shaped the speaker's life and identity.
+### C0127 · (semantic) Continuity of family enterprise across residential transitions
+Carrying the family business forward when relocating rather than abandoning the trade.
 *evidence:* 3 excerpt(s) across ei-845-rodwin
 
-### C0209 · (semantic) Residential mobility to Rockaway Beach
-The family's relocation from the Lower East Side to Rockaway Beach.
+### C0128 · (latent) Intra-urban relocation from immigrant enclave after long residence
+Departure from a dense immigrant neighborhood to another part of the metropolitan area after an extended period of settlement.
 *evidence:* 3 excerpt(s) across ei-845-rodwin
 
-### C0210 · (semantic) Continuity of family bakery enterprise
-The family continued operating a bakery after relocating to Rockaway Beach.
-*evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0211 · (semantic) Temporal anchoring of bakery to early childhood
-Bakery memories are tied to very early childhood, placing its operation around 1911.
+### C0129 · (latent) Fusion of family name and business identity
+The family surname functioning simultaneously as the firm's name, indexing the inseparability of household and enterprise in the immigrant economy.
 *evidence:* 3 excerpt(s) across ei-845-rodwin
 
-### C0212 · (semantic) Duration of East Side residence
-The family lived on the Lower East Side for approximately fifteen years before relocating.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0213 · (latent) Bakery as family identity marker
-The bakery name doubles as the family's maiden name, suggesting the business defined family identity rather than the reverse.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0214 · (latent) Working-class immigrant family enterprise
-Implicit framing of a small family-run bakery as the central economic and social unit around which life was organized.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0215 · (semantic) Welcoming relatives in America
-Narrator recalls relatives in this country as kind and friendly upon arrival.
-*evidence:* 3 excerpt(s) across ei-845-rodwin
-
-### C0216 · (semantic) Father's bakery as family gathering hub
-Relatives regularly visited the narrator's father's bakery on Fridays, using it as a social meeting point.
+### C0130 · (semantic) Bakery as immigrant kin gathering site
+The family business functioned as a recurring meeting point for relatives, illustrating how immigrant-owned enterprises served as anchors of kin networks within ethnic enclaves.
 *evidence:* 5 excerpt(s) across ei-845-rodwin
 
-### C0217 · (latent) Kinship as anchor of immigrant experience
-Underlying sense that the immigrant life in America was structured and made livable through extended-family proximity and ritual gatherings.
-*evidence:* 6 excerpt(s) across ei-845-rodwin
-
-### C0218 · (semantic) Mother's contentment tied to father's presence
-Mother's willingness to come to America was conditional on going with her husband, not on the country itself.
+### C0131 · (semantic) Spousal-contingent female migration
+A pattern in which a woman's migration was conditional on her husband's decision, reflecting couple-based migration norms in which female mobility followed male partners.
 *evidence:* 3 excerpt(s) across ei-845-rodwin
 
-### C0219 · (latent) Mother's identity through marital bond
-Latent framing of the mother's migration desire as relational rather than autonomous, suggesting a gendered narrative of emigration.
+### C0132 · (semantic) Positive retrospective evaluation of migration
+A satisfied or favorable after-the-fact assessment of the migration experience and its outcomes for the immigrant generation.
 *evidence:* 3 excerpt(s) across ei-845-rodwin
 
-### C0220 · (semantic) Father's happiness in America
-Narrator affirms that her father was happy in this country.
+### C0133 · (semantic) Second-generation geographic dispersal
+The scattering of adult immigrant-descendant children across distant regions of the host country, characteristic of post-migration family trajectories.
 *evidence:* 2 excerpt(s) across ei-845-rodwin
 
-### C0221 · (latent) Selective retention of immigration landmarks
-Latent pattern in which emotionally significant sites (family bakery, home) remain vivid while iconic institutional sites (Ellis Island) recede.
-*evidence:* 5 excerpt(s) across ei-845-rodwin
-
-### C0222 · (semantic) Current life assessed as acceptable
-At age ninety, narrator describes present circumstances simply as 'all right.'
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0223 · (semantic) Dispersed adult children across U.S.
-Narrator has two daughters, one near Los Angeles and one in Atlanta, indicating geographic spread.
+### C0134 · (latent) Fading autobiographical memory in late life
+Uncertainty or gaps in recall of formative life events associated with advanced age.
 *evidence:* 2 excerpt(s) across ei-845-rodwin
 
-### C0224 · (semantic) Ongoing connection to grandchildren
-Narrator has grandchildren and offers to show them, signaling active grandparent role.
+### C0135 · (latent) Understated contentment as evaluative register
+A recurring tone of modest, undramatic satisfaction that characterizes the speaker's evaluations across multiple life domains and across time.
 *evidence:* 3 excerpt(s) across ei-845-rodwin
 
-### C0225 · (latent) Generational geographic mobility
-Latent recognition that descendants of an immigrant family have spread across U.S. regions, marking American mobility from Lower East Side roots.
+### C0136 · (semantic) Generational continuity through descendants
+The presence of grandchildren as material evidence of an ongoing family lineage extending beyond the immigrant generation.
 *evidence:* 2 excerpt(s) across ei-845-rodwin
-
-### C0226 · (latent) Understated contentment/resilience
-Latent pattern of minimizing language ('nice,' 'all right') that conveys quiet satisfaction rather than detailed narration.
-*evidence:* 4 excerpt(s) across ei-845-rodwin
-
-### C0227 · (semantic) Interview closing and biographical summary
-Interviewer formally thanks the narrator, removes equipment, and summarizes her immigration biography for the National Park Service record.
-*evidence:* 9 excerpt(s) across ei-845-rodwin
 

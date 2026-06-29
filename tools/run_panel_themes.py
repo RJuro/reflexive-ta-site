@@ -37,7 +37,7 @@ def get_panel() -> dict:
     m.init_db(conn)
     run = m.new_run(conn, "panel for themes")
     doc_id, secs, _ = m.ingest(conn, run, m.ROOT.parent / "transcripts_sample" / DOC)
-    panel = m.code_sections_panel(conn, doc_id, CODERS)
+    panel, _ = m.code_sections_panel(conn, doc_id, CODERS)
     m.EXPORT_DIR.mkdir(exist_ok=True)
     CACHE.write_text(json.dumps(panel, indent=2, ensure_ascii=False))
     print(f"coded {DOC}: {secs and len(secs)} sections; cached → {CACHE.name}")

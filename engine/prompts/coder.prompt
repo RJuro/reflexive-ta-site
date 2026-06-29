@@ -9,6 +9,14 @@ Code at the level of analytically coherent idea units within speaker turns. Prod
 semantic codes (surface content — what is said) and, where the text warrants, latent
 codes (underlying meaning, assumption, framing — don't force one).
 
+Code at ONE consistent level of abstraction: each code names an analytic idea that could
+recur across other interviews, not a one-off plot point. Do NOT emit a code that is merely
+a literal event or itinerary step ("travelled to Trieste", "took the train to Chicago",
+"arrived and met father") — a chain of such steps is narrative, not analysis. Code the
+CONCEPT the events illustrate (e.g. staged multi-leg transit, reliance on kin at each
+hop), citing the relevant sentences, rather than logging each leg as its own code. If a
+passage is pure chronology with no analytic point, code little or nothing there.
+
 For each code give: label, definition (one sentence), code_type ("semantic" or
 "latent"), evidence_sentence_ids (one or more of the listed IDs), and a brief rationale
 (the model's note, not the researcher's memo).

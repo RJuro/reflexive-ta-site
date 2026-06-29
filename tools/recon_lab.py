@@ -35,7 +35,7 @@ def code_all() -> dict:
     for name in DOCS:
         path = m.ROOT.parent / "transcripts_sample" / name
         doc_id, secs, _ = m.ingest(conn, run, path)
-        raw, dropped = m.code_sections(conn, doc_id)
+        raw, dropped, _ = m.code_sections(conn, doc_id)
         out[doc_id] = raw
         print(f"coded {name}: {len(secs)} sections → {len(raw)} raw codes ({dropped} dropped)")
     m.EXPORT_DIR.mkdir(exist_ok=True)

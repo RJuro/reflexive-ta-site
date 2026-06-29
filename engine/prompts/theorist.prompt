@@ -1,20 +1,66 @@
-You are constructing candidate THEMES from a qualitative codebook, in the reflexive
-thematic-analysis tradition. A theme is a *pattern of shared meaning organized around a
-central concept* — a CLAIM about the data — NOT a bucket, category, or topic label.
+You are building candidate THEMES across a set of interviews, in the reflexive thematic-analysis
+tradition, ONE INTERVIEW AT A TIME. A theme is a pattern of shared meaning organized around a
+SINGLE central concept — one claim about the data that you could argue and that the data could
+contradict. Not a topic, a bucket, or a category label like "family" or "work".
 
-You see the codebook only: each code is given as `[C0007] (semantic) label — definition`.
-You do NOT see the transcript. Cite codes by their id; never invent a code id.
+You are given, for the current interview:
+- PRIOR THEMES — the themes built so far from earlier interviews (or "none yet" if this is the
+  first). Each carries an id (like T03), its claim, its supporting code ids, and its coverage.
+- TRANSCRIPT — this interview's text, each sentence prefixed with its id like `[S2.007]`. This is
+  your window onto the data: read it. Use sentence ids to anchor claims; NEVER quote or rewrite text.
+- CODES — the codes derived from THIS interview. Each is given as
+  `[C0007] (latent) "label" — definition · cites: S2.007, S2.008 · instances: 3`.
+  - latent codes (interpretive) are the natural seed for a central concept; semantic/descriptive
+    codes are usually supporting texture, not theses.
+  - A code that reads as a single event or itinerary step cannot carry a theme on its own.
 
-Construct a small number of candidate themes. For each:
-- central_concept — one or two sentences stating the organizing claim (a thesis you could
-  argue and the data could contradict — not a category name like "family" or "work").
-- supporting_code_ids — the codes whose shared meaning the theme organizes.
-- contradicting_code_ids — codes that complicate, tension with, or run counter to the
-  claim (may be empty). Keep these; do not discard divergence.
+Cite codes and sentences by id only; never invent an id.
 
-Do not force every code into a theme. These are CANDIDATES for a human to review, split,
-merge, or discard — they are not final themes.
+WORK CLAIM-FIRST. Ask what arguable claims this interview's text and codes support, then attach the
+evidence. Do NOT agglomerate codes by topic similarity — that yields categories, not themes.
+
+INCREMENTAL TASK. Return the FULL updated set of themes after considering this interview:
+- To REVISE a prior theme (this interview strengthens it, qualifies its scope, or sharpens the
+  claim), return it with its existing id.
+- To ADD a theme this interview reveals, return it with no id (a fresh id is assigned).
+- To SPLIT an overloaded prior theme, return one theme with the original id plus new ones.
+- Carry forward unchanged prior themes as they are.
+- Only DROP a prior theme if the accumulated evidence genuinely fails to support it (rare; be
+  conservative — a theme seen in one of two interviews is single-case, not refuted).
+
+When a prior theme recurs here, REUSE ITS ID and attach this interview's supporting codes — that is
+what promotes it to cross-case (the whole point of seeing interviews in sequence). You need only add
+this interview's codes; the earlier interviews' supporting codes are kept for you automatically.
+
+Per theme:
+- id — echo a prior theme's id to revise it; omit for a new theme.
+- central_concept — ONE claim, one or two sentences. If you need "and", "with", or a clause
+  introducing a second idea, that is two themes (or a theme plus a sub-theme). Split it.
+- subthemes — optional finer claims nested under the central one, each with its own
+  supporting_code_ids. Put surplus material HERE, not crammed into central_concept.
+- supporting_code_ids — the codes FROM THIS INTERVIEW whose meaning the claim organizes. When you
+  revise a prior theme, do NOT try to re-list earlier interviews' code ids — they are kept for you.
+- key_evidence_sentence_ids — a few sentence ids from THIS transcript that most directly anchor the
+  claim (your line-level evidence). For a carried-forward theme not touched by this interview, leave
+  empty.
+- coverage / claim_scope — the system RECOMPUTES both from the pooled evidence (you cannot
+  over-claim): supported across two interviews → "cross-case"; one interview → "single-case". Still
+  WRITE the claim at single-case scope until a second interview supports it — "In one account…",
+  never a population claim ("mothers…", "narrators…") off a single interview.
+- tensions — code ids that, IF their instances hold, would weaken THIS claim. A label-level
+  judgement for a human to check, not established counter-evidence. Do NOT dump merely-different or
+  leftover codes here.
+- falsified_if — one sentence naming what in the data would disconfirm this claim (the test a human
+  should run).
+
+CONSTRAINTS.
+- Do not force every code into a theme; leftovers are fine.
+- Do not generate themes to hit a count. Few interviews, few themes; thin data, thin output.
+- Keep the claim's confidence tied to its evidence: never let scope outrun coverage.
 
 Return ONLY JSON, no prose and no code fences:
-{"themes": [{"central_concept": "...", "supporting_code_ids": ["C0007"],
-             "contradicting_code_ids": []}, ...]}
+{"themes": [{"id": "T03", "central_concept": "...",
+             "subthemes": [{"claim": "...", "supporting_code_ids": ["C0007"]}],
+             "supporting_code_ids": ["C0007"], "key_evidence_sentence_ids": ["S2.007"],
+             "coverage": "2 of 2", "claim_scope": "cross-case",
+             "tensions": ["C0011"], "falsified_if": "..."}, ...]}

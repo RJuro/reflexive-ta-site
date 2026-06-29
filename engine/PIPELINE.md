@@ -1,11 +1,17 @@
 # MASSHINE engine — pipeline, prompts, and plan adherence
 
-What the engine does, call by call: which prompt runs when, what goes in, what comes out.
-Then an honest check against `DESIGN_REFLECTION.md`.
+> ⚠️ **Superseded for mechanics — see [`../WORKFLOW.md`](../WORKFLOW.md) for the current,
+> authoritative stage-by-stage walkthrough.** Since this file was written, theming was rewritten
+> from a single codebook-only pass into a **sequential, transcript-grounded** walk; a **standpoint
+> panel** pipeline was added; runs became **resumable**; and timeouts changed (below). The
+> "Are we still following the plan?" section at the bottom is still current and unique to this file.
 
-Model: **MiniMax-M3**, OpenAI-compatible, **default sampling** (we don't set temperature),
-per-call **timeout 120s / 1 retry**. Every prompt is a file in `prompts/` (P5); the model
-returns **JSON only** (its `<think>…</think>` is stripped before parsing); the model cites
+What the engine does, call by call. Then an honest check against `DESIGN_REFLECTION.md`.
+
+Model: **MiniMax-M3**, OpenAI-compatible, **default sampling** (we don't set temperature). Per-call
+**timeout 300s / 1 retry** for structure/coder/reconcile; the **theorist runs at 900s / no retry**
+(it now reads a whole transcript with thinking on). Every prompt is a file in `prompts/` (P5); the
+model returns **JSON only** (its `<think>…</think>` is stripped before parsing); the model cites
 **IDs, never raw text** (P1) and the system resolves verbatim spans from the index.
 
 ---
@@ -25,7 +31,9 @@ import transcript
   │
   ├─ [LLM] reconcile.prompt        1 call/project  → project codebook (dedup across docs)
   │
-  └─ [LLM] theorist.prompt         1 call/project  → candidate themes (claims + tensions)
+  └─ [LLM] theorist.prompt         1 call/INTERVIEW, SEQUENTIAL → candidate themes
+         (each interview: prior themes + its transcript + its codes → updated themes;
+          coverage/scope, sub-themes, anchors, tensions, falsified-if — see WORKFLOW.md §5)
 ```
 
 Per-document LLM calls = `1 (structure) + N_sections (parallel) + 1 (reconcile)`.
@@ -83,12 +91,18 @@ Per-project = `+ 1 (cross-doc reconcile)`. Measured: structure/coder/reconcile �
   `reconcile_into`, re-derives themes. (Previously the only path was a full rebuild that
   renumbered every id — now fixed.)
 
-### 5. `theorist.prompt` — candidate themes  *(WIRED)*
-- **In:** the project codebook as `[C0007] (semantic) label — definition` (no transcript).
-- **Out:** `{"themes": [{"central_concept", "supporting_code_ids", "contradicting_code_ids"}]}`
-- Themes are *claims*, not bucket labels; divergence (contradicting codes) preserved. Invented
-  or empty-support code ids are dropped; themes stored in the `theme` table and exported.
-- **Functions:** `theorize()`, `theorize_project()`.
+### 5. `theorist.prompt` — candidate themes  *(REWRITTEN — sequential, transcript-grounded)*
+- **In, per interview (reading order):** the prior themes + that interview's **full transcript**
+  (sentence-id tagged) + its codes (`[C0007] (latent) "label" — def · cites · instances`).
+- **Out:** `{id, central_concept, subthemes[], supporting_code_ids[], key_evidence_sentence_ids[],
+  coverage, claim_scope, tensions[], falsified_if}` (+ `paradigm_provenance` in the panel).
+  Coverage/scope are **computed in Python** from interviews-seen-so-far (not trusted to the model);
+  supporting codes **accumulate** across interviews so coverage can rise to "2 of 2".
+- **Functions:** `theorize_walk()`, `theorize_project_sequential()` (themes over the project codebook,
+  so theme ids match `4_codebook.md`), `theorize_panel_sequential()`. The legacy codebook-only
+  `theorize()`/`theorize_project()`/`theorize_panel()` still exist for `demo`/`add_document`/
+  `run_panel_themes` and use `theorist_codebook.prompt`.
+- Full detail (what the model sees, the panel, friction, resume, debugging): **`../WORKFLOW.md`**.
 
 ---
 
@@ -121,7 +135,7 @@ files, SQLite + JSON export, one MiniMax client at default settings, RTA framing
 | 0 skeleton | FastAPI + SQLite + sentence index, round-trips | ✅ done |
 | 1 autopilot coder | code sections, cite sentence IDs | ✅ done (blind + parallel) |
 | 2 conciliator | per-code, **whole codebook in prompt**, **create/merge/minority/defer + rationale**, phase from saturation | ⚠️ **deviated** — see below |
-| 3 theme pass | `theorist.prompt` → candidate themes | ✅ done (1 pass, claims + tensions, exported) |
+| 3 theme pass | `theorist.prompt` → candidate themes | ✅ done — now **sequential + transcript-grounded** (claim / coverage / scope / line-anchors / falsified-if); panel adds paradigm provenance |
 | 4 the app | reading + codebook views | ⬜ not started |
 | 5 co-pilot + comparison | interactive lenses, variance | ⬜ not started |
 

@@ -41,6 +41,10 @@ your evidence anchors. NEVER quote or rewrite the text; cite the sentence IDs th
 code. Produce semantic codes (what is said) and latent codes (underlying meaning / framing) where
 the text warrants. For each code give: label, definition (one sentence), code_type ("semantic" or
 "latent"), evidence_sentence_ids (one or more listed IDs), and a brief rationale.
+Code at ONE consistent level of abstraction — an analytic idea that could recur across interviews,
+not a one-off plot point. Do NOT log literal events or itinerary steps as codes ("took the train
+to X", "arrived at Y"); code the experiential or mnemonic point such moments illustrate, citing
+the sentences.
 
 Return ONLY JSON, no prose or code fences:
 {"codes": [{"label": "...", "definition": "...", "code_type": "semantic|latent",

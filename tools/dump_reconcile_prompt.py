@@ -28,7 +28,7 @@ def main() -> None:
     m.init_db(conn)
     run = m.new_run(conn, "dump reconcile prompt")
     doc_id, sections, sents = m.ingest(conn, run, sample)
-    raw_codes, dropped = m.code_sections(conn, doc_id)        # raw per-section codes
+    raw_codes, dropped, _ = m.code_sections(conn, doc_id)     # raw per-section codes
     system, user, tmp = m._reconcile_messages(raw_codes)      # the exact assembly
 
     m.EXPORT_DIR.mkdir(exist_ok=True)

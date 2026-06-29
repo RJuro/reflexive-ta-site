@@ -41,7 +41,7 @@ def main() -> None:
 
     t0 = time.perf_counter()
     doc_id, secs, _ = m.ingest(conn, run, path)
-    panel = m.code_sections_panel(conn, doc_id, CODERS)
+    panel, _ = m.code_sections_panel(conn, doc_id, CODERS)
     fr = m.friction(panel)
     dt = time.perf_counter() - t0
 

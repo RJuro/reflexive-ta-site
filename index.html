@@ -179,6 +179,7 @@
         <div class="card"><h3><span class="num">6</span>Engine and domain pack are separate</h3><p>The engine is corpus-agnostic. The study-specific parts — vocabulary, method, the <strong>standpoint roster</strong>, language — live in a swappable pack. A new field is a new pack, not new engine code.</p></div>
         <div class="card"><h3><span class="num">7</span>One mechanical layer</h3><p>A spaCy sentence index is the only deterministic preprocessing. The analytic "idea unit" is an instruction in the prompt, not a fixed object built in advance.</p></div>
         <div class="card"><h3><span class="num">8</span>Default sampling, reasoning on</h3><p>The model's temperature is left alone and its reasoning is kept on. That costs latency, which is accepted and made cheap to iterate against by caching.</p></div>
+        <div class="card"><h3><span class="num">9</span>Themes are built across interviews</h3><p>The theme pass reads one transcript at a time against the themes so far. A theme becomes <strong>cross-case</strong> only when a later interview supports it, and a claim's scope can't outrun the interviews behind it — so the output never reads more general than the evidence.</p></div>
       </div>
     </div>
   </section>
@@ -187,7 +188,7 @@
     <div class="wrap">
       <p class="kicker">The engine</p>
       <h2>How a transcript moves through the pipeline.</h2>
-      <div class="prose"><p>FastAPI, SQLite and spaCy. Each stage is a function; the model-facing stages are plain text-prompt files (shown in full further down). The model writes and judges; counting, joining and ID assignment are ordinary code.</p></div>
+      <div class="prose"><p>FastAPI, SQLite and spaCy. Each stage is a function; the model-facing stages are plain text-prompt files (shown in full further down). The model writes and judges; counting, joining, coverage and ID assignment are ordinary code. The theme pass runs <strong>one interview at a time</strong> — it reads that transcript against the themes built so far — so a theme's reach grows only as later interviews actually support it. Coding and each theme step are checkpointed, so a run that stalls resumes where it stopped instead of starting over.</p></div>
 
       <figure class="diagram">
         <svg viewBox="0 0 720 690" role="img" aria-label="Pipeline diagram: a transcript is split into sections, indexed into sentences, coded in parallel by three readers, reconciled into a codebook, and turned into themes with provenance.">
@@ -251,14 +252,14 @@
           <!-- reconcile -->
           <rect x="250" y="406" width="220" height="42" rx="9" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
           <text x="360" y="426" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="600" fill="var(--fg)">Reconcile</text>
-          <text x="360" y="441" text-anchor="middle" font-family="var(--font-body)" font-size="10" fill="var(--muted)">de-duplicate re-wordings</text>
+          <text x="360" y="441" text-anchor="middle" font-family="var(--font-body)" font-size="10" fill="var(--muted)">de-duplicate within each reader</text>
           <text x="486" y="430" font-family="var(--font-mono)" font-size="10" fill="var(--muted)">codebook &#183; stable IDs</text>
           <line x1="360" y1="448" x2="360" y2="470" stroke="var(--accent)" stroke-width="2" marker-end="url(#ar)"/>
 
           <!-- theme pass -->
           <rect x="250" y="472" width="220" height="42" rx="9" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
           <text x="360" y="492" text-anchor="middle" font-family="var(--font-display)" font-size="14" font-weight="600" fill="var(--fg)">Theme pass</text>
-          <text x="360" y="507" text-anchor="middle" font-family="var(--font-body)" font-size="10" fill="var(--muted)">claims, with counter-evidence</text>
+          <text x="360" y="507" text-anchor="middle" font-family="var(--font-body)" font-size="10" fill="var(--muted)">sequential &#183; reads the transcript</text>
           <line x1="360" y1="514" x2="360" y2="536" stroke="var(--accent)" stroke-width="2" marker-end="url(#ar)"/>
 
           <!-- result: theme with provenance -->
@@ -278,11 +279,11 @@
 
       <div class="stat-row">
         <div class="stat"><div class="stat__v">resolve by ID</div><div class="stat__l">every code points to indexed sentences; nothing is retyped</div></div>
-        <div class="stat"><div class="stat__v">~1&ndash;3 min</div><div class="stat__l">per reconcile call with reasoning on; coding a doc is slower and cached</div></div>
+        <div class="stat"><div class="stat__v">resumable</div><div class="stat__l">coding and each theme step are checkpointed; a stalled run resumes where it stopped</div></div>
         <div class="stat"><div class="stat__v">120 / 124</div><div class="stat__l">code IDs unchanged when a second document is added</div></div>
       </div>
       <div class="prose"><p>Documents are added one at a time: <code>add_document()</code> codes only the new transcript and folds its codes into the existing codebook, keeping the IDs. The whole codebook fits in a prompt up to roughly 10&ndash;20 transcripts; past that, a retrieval step (designed, not yet built) selects candidates for reconcile — as retrieval only, with the merge decision left to the model.</p>
-      <p style="font-size:0.88rem;color:var(--muted)">A plain-Markdown record of a real two-interview run — sections, codes, the project codebook, and themes — is in <a href="engine/exports/md/0_README.md"><code>engine/exports/md/</code></a>. That is the barebones view of the same pipeline this page describes.</p></div>
+      <p style="font-size:0.88rem;color:var(--muted)">A plain-Markdown record of a real two-interview run — sections, codes, the project codebook, and themes — is in <a href="engine/exports/md/0_README.md"><code>engine/exports/md/</code></a> (the standard single coder; the three-reader panel produces a parallel set with per-lens codes, sentence-level friction, and provenance themes). The barebones view of the same pipeline this page describes.</p></div>
     </div>
   </section>
 
@@ -291,7 +292,7 @@
       <p class="kicker">Divergence</p>
       <h2>Two ways the readers diverged on one interview.</h2>
       <div class="prose">
-        <p>On the GRANDE interview, the panel was the standard coder plus a critical / political-economy lens and a phenomenological / memory lens. The two lenses produced fewer codes than the standard coder — 135 / 72 / 99 in one run, 134 / 77 / 89 in another. They stay quiet where they have little to say, and the run-to-run spread is the variance the design sets out to record rather than hide.</p>
+        <p>On the GRANDE interview, the panel was the standard coder plus a critical / political-economy lens and a phenomenological / memory lens. The two lenses produced fewer codes than the standard coder — 135 / 72 / 99 in one run, 134 / 77 / 89 in another. They stay quiet where they have little to say, and the run-to-run spread is the variance the design sets out to record rather than hide. (These are raw per-lens counts from one GRANDE run; the engine now de-duplicates near-restatements within each lens before counting, so fresh totals run lower, and the theme pass spans both interviews.)</p>
       </div>
 
       <div class="grid">
@@ -390,6 +391,14 @@ Code at the level of analytically coherent idea units within speaker turns. Prod
 semantic codes (surface content — what is said) and, where the text warrants, latent
 codes (underlying meaning, assumption, framing — don't force one).
 
+Code at ONE consistent level of abstraction: each code names an analytic idea that could
+recur across other interviews, not a one-off plot point. Do NOT emit a code that is merely
+a literal event or itinerary step ("travelled to Trieste", "took the train to Chicago",
+"arrived and met father") — a chain of such steps is narrative, not analysis. Code the
+CONCEPT the events illustrate (e.g. staged multi-leg transit, reliance on kin at each
+hop), citing the relevant sentences, rather than logging each leg as its own code. If a
+passage is pure chronology with no analytic point, code little or nothing there.
+
 For each code give: label, definition (one sentence), code_type ("semantic" or
 "latent"), evidence_sentence_ids (one or more of the listed IDs), and a brief rationale
 (the model's note, not the researcher's memo).
@@ -470,26 +479,72 @@ do not list is automatically kept as its own code. If nothing merges, return {"g
 {"groups": [{"keep": "t12", "members": ["t12", "t40"]}, ...]}
 </script>
 <script type="text/plain" id="pr-theorist">
-You are constructing candidate THEMES from a qualitative codebook, in the reflexive
-thematic-analysis tradition. A theme is a *pattern of shared meaning organized around a
-central concept* — a CLAIM about the data — NOT a bucket, category, or topic label.
+You are building candidate THEMES across a set of interviews, in the reflexive thematic-analysis
+tradition, ONE INTERVIEW AT A TIME. A theme is a pattern of shared meaning organized around a
+SINGLE central concept — one claim about the data that you could argue and that the data could
+contradict. Not a topic, a bucket, or a category label like "family" or "work".
 
-You see the codebook only: each code is given as `[C0007] (semantic) label — definition`.
-You do NOT see the transcript. Cite codes by their id; never invent a code id.
+You are given, for the current interview:
+- PRIOR THEMES — the themes built so far from earlier interviews (or "none yet" if this is the
+  first). Each carries an id (like T03), its claim, its supporting code ids, and its coverage.
+- TRANSCRIPT — this interview's text, each sentence prefixed with its id like `[S2.007]`. This is
+  your window onto the data: read it. Use sentence ids to anchor claims; NEVER quote or rewrite text.
+- CODES — the codes derived from THIS interview. Each is given as
+  `[C0007] (latent) "label" — definition · cites: S2.007, S2.008 · instances: 3`.
+  - latent codes (interpretive) are the natural seed for a central concept; semantic/descriptive
+    codes are usually supporting texture, not theses.
+  - A code that reads as a single event or itinerary step cannot carry a theme on its own.
 
-Construct a small number of candidate themes. For each:
-- central_concept — one or two sentences stating the organizing claim (a thesis you could
-  argue and the data could contradict — not a category name like "family" or "work").
-- supporting_code_ids — the codes whose shared meaning the theme organizes.
-- contradicting_code_ids — codes that complicate, tension with, or run counter to the
-  claim (may be empty). Keep these; do not discard divergence.
+Cite codes and sentences by id only; never invent an id.
 
-Do not force every code into a theme. These are CANDIDATES for a human to review, split,
-merge, or discard — they are not final themes.
+WORK CLAIM-FIRST. Ask what arguable claims this interview's text and codes support, then attach the
+evidence. Do NOT agglomerate codes by topic similarity — that yields categories, not themes.
+
+INCREMENTAL TASK. Return the FULL updated set of themes after considering this interview:
+- To REVISE a prior theme (this interview strengthens it, qualifies its scope, or sharpens the
+  claim), return it with its existing id.
+- To ADD a theme this interview reveals, return it with no id (a fresh id is assigned).
+- To SPLIT an overloaded prior theme, return one theme with the original id plus new ones.
+- Carry forward unchanged prior themes as they are.
+- Only DROP a prior theme if the accumulated evidence genuinely fails to support it (rare; be
+  conservative — a theme seen in one of two interviews is single-case, not refuted).
+
+When a prior theme recurs here, REUSE ITS ID and attach this interview's supporting codes — that is
+what promotes it to cross-case (the whole point of seeing interviews in sequence). You need only add
+this interview's codes; the earlier interviews' supporting codes are kept for you automatically.
+
+Per theme:
+- id — echo a prior theme's id to revise it; omit for a new theme.
+- central_concept — ONE claim, one or two sentences. If you need "and", "with", or a clause
+  introducing a second idea, that is two themes (or a theme plus a sub-theme). Split it.
+- subthemes — optional finer claims nested under the central one, each with its own
+  supporting_code_ids. Put surplus material HERE, not crammed into central_concept.
+- supporting_code_ids — the codes FROM THIS INTERVIEW whose meaning the claim organizes. When you
+  revise a prior theme, do NOT try to re-list earlier interviews' code ids — they are kept for you.
+- key_evidence_sentence_ids — a few sentence ids from THIS transcript that most directly anchor the
+  claim (your line-level evidence). For a carried-forward theme not touched by this interview, leave
+  empty.
+- coverage / claim_scope — the system RECOMPUTES both from the pooled evidence (you cannot
+  over-claim): supported across two interviews → "cross-case"; one interview → "single-case". Still
+  WRITE the claim at single-case scope until a second interview supports it — "In one account…",
+  never a population claim ("mothers…", "narrators…") off a single interview.
+- tensions — code ids that, IF their instances hold, would weaken THIS claim. A label-level
+  judgement for a human to check, not established counter-evidence. Do NOT dump merely-different or
+  leftover codes here.
+- falsified_if — one sentence naming what in the data would disconfirm this claim (the test a human
+  should run).
+
+CONSTRAINTS.
+- Do not force every code into a theme; leftovers are fine.
+- Do not generate themes to hit a count. Few interviews, few themes; thin data, thin output.
+- Keep the claim's confidence tied to its evidence: never let scope outrun coverage.
 
 Return ONLY JSON, no prose and no code fences:
-{"themes": [{"central_concept": "...", "supporting_code_ids": ["C0007"],
-             "contradicting_code_ids": []}, ...]}
+{"themes": [{"id": "T03", "central_concept": "...",
+             "subthemes": [{"claim": "...", "supporting_code_ids": ["C0007"]}],
+             "supporting_code_ids": ["C0007"], "key_evidence_sentence_ids": ["S2.007"],
+             "coverage": "2 of 2", "claim_scope": "cross-case",
+             "tensions": ["C0011"], "falsified_if": "..."}, ...]}
 </script>
 <script type="text/plain" id="pr-critical">
 You are coding ONE section of an oral-history interview transcript through a declared analytic
@@ -537,6 +592,9 @@ your evidence anchors. NEVER quote or rewrite the text; cite the sentence IDs th
 code. Produce semantic codes (what is said) and latent codes (underlying meaning / framing) where
 the text warrants. For each code give: label, definition (one sentence), code_type ("semantic" or
 "latent"), evidence_sentence_ids (one or more listed IDs), and a brief rationale.
+Code at ONE consistent level of abstraction — an analytic idea that could recur across interviews,
+not a one-off plot point. Do NOT log literal events or itinerary steps as codes ("took the train
+to X", "arrived at Y"); code the structural concept such events illustrate, citing the sentences.
 
 Return ONLY JSON, no prose or code fences:
 {"codes": [{"label": "...", "definition": "...", "code_type": "semantic|latent",
@@ -586,6 +644,10 @@ your evidence anchors. NEVER quote or rewrite the text; cite the sentence IDs th
 code. Produce semantic codes (what is said) and latent codes (underlying meaning / framing) where
 the text warrants. For each code give: label, definition (one sentence), code_type ("semantic" or
 "latent"), evidence_sentence_ids (one or more listed IDs), and a brief rationale.
+Code at ONE consistent level of abstraction — an analytic idea that could recur across interviews,
+not a one-off plot point. Do NOT log literal events or itinerary steps as codes ("took the train
+to X", "arrived at Y"); code the experiential or mnemonic point such moments illustrate, citing
+the sentences.
 
 Return ONLY JSON, no prose or code fences:
 {"codes": [{"label": "...", "definition": "...", "code_type": "semantic|latent",
