@@ -1114,7 +1114,7 @@
             <span class="fam__label">${esc(f.label)}</span>
             ${famNotes ? '<span class="note-dot"></span>' : ''}
             <span class="fam__def">${esc(f.definition)}</span>
-            <span class="fam__count">${members.length}${members.length !== f.n_codes ? ` of ${f.n_codes}` : ''}</span>
+            <span class="fam__count">${members.length}${members.length !== f.n_codes ? ` of ${f.n_codes}` : ''}${f.n_sources > 1 ? ` · ${f.n_sources} sources` : ''}</span>
             <button class="btn-bare" data-fam-open="${f.id}" title="Memo & notes">✎</button>
           </div>
           ${open ? `<div class="fam__body">${members.length
@@ -1193,13 +1193,16 @@
   function openConsolidateSheet(nCodes) {
     const root = $('sheet-root');
     const has = (S.families?.families || []).length > 0;
+    const nSrc = new Set(S.codes.filter(c => c.status !== 'rejected').map(c => c.origin_doc_id)).size;
+    const callsCopy = nSrc > 1
+      ? `${nSrc + 1} model calls — each source's codes are grouped first, then aggregated into 8–15 project families.`
+      : `One model call groups ${nCodes} active codes into 8–15 families — the compact view of the codebook, with every code and its evidence kept underneath.`;
     root.innerHTML = `
       <div class="sheet-wrap" id="sheet-bg">
         <div class="sheet">
           <h2>${has ? 'Re-consolidate the codebook' : 'Consolidate the codebook'}</h2>
           <p class="hint" style="font-size:12px;line-height:1.5;margin:0 0 6px">
-            One model call groups ${nCodes} active codes into 8–15 families — the compact view of
-            the codebook, with every code and its evidence kept underneath.${has ? ' Existing families are replaced; your open family notes ride along.' : ''}
+            ${callsCopy}${has ? ' Existing families are replaced; your open family notes ride along.' : ''}
           </p>
           <div class="sheet__foot">
             <button class="btn-quiet" id="cs-cancel">Cancel</button>
@@ -1721,7 +1724,7 @@
             <h1 class="insp-title">${esc(f.label)}</h1>
           </div>
           <p class="insp-def">${esc(f.definition)}</p>
-          <p class="code-item__type" style="margin-top:6px">${f.n_codes} code${f.n_codes === 1 ? '' : 's'}</p>
+          <p class="code-item__type" style="margin-top:6px">${f.n_codes} code${f.n_codes === 1 ? '' : 's'}${f.n_sources > 1 ? ` · ${f.n_sources} sources` : ''}</p>
         </div>
         ${memoBlock('family', f.id, { label: f.label })}
         ${notesBlock('family', f.id, null, { label: f.label },

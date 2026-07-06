@@ -1,0 +1,48 @@
+You are a reflexive thematic-analysis researcher completing the SECOND stage of a two-stage
+codebook consolidation. Each source (interview/document) already had its own codes grouped
+into per-source families — a first pass, done independently per source so within-case
+structure comes first. Your job now is to look ACROSS all sources' families and organize
+them into the project-level 8–15 FAMILIES — the compact, cross-case view a human researcher
+can hold in mind, without discarding any of the underlying per-source work.
+
+INPUT
+The per-source families are listed below, grouped under a heading for each source. Each
+family line looks like:
+[SF07] (source: <doc title>) "label" — definition · 7 codes · e.g. "code label a"; "code
+label b"; "code label c"
+
+TASK
+Merge and organize these per-source families into 8–15 project-level FAMILIES. Where
+different sources produced families about the same underlying concern (even under
+different labels), merge them into one project family — that cross-case synthesis is the
+whole point of this pass. A project family is bigger than any one source's family but
+narrower than a whole theme: it organizes the codebook for browsing, it does not interpret
+or theorize beyond what the member families' own definitions already claim. Do not invent
+analytic content that isn't already present in the families you group.
+
+Every project family needs:
+  - "label": a short name, at most 8 words.
+  - "definition": one sentence describing what unites the family's members.
+  - "member_family_ids": the real per-source family ids (exactly as given, e.g. "SF07")
+    that belong to this project family — every id you list MUST come from the input listing
+    above. Never invent an id.
+
+COVERAGE
+Try to place every per-source family into some project family. A genuinely unclassifiable
+family may be left out — it will be filed under an automatic "Unfiled" bucket along with
+any of its codes, so leaving a poor fit out is better than forcing it somewhere it doesn't
+belong. Do not let one or two stray families block you from finalizing the grouping.
+
+ORDER — THE SEMANTIC RING
+Order the project families in your output so that ADJACENT families are the most closely
+related pair available, forming a ring: the last family in your list should also relate back
+to the first, as if the families sit around a color wheel and neighbors on the wheel share
+the closest kinship. This ordering carries no extra cost — you are only choosing the
+sequence of the same families — but it is used downstream to assign each family a hue, so
+put real thought into which family comes next to which.
+
+Return ONLY JSON, no prose or code fences:
+{"families": [
+  {"label": "...", "definition": "...", "member_family_ids": ["SF01", "SF02"]},
+  ...
+]}

@@ -250,16 +250,21 @@ def theme_work(pid: str, mode: str, feedback: bool = False):
 
 
 def consolidate_work(pid: str):
-    """P6: group the whole codebook into 8–15 code families (ONE LLM call). Reads open
-    family comments as guidance, persists families + hues, clears the staleness flag, and
-    marks those comments addressed — the same shape as theme_work's feedback handling."""
+    """P6: group the whole codebook into 8–15 code families. Small/single-source projects get
+    one LLM call; larger multi-source projects use a hierarchical map-reduce (per-source
+    families, then one aggregation) — see consolidate.consolidate_codebook. Reads open family
+    comments as guidance, persists families + hues, clears the staleness flag, and marks those
+    comments addressed — the same shape as theme_work's feedback handling."""
     def work(progress):
         conn = project_db(projects.project_db_path(pid))
         try:
             codes = store.codes_payload(conn)
             guidance = store.compile_family_guidance(conn) or None
+            doc_titles = {r[0]: (r[1] or "").strip() or r[2]
+                          for r in conn.execute("SELECT id, title, filename FROM document")}
             progress(stage="consolidate", message="grouping the codebook into families")
-            families = consolidate_codebook(codes, guidance=guidance)
+            families = consolidate_codebook(codes, guidance=guidance, doc_titles=doc_titles,
+                                             progress=progress)
             store.persist_families(conn, families)
             store.set_families_stale(conn, False)
             n_addr = store.mark_feedback_addressed(conn, target_type="family")

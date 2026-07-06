@@ -226,17 +226,21 @@ def persist_families(conn: sqlite3.Connection, families: list[dict]) -> None:
 
 
 def families_payload(conn: sqlite3.Connection) -> list[dict]:
-    """Families ordered by ring position, each with n_codes = count of non-rejected members."""
+    """Families ordered by ring position, each with n_codes = count of non-rejected members
+    and n_sources = count of distinct origin docs among those active members (derived, no
+    schema change — >1 signals a family that was aggregated across sources)."""
     revs = revisions_map(conn)
     out = []
     for r in conn.execute(
             "SELECT id, label, definition, hue, position FROM code_family ORDER BY position"):
         fid = r[0]
-        member_ids = [row[0] for row in conn.execute(
-            "SELECT id FROM code WHERE family_id=?", (fid,))]
-        n_codes = sum(1 for cid in member_ids if not revs.get(cid, {}).get("rejected"))
+        rows = conn.execute(
+            "SELECT id, origin_doc_id FROM code WHERE family_id=?", (fid,)).fetchall()
+        active = [(cid, doc_id) for cid, doc_id in rows if not revs.get(cid, {}).get("rejected")]
+        n_codes = len(active)
+        n_sources = len({doc_id for _, doc_id in active})
         out.append({"id": fid, "label": r[1], "definition": r[2], "hue": r[3], "position": r[4],
-                    "n_codes": n_codes})
+                    "n_codes": n_codes, "n_sources": n_sources})
     return out
 
 

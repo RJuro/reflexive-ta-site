@@ -391,6 +391,7 @@ lobotomy.*
 ## Plan
 
 1. ✅ SHIPPED (2026-07-06): **Consolidation pass → code families** — `consolidate.prompt` + `consolidate.py` (one LLM call, Python-validated: invented/rejected ids dropped, first-claim wins, Unfiled catch-all), schema v7 (`code_family` + `code.family_id`), `POST /consolidate` job with family-note guidance, staleness on codes rewrite, family grouping UI + inspector pane + exports.
+   2026-07-06 (later): consolidation is now hierarchical — per-source families first (one call per source), then one aggregation into the project 8–15; single-source/small projects keep the one-call path.
    New job kind `consolidate`: ONE LLM call over the codebook proposes 8–15 families —
    `{label, definition, member_code_ids}` — with grounding rules (members must be real
    code ids; Python validates and drops inventions; unassigned codes go to an explicit
@@ -451,3 +452,43 @@ Once codes are consolidated into families (item 1), color them hierarchically:
   hue. Two different dimensions, two different visual channels — never both as color.
 - Hue stored on the family row at consolidation time (deterministic, stable across
   sessions, consistent in exports).
+
+---
+
+# P7 — Hierarchy discipline: codes ≠ families ≠ themes (reviewer round 2, 2026-07-06)
+
+*Second external review (77 codes / 14 families / 5 themes on one interview — the coder
+restraint is working; the granularity fight moved up a level). Diagnosis: families risk
+becoming boxes that (a) hide overcoding by legitimizing weak codes, (b) blur into
+proto-themes, and (c) have no visible connection to the themes layer. "The system now
+needs a stronger hierarchy discipline: codes are reusable phenomena, families are clean
+organizational clusters, themes are concise interpretive claims — with explicit checks
+that each level is not repeating or rescuing the others."*
+
+## Plan
+
+1. **Hierarchy-discipline prompt block** (consolidate_source / consolidate_aggregate /
+   theorist): families must not rescue weak codes; family labels are descriptive
+   mid-level clusters, never theoretical claims (claims belong to themes); minimum ~3
+   codes per family unless analytically central; target 6–10 robust families per source;
+   a within-family redundancy sweep in the consolidation self-review (merge same-claim
+   codes / flag subcode candidates); single-case themes use hedged language ("in this
+   account", never universals).
+2. **Family rationale — the "why".** The consolidation returns a one-sentence rationale
+   per family ("why these codes belong together"); stored (`code_family.rationale`,
+   schema v8) and rendered in the family header/inspector. A box becomes an argument.
+3. **Theme label / claim split.** Theorist returns a short scannable `label` (≤6 words,
+   e.g. "Kinship-mediated underpayment") alongside the one-sentence `central_concept`;
+   label rides in theme_v2 payload; UI cards title on the label; exports updated.
+4. **Theme ↔ family cross-links, Python-derived (NOT model-emitted).** Family ids churn
+   on re-consolidation, so supporting_family_ids must be derived at read time from
+   supporting codes → their families → counts. UI: theme cards show family chips in the
+   family colors; family header/inspector shows "feeds themes: T01, T03". This is the
+   connective tissue that makes the palette meaningful.
+5. **Evidence-spread flag (computable, not promptable).** A theme whose supporting
+   evidence concentrates in one section gets a quiet "narrow evidence base" chip —
+   derived from sentence ids in Python, mirroring the thin-support flag.
+
+Sequencing: implement immediately after the hierarchical per-source consolidation lands
+(same files). Items 1–2 ride on the new prompts; 3 touches theorist + themes UI; 4–5 are
+pure Python/UI.
