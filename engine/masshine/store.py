@@ -389,6 +389,83 @@ def mark_feedback_addressed(conn: sqlite3.Connection, doc_id: str | None = None,
     return cur.rowcount
 
 
+# ---- export (v5) ------------------------------------------------------------------------------
+# Self-contained exports: codes with researcher revisions applied and verbatim quotes resolved
+# from the sentence index, themes with their full payload, plus memos and comments — everything
+# a coauthor needs outside the app. JSON = archival/complete; CSV = flat, spreadsheet-ready.
+
+def _safe_quote(conn: sqlite3.Connection, qualified: str) -> str:
+    try:
+        from .db import resolve_ev
+        return " ".join(resolve_ev(conn, qualified).split())
+    except Exception:
+        return ""
+
+
+def export_payload(conn: sqlite3.Connection, mode: str) -> dict:
+    codes = codes_payload(conn)
+    for c in codes:
+        c["evidence"] = [{"id": e, "quote": _safe_quote(conn, e)} for e in c["evidence"]]
+    th = themes_payload(conn, mode)
+    return {
+        "exported_at": _now(),
+        "mode": mode,
+        "documents": document_list(conn),
+        "codes": codes,
+        "themes": th["themes"],
+        "themes_stale": th["stale"],
+        "memos": list_memos(conn),
+        "comments": list_comments(conn),
+    }
+
+
+def _memo_map(conn: sqlite3.Connection, target_type: str) -> dict[str, str]:
+    return {m["target_id"]: m["body"] for m in list_memos(conn, target_type=target_type)}
+
+
+def codes_csv(conn: sqlite3.Connection) -> str:
+    import csv
+    import io
+    memos = _memo_map(conn, "code")
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["id", "lens", "type", "status", "label", "machine_label", "definition",
+                "origin_doc", "n_evidence", "evidence_ids", "exemplar_quote",
+                "model_rationale", "researcher_memo"])
+    for c in codes_payload(conn):
+        w.writerow([
+            c["id"], c["coder"], c["code_type"], c["status"],
+            c["researcher_label"] or c["label"], c["label"], c["definition"],
+            c["origin_doc_id"], len(c["evidence"]), " ".join(c["evidence"]),
+            _safe_quote(conn, c["evidence"][0]) if c["evidence"] else "",
+            c["model_rationale"], memos.get(c["id"], ""),
+        ])
+    return out.getvalue()
+
+
+def themes_csv(conn: sqlite3.Connection, mode: str) -> str:
+    import csv
+    import io
+    memos = _memo_map(conn, "theme")
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["id", "central_concept", "coverage", "claim_scope", "provenance",
+                "n_supporting", "supporting_code_ids", "tensions", "subthemes",
+                "key_evidence", "falsified_if", "researcher_memo"])
+    for t in themes_payload(conn, mode)["themes"]:
+        prov = t.get("paradigm_provenance") or {}
+        w.writerow([
+            t["id"], t["central_concept"], t.get("coverage", ""), t.get("claim_scope", ""),
+            "|".join(f"{k}:{v}" for k, v in prov.items()),
+            len(t.get("supporting_code_ids", [])), " ".join(t.get("supporting_code_ids", [])),
+            " ".join(t.get("tensions", [])),
+            " | ".join(st.get("claim", "") for st in t.get("subthemes", [])),
+            " ".join(t.get("key_evidence_sentence_ids", [])),
+            t.get("falsified_if", ""), memos.get(t["id"], ""),
+        ])
+    return out.getvalue()
+
+
 def set_themes_stale(conn: sqlite3.Connection, mode: str, stale: bool) -> None:
     conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)",
                  (f"themes_stale:{mode}", 1 if stale else 0))

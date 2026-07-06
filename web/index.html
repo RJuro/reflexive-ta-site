@@ -295,6 +295,13 @@
   .sheet__file { padding: 18px; border: 1.5px dashed var(--hairline); border-radius: 10px; text-align: center; color: var(--muted); font-size: 12.5px; cursor: pointer; }
   .sheet__file:hover { border-color: var(--accent); color: var(--fg); }
   .sheet__foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .export-list { display: flex; flex-direction: column; gap: 7px; }
+  .export-item {
+    display: flex; flex-direction: column; gap: 2px; padding: 11px 13px;
+    border: 1px solid var(--hairline); border-radius: 9px; background: var(--bg);
+    color: var(--fg); text-decoration: none; font-size: 12.5px;
+  }
+  .export-item:hover { border-color: var(--accent); }
   .empty { color: var(--faint); font-size: 12.5px; font-style: italic; }
 </style>
 </head>

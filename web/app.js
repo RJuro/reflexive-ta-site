@@ -261,6 +261,35 @@
     });
   }
 
+  function openExportSheet() {
+    const root = $('sheet-root');
+    const base = `/projects/${S.pid}/export`;
+    root.innerHTML = `
+      <div class="sheet-wrap" id="sheet-bg">
+        <div class="sheet">
+          <h2>Export</h2>
+          <div class="export-list">
+            <a class="export-item" href="${base}" download>
+              <span><strong>Everything</strong> · JSON</span>
+              <span class="hint">codes with quotes, themes, memos, notes — archival</span>
+            </a>
+            <a class="export-item" href="${base}/codes.csv" download>
+              <span><strong>Codebook</strong> · CSV</span>
+              <span class="hint">one row per code — labels, definitions, evidence, memos</span>
+            </a>
+            <a class="export-item" href="${base}/themes.csv" download>
+              <span><strong>Themes</strong> · CSV</span>
+              <span class="hint">one row per theme — claims, provenance, falsifiability</span>
+            </a>
+          </div>
+          <div class="sheet__foot"><button class="btn-quiet" id="ex-close">Close</button></div>
+        </div>
+      </div>`;
+    const close = () => { root.innerHTML = ''; };
+    $('ex-close').addEventListener('click', close);
+    $('sheet-bg').addEventListener('click', e => { if (e.target.id === 'sheet-bg') close(); });
+  }
+
   // ---- render: sidebar ---------------------------------------------------------------------------
   function renderSidebar() {
     const sb = $('sidebar');
@@ -353,8 +382,11 @@
     const open = openCount();
     const notesChip = open && !job ? `<span class="notes-chip"><b>${open}</b> note${open > 1 ? 's' : ''} pending</span>` : '';
     const na = nextAction();
-    tb.innerHTML = `${left}<div class="tb-spacer"></div>${notesChip}${jobChip}
+    const exportBtn = S.view !== 'home' && S.codes.length
+      ? '<button class="btn-quiet" id="tb-export">Export</button>' : '';
+    tb.innerHTML = `${left}<div class="tb-spacer"></div>${exportBtn}${notesChip}${jobChip}
       ${na ? `<button class="primary" id="tb-primary" ${na.hint ? `title="${esc(na.hint)}"` : ''}>${esc(na.label)}</button>` : ''}`;
+    $('tb-export')?.addEventListener('click', openExportSheet);
     $('tb-primary')?.addEventListener('click', na?.fn);
   }
 

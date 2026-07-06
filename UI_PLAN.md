@@ -215,3 +215,82 @@ All of it is live (40 tests green, verified in the browser on the demo project):
 
 Deferred: live per-sentence lens suggestions (`/suggest`), non-plain-text
 ingestion (PDF/docx), memo export into the markdown artifacts.
+
+---
+
+# v5 — Make it shine (UX audit, 2026-07-06)
+
+*A fresh-eyes pass over the deployed v4, prompted by coauthor-sharing. Verified findings
+first, then the plan. The north star: a coauthor must trust and enjoy the analysis within
+five minutes (orientation, titles, legible references), and the researcher's loop must stay
+frictionless over weeks (lifecycle, provenance, export).*
+
+## Verified findings
+
+| # | Finding | Evidence |
+|---|---------|----------|
+| F1 | **Mojibake at ingestion.** `ingest.py:78` reads uploads as UTF-8 with `errors="replace"`; Windows-1252 files (curly apostrophe = 0x92) become `Let�s`. Two of ten sample transcripts are cp1252 (`DP-5 JOHNSON` 297 bad chars, `NPS-101 KEMPF` 45) — both decode 100% clean as cp1252. The damage bakes into `document.text`, the sentence index, and every prompt. `seed.py:29` has the same pattern. |
+| F2 | **No way home (visible).** The only route back to Projects is clicking the project name with a tiny ▾ — an invisible affordance. The user didn't find it: that's a failed control, not a missing one. |
+| F3 | **No project lifecycle.** Zero endpoints for rename / archive / delete on projects; same for documents. The registry accumulates test projects forever ("test", "Live ingest test", smoke tests…). |
+| F4 | **Raw filenames as titles.** "DP-40 GRANDE, M" is the title everywhere — sidebar, header, project cards. The structure() call already reads the whole transcript at ingest and returns only sections; it could return a display title + abstract in the same call for ~0 extra cost. |
+| F5 | **Sentence references are illegible.** Theme anchors render as bare `S5.029` chips — no quote preview, no source name (hover shows only the doc id). With 2+ sources, `S1.019` is genuinely ambiguous (both docs have one). After clicking an anchor you land in the doc with no highlight-flash and no way back to the theme you came from. |
+| F6 | **Section gists are computed and never shown.** The LLM writes a one-line descriptive gist per section at ingest; the v4 frontend never renders them (`grep gist web/app.js` → nothing). A free navigation + summary asset, unused. |
+| F7 | **Coauthors have no identity.** One shared PIN; comments and memos carry no author, no timestamps in the UI. Two coauthors' notes are indistinguishable — and both can silently trigger paid runs. |
+| F8 | **No export.** `render_md.py` produces the full markdown report offline; the UI offers no download. Coauthors screenshot instead of citing. |
+| F9 | **Job history invisible.** Only the live chip + toast exist; the registry's full job history (incl. failures, durations) has an endpoint but no UI. |
+
+## The plan
+
+### P1 — Trust & data quality *(do first; small)*
+1. **Encoding-aware ingestion (F1).** Read bytes → try strict UTF-8 → fall back to cp1252 →
+   normalize NFC; if replacement chars would remain, surface a data-quality warning on the
+   document instead of silently corrupting. Same fix in `seed.py`. Add a repair path for
+   already-ingested docs (re-read the stored upload). Test with the two known cp1252 files.
+2. **LLM front-matter at ingest (F4).** Extend `structure.prompt`'s schema to
+   `{title, summary, sections}` — one call, no new latency. Schema v5: `document.title`,
+   `document.summary`. UI: sidebar rows, doc header ("Mary Grande — Yugoslavia to Ellis
+   Island, 1920"), and the abstract under the header. Title is editable (human override
+   wins — same pattern as `researcher_label` on codes).
+3. **Render section gists (F6).** Quiet section headers inside the transcript + a slim
+   sticky mini-TOC for jump navigation. Zero backend work.
+
+### P2 — Orientation & lifecycle *(the "it behaves like an app" tier)*
+4. **Explicit Home (F2).** Breadcrumb `Projects / ‹name›` in the toolbar (both halves
+   clickable), Esc closes inspector → second Esc goes home.
+5. **Project + document lifecycle (F3).** `PATCH /projects/{pid}` (rename),
+   `DELETE /projects/{pid}` (type-name-to-confirm), `archived` flag (hidden by default,
+   toggle in Projects view); document rename/delete with a "N theme steps will be
+   invalidated" warning wired to the existing staleness machinery.
+6. **Legible references (F5).** Every sid chip everywhere gets: hover tooltip with the
+   verbatim quote + source title; source-qualified label when the project has >1 doc
+   ("Grande · S1.019"); a highlight-flash on jump arrival; history-friendly back (jump
+   pushes state so browser-back returns to the theme/codebook you left).
+
+### P3 — The coauthor tier
+7. **Identity-lite (F7).** Ask a display name once (localStorage), stamp it + timestamp on
+   comments/memos ("RJ · 2h ago"). No accounts, no auth change.
+8. **Viewer vs editor.** Optional `MASSHINE_VIEW_PIN`: viewers browse everything, run/feedback
+   buttons hidden. Protects the MiniMax budget from curious clicks.
+9. **Notes review queue.** An "All notes" view (open feedback across the project, grouped by
+   target) — the pre-flight check before pressing *Re-code with feedback*.
+10. **Export (F8).** ✅ SHIPPED (2026-07-06): `GET /projects/{pid}/export` (self-contained
+    JSON — codes with resolved quotes + revisions applied, full themes, memos, comments),
+    `/export/codes.csv` and `/export/themes.csv` (flat, spreadsheet-ready), plus a quiet
+    toolbar "Export" button opening a three-option sheet. Still open: a rendered Markdown
+    *report* via `render_md` (narrative form, for appendices).
+
+### P4 — Provenance as the hero *(the differentiator)*
+11. **Feedback diff after re-code.** Snapshot the codebook before a recode; after, show
+    "12 new codes · 3 dropped · your note on S1.019 → 2 new codes". This makes the loop —
+    the product's core claim — *visible*. (Table `code_history` or reuse checkpoint diffing.)
+12. **Analysis dashboard.** Project landing: codes per lens, sentence coverage %, friction
+    counts, themes + staleness, open notes, last runs (job history — F9 — lives here too).
+
+### P5 — Reading comfort *(polish)*
+13. In-document search; `j/k` sentence navigation; sentence id revealed in the margin on
+    hover/selection (ids are currently visible only after clicking).
+14. Coding-density minimap per document (see where the analysis concentrates at a glance).
+
+**Sequencing:** P1 is a half-day and removes the two things that actively erode trust
+(mojibake, wrong titles). P2 makes it feel like a real app. P3 is what coauthor-sharing
+actually needs. P4 is the demo-day differentiator. Ship P1+P2 together, then P3.

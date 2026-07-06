@@ -12,7 +12,7 @@ from pathlib import Path
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Form, HTTPException, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Response, UploadFile
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -368,6 +368,63 @@ def revise_code(pid: str, code_id: str, req: ReviseReq):
                                   (req.new_label or "").strip() or None)
     finally:
         conn.close()
+
+
+# ---- export -------------------------------------------------------------------------------------
+
+def _proj_slug(name: str) -> str:
+    import re
+    s = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return s or "project"
+
+
+def _mode_of(proj: dict) -> str:
+    return "panel" if proj.get("pack_id") else "standard"
+
+
+@app.get("/projects/{pid}/export")
+def export_json(pid: str):
+    """Everything, self-contained: codes (revisions applied, quotes resolved), full themes,
+    memos, comments. JSON for archival / downstream analysis."""
+    import json as _json
+    proj = _require_project(pid)
+    conn = _conn(pid)
+    try:
+        payload = store.export_payload(conn, _mode_of(proj))
+    finally:
+        conn.close()
+    payload["project"] = proj
+    return Response(
+        content=_json.dumps(payload, indent=2, ensure_ascii=False),
+        media_type="application/json",
+        headers={"Content-Disposition":
+                 f'attachment; filename="masshine-{_proj_slug(proj["name"])}.json"'})
+
+
+@app.get("/projects/{pid}/export/codes.csv")
+def export_codes_csv(pid: str):
+    proj = _require_project(pid)
+    conn = _conn(pid)
+    try:
+        body = store.codes_csv(conn)
+    finally:
+        conn.close()
+    return Response(content=body, media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition":
+                             f'attachment; filename="masshine-{_proj_slug(proj["name"])}-codes.csv"'})
+
+
+@app.get("/projects/{pid}/export/themes.csv")
+def export_themes_csv(pid: str):
+    proj = _require_project(pid)
+    conn = _conn(pid)
+    try:
+        body = store.themes_csv(conn, _mode_of(proj))
+    finally:
+        conn.close()
+    return Response(content=body, media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition":
+                             f'attachment; filename="masshine-{_proj_slug(proj["name"])}-themes.csv"'})
 
 
 # ---- jobs + usage -------------------------------------------------------------------------------
