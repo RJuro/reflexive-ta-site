@@ -23,9 +23,23 @@ analytic content that isn't already present in the families you group.
 Every project family needs:
   - "label": a short name, at most 8 words.
   - "definition": one sentence describing what unites the family's members.
+  - "rationale": one sentence — why these particular per-source families belong in one
+    cluster (not a repeat of the definition; name the shared thread, especially what
+    recurs across sources).
   - "member_family_ids": the real per-source family ids (exactly as given, e.g. "SF07")
     that belong to this project family — every id you list MUST come from the input listing
     above. Never invent an id.
+
+HIERARCHY DISCIPLINE
+Family labels stay DESCRIPTIVE mid-level clusters ("community, faith, and extra-role care"),
+never interpretive claims ("care as ethical proof of belonging" is a THEME, not a family —
+leave claim-level language for the theming pass downstream). Prefer 8–12 project families
+overall. Merge overlapping per-source families AGGRESSIVELY — a concern that shows up under
+different labels in several sources is exactly the cross-source recurrence this aggregation
+pass exists to surface, so do not leave near-duplicate per-source families sitting apart in
+separate project families. A project family built from a single small per-source family with
+no cross-source echo should be scrutinized: fold it into a neighboring project family unless
+it is genuinely analytically distinct and likely to matter on its own.
 
 COVERAGE
 Try to place every per-source family into some project family. A genuinely unclassifiable
@@ -43,6 +57,7 @@ put real thought into which family comes next to which.
 
 Return ONLY JSON, no prose or code fences:
 {"families": [
-  {"label": "...", "definition": "...", "member_family_ids": ["SF01", "SF02"]},
+  {"label": "...", "definition": "...", "rationale": "...",
+   "member_family_ids": ["SF01", "SF02"]},
   ...
 ]}

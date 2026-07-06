@@ -251,7 +251,12 @@
   }
   .chip--id { color: var(--fg); }
   .chip--warn { color: var(--amber); border-color: oklch(62% 0.12 70 / 0.4); }
+  .theme-card__label { font-family: var(--font-display); font-size: 17.5px; font-weight: 700; line-height: 1.35; margin: 0 0 3px; }
   .theme-card__claim { font-family: var(--font-display); font-size: 16.5px; line-height: 1.45; margin: 0 0 10px; }
+  .theme-card__claim--sub { font-size: 12.5px; color: var(--muted); }
+  .fam-chip { cursor: pointer; }
+  .feeds-line { margin-top: 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .feeds-line__label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
   .theme-card__sub { margin: 0 0 4px; padding-left: 14px; font-size: 12.5px; color: var(--muted); position: relative; }
   .theme-card__sub::before { content: '–'; position: absolute; left: 0; color: var(--faint); }
   .theme-card__sect { margin-top: 10px; }
@@ -438,6 +443,7 @@
   .fam__def { color: var(--faint); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
   .fam__count { color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; flex: none; }
   .fam__body { padding: 4px 10px 10px; }
+  .fam__why { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin: 2px 0 8px; }
   .fam__body .code-row { margin-bottom: 4px; }
   .notes-row__main textarea {
     width: 100%; resize: none; border: 1px solid var(--hairline); border-radius: 7px;
@@ -462,7 +468,7 @@
   <div class="toasts" id="toasts"></div>
   <div id="sheet-root"></div>
   <input type="file" id="file-input" accept=".txt,.md" hidden>
-  <script src="/api.js?v=12"></script>
-  <script src="/app.js?v=12"></script>
+  <script src="/api.js?v=13"></script>
+  <script src="/app.js?v=13"></script>
 </body>
 </html>

@@ -131,6 +131,60 @@
     const key = `${docId}#${sid}`;
     return S.codes.filter(c => c.evidence.includes(key));
   }
+
+  // ---- P7: theme <-> family cross-links, derived client-side (never model-emitted — family ids
+  // churn on re-consolidation, so this is recomputed fresh from S.codes' family_id every render). ---
+  // themeFamilies(t): families touched by a theme's supporting codes, counted, sorted desc.
+  function themeFamilies(t) {
+    const counts = new Map();
+    for (const cid of t.supporting_code_ids || []) {
+      const c = codeById(cid);
+      if (!c || c.status === 'rejected' || !c.family_id) continue;
+      const f = famById(c.family_id);
+      if (!f) continue;
+      counts.set(f.id, (counts.get(f.id) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([fid, n]) => ({ family: famById(fid), n }))
+      .sort((a, b) => b.n - a.n);
+  }
+  // familyThemes(fid): the reverse mapping — themes whose supporting codes touch this family.
+  function familyThemes(fid) {
+    const out = [];
+    for (const t of S.themes?.themes || []) {
+      if (themeFamilies(t).some(x => x.family.id === fid)) out.push(t);
+    }
+    return out;
+  }
+  // Shared "Feeds themes" line (family expanded body + family inspector) — zero themes -> nothing.
+  function feedsThemesLine(fid) {
+    const themes = familyThemes(fid);
+    if (!themes.length) return '';
+    return `<div class="feeds-line">
+      <span class="feeds-line__label">Feeds themes</span>
+      ${themes.map(t => `<button class="chip" data-theme-chip="${t.id}">${esc(t.label || t.id)}</button>`).join('')}
+    </div>`;
+  }
+
+  // ---- P7: evidence-spread flag — a theme whose evidence sits in a single (doc, section) is
+  // better served by a code or memo than a theme; derived from sentence-id prefixes, no schema. ---
+  function _sectionOf(qualifiedSid) {
+    // "dp-40-grande-m#S3.036" -> {doc: "dp-40-grande-m", section: "S3"}
+    const [doc, sid] = qualifiedSid.split('#');
+    const m = /^([A-Za-z]+\d+)/.exec(sid || '');
+    return { doc, section: m ? m[1] : (sid || '') };
+  }
+  function themeEvidenceIsNarrow(t) {
+    const anchors = new Set(t.key_evidence_sentence_ids || []);
+    for (const cid of t.supporting_code_ids || []) {
+      const c = codeById(cid);
+      if (!c) continue;
+      for (const e of c.evidence || []) anchors.add(e);
+    }
+    if (!anchors.size) return false;
+    const spots = new Set([...anchors].map(a => { const s = _sectionOf(a); return `${s.doc}#${s.section}`; }));
+    return spots.size === 1;
+  }
   function commentsFor(type, id) {
     return S.comments.filter(c => c.target_type === type && c.target_id === id);
   }
@@ -1117,9 +1171,13 @@
             <span class="fam__count">${members.length}${members.length !== f.n_codes ? ` of ${f.n_codes}` : ''}${f.n_sources > 1 ? ` · ${f.n_sources} sources` : ''}</span>
             <button class="btn-bare" data-fam-open="${f.id}" title="Memo & notes">✎</button>
           </div>
-          ${open ? `<div class="fam__body">${members.length
-            ? members.map(x => rowFor(x, f.hue)).join('')
-            : '<p class="empty">No codes match the current filter.</p>'}</div>` : ''}
+          ${open ? `<div class="fam__body">
+            ${f.rationale ? `<p class="fam__why">Why: ${esc(f.rationale)}</p>` : ''}
+            ${members.length
+              ? members.map(x => rowFor(x, f.hue)).join('')
+              : '<p class="empty">No codes match the current filter.</p>'}
+            ${feedsThemesLine(f.id)}
+          </div>` : ''}
         </div>`;
       }).join('') + ((byFam._none || []).length ? `
         <div class="lens-head">not yet filed · ${byFam._none.length}</div>
@@ -1185,6 +1243,13 @@
       }));
     c.querySelectorAll('[data-fam-open]').forEach(b =>
       b.addEventListener('click', e => { e.stopPropagation(); select('family', b.dataset.famOpen); }));
+    c.querySelectorAll('[data-theme-chip]').forEach(b =>
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        const tid = b.dataset.themeChip;
+        switchView('themes');
+        select('theme', tid);
+      }));
     const kick = () => { const n = S.codes.filter(x => x.status !== 'rejected').length; openConsolidateSheet(n); };
     $('cb-consolidate')?.addEventListener('click', kick);
     $('cb-reconsolidate')?.addEventListener('click', kick);
@@ -1244,6 +1309,8 @@
         const anchors = (t.key_evidence_sentence_ids || []).slice(0, 8);
         const tensions = (t.tensions || []).map(codeById).filter(Boolean);
         const notes = commentsFor('theme', t.id).filter(n => n.status === 'open').length;
+        const famChips = themeFamilies(t);
+        const narrow = themeEvidenceIsNarrow(t);
         return `<article class="theme-card ${S.sel?.type === 'theme' && S.sel.id === t.id ? 'is-active' : ''}" data-tid="${t.id}">
           <div class="theme-card__meta">
             <span class="chip chip--id">${esc(t.id)}</span>
@@ -1252,9 +1319,13 @@
             ${provChips}
             ${tensions.length ? `<span class="chip chip--warn">${tensions.length} tension${tensions.length > 1 ? 's' : ''}</span>` : ''}
             ${notes ? `<span class="chip chip--warn">● ${notes} note${notes > 1 ? 's' : ''}</span>` : ''}
+            ${narrow ? `<span class="chip chip--warn" title="all evidence sits in a single passage — consider a code or memo instead">narrow evidence</span>` : ''}
           </div>
-          <p class="theme-card__claim">${esc(t.central_concept)}</p>
+          ${t.label ? `<p class="theme-card__label">${esc(t.label)}</p>` : ''}
+          <p class="theme-card__claim ${t.label ? 'theme-card__claim--sub' : ''}">${esc(t.central_concept)}</p>
           ${(t.subthemes || []).map(st => `<p class="theme-card__sub">${esc(st.claim)}</p>`).join('')}
+          ${famChips.length ? `<div class="theme-card__sect">
+            ${famChips.map(({ family, n }) => `<button class="chip fam-chip" data-fam-chip="${family.id}"><span class="lens-dot" style="background:${famColor(family.hue)}"></span>${esc(family.label)} ${n}</button>`).join('')}</div>` : ''}
           ${anchors.length ? `<div class="theme-card__sect"><h4>Anchored in</h4>
             ${anchors.map(a => { const [dd, sid] = a.split('#'); return `<button class="anchor" data-doc="${dd}" data-sid="${sid}" data-tip-doc="${dd}" data-tip-sid="${sid}">${esc(sidChipLabel(dd, sid))}</button>`; }).join('')}</div>` : ''}
           ${tensions.length ? `<div class="theme-card__sect"><h4>In tension with</h4>
@@ -1264,6 +1335,14 @@
       }).join('') : `<p class="empty">No themes yet — ${anyCoded() ? 'build them from the codebook.' : 'run coding first.'}</p>`}
     </div>`;
     $('th-rebuild')?.addEventListener('click', () => runThemes(fb));
+    c.querySelectorAll('[data-fam-chip]').forEach(b =>
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        const fid = b.dataset.famChip;
+        S.famOpen.add(fid);
+        switchView('codebook');
+        setTimeout(() => document.querySelector(`.fam [data-fam-toggle="${fid}"]`)?.scrollIntoView({ block: 'center' }), 30);
+      }));
     c.querySelectorAll('[data-tid]').forEach(card =>
       card.addEventListener('click', e => {
         if (e.target.closest('[data-doc],[data-code]')) return;
@@ -1699,14 +1778,26 @@
       box.innerHTML = `
         <div class="insp-head"><span class="sid">${esc(t.id)}</span><h2>Theme</h2>
           <button class="insp-close" id="insp-x">✕</button></div>
+        ${t.label ? `<h1 class="insp-title" style="margin:0 0 6px">${esc(t.label)}</h1>` : ''}
         <blockquote class="insp-quote">${esc(t.central_concept)}</blockquote>
         <div class="insp-sec">
           <p class="code-item__type">${esc(t.coverage || '')} sources · ${esc(t.claim_scope || '')} · ${(t.supporting_code_ids || []).length} supporting codes</p>
+          ${themeFamilies(t).length ? `<div class="feeds-line">
+            ${themeFamilies(t).map(({ family, n }) => `<button class="chip fam-chip" data-fam-chip="${family.id}"><span class="lens-dot" style="background:${famColor(family.hue)}"></span>${esc(family.label)} ${n}</button>`).join('')}
+          </div>` : ''}
         </div>
         ${memoBlock('theme', t.id, { claim: t.central_concept })}
         ${notesBlock('theme', t.id, null, { claim: t.central_concept },
           'Notes are considered when themes are rebuilt with feedback.')}`;
       $('insp-x').addEventListener('click', closeInspector);
+      box.querySelectorAll('[data-fam-chip]').forEach(b =>
+        b.addEventListener('click', e => {
+          e.stopPropagation();
+          const fid = b.dataset.famChip;
+          S.famOpen.add(fid);
+          switchView('codebook');
+          setTimeout(() => document.querySelector(`.fam [data-fam-toggle="${fid}"]`)?.scrollIntoView({ block: 'center' }), 30);
+        }));
       wireMemo(box, 'theme', t.id, { claim: t.central_concept });
       wireNotes(box, 'theme', t.id, null, { claim: t.central_concept });
       return;
@@ -1724,12 +1815,21 @@
             <h1 class="insp-title">${esc(f.label)}</h1>
           </div>
           <p class="insp-def">${esc(f.definition)}</p>
+          ${f.rationale ? `<p class="rationale" style="margin-top:6px">${esc(f.rationale)}</p>` : ''}
           <p class="code-item__type" style="margin-top:6px">${f.n_codes} code${f.n_codes === 1 ? '' : 's'}${f.n_sources > 1 ? ` · ${f.n_sources} sources` : ''}</p>
+          ${feedsThemesLine(f.id)}
         </div>
         ${memoBlock('family', f.id, { label: f.label })}
         ${notesBlock('family', f.id, null, { label: f.label },
           'Notes are considered when the codebook is re-consolidated.')}`;
       $('insp-x').addEventListener('click', closeInspector);
+      box.querySelectorAll('[data-theme-chip]').forEach(b =>
+        b.addEventListener('click', e => {
+          e.stopPropagation();
+          const tid = b.dataset.themeChip;
+          switchView('themes');
+          select('theme', tid);
+        }));
       wireMemo(box, 'family', f.id, { label: f.label });
       wireNotes(box, 'family', f.id, null, { label: f.label });
     }

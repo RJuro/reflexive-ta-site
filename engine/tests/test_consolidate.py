@@ -57,6 +57,24 @@ def test_validator_drops_invented_dupes_rejected_and_files_unplaced(monkeypatch)
     assert [f["position"] for f in fams] == [0, 1, 2]
 
 
+def test_validator_carries_rationale_and_defaults_when_absent(monkeypatch):
+    """P7: rationale rides through _validate_families like label/definition — present when the
+    model supplies it, "" when it doesn't (never required, never blocking)."""
+    canned = {"families": [
+        {"label": "Fam A", "definition": "a", "rationale": "shared thread: transit logistics",
+         "member_code_ids": ["C0001"]},
+        {"label": "Fam B", "definition": "b", "member_code_ids": ["C0002"]},  # no rationale at all
+    ]}
+    monkeypatch.setattr(llm, "chat_json", lambda *a, **k: canned)
+    fams = consolidate.consolidate_codebook(_codes(3))
+    fam_a = next(f for f in fams if f["label"] == "Fam A")
+    fam_b = next(f for f in fams if f["label"] == "Fam B")
+    assert fam_a["rationale"] == "shared thread: transit logistics"
+    assert fam_b["rationale"] == ""
+    unfiled = next(f for f in fams if f["label"] == "Unfiled")
+    assert unfiled["rationale"]  # the fixed Unfiled rationale is always non-empty
+
+
 def test_validator_uses_researcher_label_and_skips_rejected_in_listing(monkeypatch):
     seen = {}
 
@@ -182,9 +200,9 @@ def seeded(tmp_path, monkeypatch):
 
 def _fake_families():
     return [
-        {"label": "Transit", "definition": "d1", "member_code_ids": ["C0001", "C0002"],
-         "position": 0, "hue": 0},
-        {"label": "Kin", "definition": "d2", "member_code_ids": ["C0003"],
+        {"label": "Transit", "definition": "d1", "rationale": "codes about border-crossing logistics",
+         "member_code_ids": ["C0001", "C0002"], "position": 0, "hue": 0},
+        {"label": "Kin", "definition": "d2", "member_code_ids": ["C0003"],  # no rationale key at all
          "position": 1, "hue": 180},
     ]
 
@@ -197,6 +215,9 @@ def test_persist_and_payload_roundtrip(seeded):
         assert [f["id"] for f in fams] == ["F01", "F02"]
         assert fams[0]["n_codes"] == 2 and fams[0]["hue"] == 0
         assert fams[0]["n_sources"] == 1 and fams[1]["n_sources"] == 1
+        # P7: rationale rides through persist -> payload; "" default when the family had none
+        assert fams[0]["rationale"] == "codes about border-crossing logistics"
+        assert fams[1]["rationale"] == ""
         by_id = {c["id"]: c for c in store.codes_payload(conn)}
         assert by_id["C0001"]["family_id"] == "F01"
         assert by_id["C0003"]["family_id"] == "F02"
@@ -207,6 +228,23 @@ def test_persist_and_payload_roundtrip(seeded):
         assert csv_text.splitlines()[0].split(",")[5] == "family" or "family" in csv_text.splitlines()[0]
         payload = store.export_payload(conn, "panel")
         assert [f["id"] for f in payload["families"]] == ["F01", "F02"]
+        assert payload["families"][0]["rationale"] == "codes about border-crossing logistics"
+    finally:
+        conn.close()
+
+
+def test_families_payload_rationale_falls_back_for_pre_v8_rows(seeded):
+    """Backward compatibility: a code_family row written before schema v8 has no rationale
+    column value (NULL) — families_payload must fall back to "" rather than error or return
+    None, matching the "existing stored data has no new field" contract for this feature."""
+    conn = project_db(projects.project_db_path(seeded))
+    try:
+        conn.execute(
+            "INSERT INTO code_family (id, label, definition, hue, position, created_at) "
+            "VALUES ('F01', 'Old Family', 'predates rationale', 0, 0, '2020-01-01')")
+        conn.commit()
+        fams = store.families_payload(conn)
+        assert fams[0]["rationale"] == ""
     finally:
         conn.close()
 

@@ -72,6 +72,37 @@ def test_export_themes_csv(seeded):
     assert int(t[header.index("n_supporting")]) > 0
 
 
+def test_export_themes_csv_has_label_column_first_after_id(seeded):
+    """P7: themes_csv gains a `label` column immediately after `id`. The seeded fixture's raw
+    cache predates the label field, so every row's label is "" — the column must still exist
+    and sit right after id (never error on a themeset with no labels)."""
+    client = TestClient(app)
+    r = client.get(f"/projects/{seeded}/export/themes.csv")
+    assert r.status_code == 200
+    rows = list(csv.reader(io.StringIO(r.text)))
+    header, body = rows[0], rows[1:]
+    assert header[:2] == ["id", "label"]
+    assert all(row[1] == "" for row in body)  # no labels in this fixture's raw cache
+
+
+def test_export_themes_csv_label_populated_when_present(seeded):
+    """When a theme does carry a label (e.g. after a re-theme with the new prompt), the CSV
+    surfaces it verbatim in the label column."""
+    conn = project_db(projects.project_db_path(seeded))
+    try:
+        conn.execute("UPDATE theme_v2 SET payload = json_set(payload, '$.label', ?) "
+                     "WHERE mode='panel' AND id='T01'", ("Kinship-mediated underpayment",))
+        conn.commit()
+    finally:
+        conn.close()
+    client = TestClient(app)
+    r = client.get(f"/projects/{seeded}/export/themes.csv")
+    rows = list(csv.reader(io.StringIO(r.text)))
+    header, body = rows[0], rows[1:]
+    t1 = next(row for row in body if row[0] == "T01")
+    assert t1[header.index("label")] == "Kinship-mediated underpayment"
+
+
 def test_export_unknown_project_404s():
     client = TestClient(app)
     assert client.get("/projects/Pnope/export").status_code == 404
@@ -112,3 +143,35 @@ def test_export_report_md_has_theme_claim_quote_code_and_filename(seeded):
     assert codes[0]["label"] in body
     # the researcher memo made it into the appendix
     assert "a researcher memo on this code" in body
+
+
+def test_report_md_theme_heading_falls_back_to_central_concept_when_no_label(seeded):
+    """P7: report_md's theme headings use label when present, falling back to central_concept
+    for themes that predate the field (the seeded fixture's raw cache has no labels)."""
+    client = TestClient(app)
+    r = client.get(f"/projects/{seeded}/export/report.md")
+    assert r.status_code == 200
+    conn = project_db(projects.project_db_path(seeded))
+    try:
+        th = store.themes_payload(conn, "panel")
+    finally:
+        conn.close()
+    t0 = th["themes"][0]
+    assert t0.get("label", "") == ""  # control: this fixture has no labels yet
+    assert f"### {t0['id']} — {t0['central_concept']}" in r.text
+
+
+def test_report_md_theme_heading_uses_label_when_present(seeded):
+    conn = project_db(projects.project_db_path(seeded))
+    try:
+        conn.execute("UPDATE theme_v2 SET payload = json_set(payload, '$.label', ?) "
+                     "WHERE mode='panel' AND id='T01'", ("Kinship-mediated underpayment",))
+        conn.commit()
+        th = store.themes_payload(conn, "panel")
+    finally:
+        conn.close()
+    t1 = next(t for t in th["themes"] if t["id"] == "T01")
+    client = TestClient(app)
+    r = client.get(f"/projects/{seeded}/export/report.md")
+    assert "### T01 — Kinship-mediated underpayment" in r.text
+    assert f"### T01 — {t1['central_concept']}" not in r.text

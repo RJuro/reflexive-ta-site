@@ -26,6 +26,15 @@ at a higher level, is not worth emitting — return fewer, stronger themes. A th
 organize SEVERAL codes into a patterned relation; build a theme on a single code only when that
 code is exceptionally central and strongly evidenced in the transcript.
 
+HIERARCHY DISCIPLINE. Themes sit ABOVE families in the hierarchy and make CLAIMS about relations,
+tensions, or mechanisms — never just restate a family's descriptive label at claim level (a family
+groups "community, faith, and extra-role care"; a theme argues something like "care work is treated
+as proof of belonging, which licenses underpayment"). If a candidate theme reads like a family
+label with a period at the end, it is not a theme yet — sharpen it into an argument or drop it.
+Single-case themes (seen in only one account so far) MUST use hedged, account-bound language — "in
+this account", "for this narrator", "this interview suggests" — never a universal or population
+claim ("mothers…", "migrants…", "narrators…") until a second interview actually supports it.
+
 INCREMENTAL TASK. Return the FULL updated set of themes after considering this interview:
 - To REVISE a prior theme (this interview strengthens it, qualifies its scope, or sharpens the
   claim), return it with its existing id.
@@ -41,8 +50,17 @@ this interview's codes; the earlier interviews' supporting codes are kept for yo
 
 Per theme:
 - id — echo a prior theme's id to revise it; omit for a new theme.
-- central_concept — ONE claim, one or two sentences. If you need "and", "with", or a clause
-  introducing a second idea, that is two themes (or a theme plus a sub-theme). Split it.
+- label — a short, scannable name for the claim, AT MOST 6 WORDS, e.g. "Kinship-mediated
+  underpayment" or "Reunion anticipation before loss". This is a title, not a summary — do
+  not pack the argument, its evidence, or its implication into it; save all of that for
+  central_concept. When you revise a prior theme and its claim has sharpened, update the
+  label to match; otherwise keep the prior label.
+- central_concept — ONE claim, one concise, scannable sentence (occasionally two only if the
+  claim genuinely needs a qualifying clause). Do not pack the argument, the evidence FOR it,
+  and its implication all into this one sentence — state the claim; evidence and implication
+  belong in key_evidence_sentence_ids / falsified_if / subthemes. If you need "and", "with",
+  or a clause introducing a second idea, that is two themes (or a theme plus a sub-theme).
+  Split it.
 - subthemes — optional finer claims nested under the central one, each with its own
   supporting_code_ids. Put surplus material HERE, not crammed into central_concept.
 - supporting_code_ids — the codes FROM THIS INTERVIEW whose meaning the claim organizes. When you
@@ -66,7 +84,7 @@ CONSTRAINTS.
 - Keep the claim's confidence tied to its evidence: never let scope outrun coverage.
 
 Return ONLY JSON, no prose and no code fences:
-{"themes": [{"id": "T03", "central_concept": "...",
+{"themes": [{"id": "T03", "label": "Kinship-mediated underpayment", "central_concept": "...",
              "subthemes": [{"claim": "...", "supporting_code_ids": ["C0007"]}],
              "supporting_code_ids": ["C0007"], "key_evidence_sentence_ids": ["S2.007"],
              "coverage": "2 of 2", "claim_scope": "cross-case",

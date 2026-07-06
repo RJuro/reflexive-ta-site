@@ -52,12 +52,14 @@ def _validate_families(proposed: list[dict], active_ids: set[str], id_key: str) 
     """Shared validator: drop invented/unknown ids, first-claim wins across families, drop
     empty families. Returns (families-without-position/hue, set of ids actually claimed).
     `id_key` is the member-id field name in each proposed family dict (either
-    "member_code_ids" or "member_family_ids")."""
+    "member_code_ids" or "member_family_ids"). `rationale` (P7: the "why" behind a family)
+    rides through with a "" default when the model omits it — never required, never blocking."""
     families: list[dict] = []
     claimed: set[str] = set()
     for fam in proposed:
         label = str(fam.get("label", "")).strip()
         definition = str(fam.get("definition", "")).strip()
+        rationale = str(fam.get("rationale", "")).strip()
         members = []
         for mid in fam.get(id_key, []) or []:
             mid = str(mid).strip()
@@ -69,7 +71,8 @@ def _validate_families(proposed: list[dict], active_ids: set[str], id_key: str) 
         if not members:                 # empty family (all members invalid/duplicate) — drop
             continue
         claimed.update(members)
-        families.append({"label": label, "definition": definition, id_key: members})
+        families.append({"label": label, "definition": definition, "rationale": rationale,
+                         id_key: members})
     return families, claimed
 
 
@@ -95,6 +98,8 @@ def _single_call_consolidate(codes: list[dict], active_ids: set[str],
         families.append({
             "label": "Unfiled",
             "definition": "Codes the consolidation pass did not place.",
+            "rationale": "No shared analytic thread was found — kept visible rather than "
+                         "forced into a family that would misrepresent them.",
             "member_code_ids": unplaced,
         })
     return _assign_ring(families)
@@ -185,7 +190,8 @@ def consolidate_codebook(codes: list[dict], guidance: str | None = None,
     (one more call) — researcher `guidance`, if any, is given ONLY to the aggregate call.
 
     Returns families in ring order, each:
-      {"label": ..., "definition": ..., "member_code_ids": [...], "position": 0, "hue": 0}
+      {"label": ..., "definition": ..., "rationale": ..., "member_code_ids": [...],
+       "position": 0, "hue": 0}
     An "Unfiled" family (only if non-empty) is appended last with its own position/hue.
 
     `progress`, if given, is called like `progress(stage=..., done=..., total=...)` at each
@@ -253,6 +259,7 @@ def consolidate_codebook(codes: list[dict], guidance: str | None = None,
             families.append({
                 "label": fam["label"],
                 "definition": fam["definition"],
+                "rationale": fam.get("rationale", ""),
                 "member_code_ids": member_code_ids,
             })
 
@@ -266,6 +273,8 @@ def consolidate_codebook(codes: list[dict], guidance: str | None = None,
         families.append({
             "label": "Unfiled",
             "definition": "Codes the consolidation pass did not place.",
+            "rationale": "No shared analytic thread was found — kept visible rather than "
+                         "forced into a family that would misrepresent them.",
             "member_code_ids": unplaced,
         })
 

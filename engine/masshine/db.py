@@ -131,8 +131,10 @@ def resolve_ev(conn: sqlite3.Connection, qualified: str) -> str:
 # v7 adds the codebook consolidation pass (P6): `code_family` (one row per family, with the
 # deterministic ring-position hue) and `code.family_id` (nullable — set only for codes a
 # consolidation run placed).
+# v8 adds hierarchy discipline (P7): `code_family.rationale` (nullable — the one-sentence
+# "why these codes belong together" the consolidation pass now returns per family).
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 
 def init_project_db(conn: sqlite3.Connection) -> None:
@@ -180,6 +182,7 @@ def init_project_db(conn: sqlite3.Connection) -> None:
         );
         CREATE TABLE IF NOT EXISTS code_family (
             id TEXT, label TEXT, definition TEXT, hue INTEGER, position INTEGER, created_at TEXT,
+            rationale TEXT,
             PRIMARY KEY (id)
         );
         """
@@ -215,6 +218,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE memo ADD COLUMN author TEXT")
     if "family_id" not in code_cols:
         conn.execute("ALTER TABLE code ADD COLUMN family_id TEXT")
+    family_cols = {r[1] for r in conn.execute("PRAGMA table_info(code_family)")}
+    if "rationale" not in family_cols:
+        conn.execute("ALTER TABLE code_family ADD COLUMN rationale TEXT")
 
 
 def project_db(path) -> sqlite3.Connection:

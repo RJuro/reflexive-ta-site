@@ -19,8 +19,27 @@ isn't already present in the codes you group.
 Every family needs:
   - "label": a short name, at most 8 words.
   - "definition": one sentence describing what unites the family's members.
+  - "rationale": one sentence — why these particular codes belong in one cluster (not a
+    repeat of the definition; name the shared thread a reader would otherwise have to infer).
   - "member_code_ids": the real code ids (exactly as given, e.g. "C0001") that belong to
     this family — every id you list MUST come from the input codebook. Never invent an id.
+
+HIERARCHY DISCIPLINE
+Families organize good codes — they do not legitimize weak ones. A code too thin to stand
+on its own (vague, a single throwaway instance, barely distinct from another code) stays
+OUT of every family; it will fall to the automatic "Unfiled" bucket, which is the correct,
+honest place for it. Do not stretch a family's membership just to give a shaky code a home.
+Family labels are DESCRIPTIVE mid-level clusters, e.g. "community, faith, and extra-role
+care" — never an interpretive claim like "care as ethical proof of belonging" (that is a
+THEME, a different level of analysis, out of scope here). Avoid families of only 1–2 codes
+unless that small cluster is analytically central and likely to recur — a stray pair of
+codes is usually better left for Unfiled or folded into a neighboring family. Target 6–10
+robust families (stretch to at most 12 only for an unusually large codebook). Before you
+return your answer, silently self-review: merge any two families that actually cover the
+same ground; within each family, check whether two member codes are making the same
+analytic claim in different words — if so, keep only the stronger/more evidenced one in
+your mental model (a genuinely distinct facet can still be listed, but do not pad a family
+with near-duplicate codes just to inflate its count).
 
 COVERAGE
 Try to place every code into some family. A genuinely unclassifiable code may be left
@@ -38,6 +57,7 @@ put real thought into which family comes next to which.
 
 Return ONLY JSON, no prose or code fences:
 {"families": [
-  {"label": "...", "definition": "...", "member_code_ids": ["C0001", "C0002"]},
+  {"label": "...", "definition": "...", "rationale": "...",
+   "member_code_ids": ["C0001", "C0002"]},
   ...
 ]}

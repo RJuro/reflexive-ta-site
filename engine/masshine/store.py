@@ -209,17 +209,19 @@ def friction_payload(conn: sqlite3.Connection, doc_id: str) -> dict:
 
 def persist_families(conn: sqlite3.Connection, families: list[dict]) -> None:
     """Replace the family table wholesale and re-tag member codes' family_id. `families` is
-    consolidate.consolidate_codebook's output: each already carries position/hue and validated
-    member_code_ids."""
+    consolidate.consolidate_codebook's output: each already carries position/hue, `rationale`
+    (P7: the "why" behind the cluster — defaults to "" when a family predates that field), and
+    validated member_code_ids."""
     conn.execute("DELETE FROM code_family")
     conn.execute("UPDATE code SET family_id=NULL")
     now = _now()
     for fam in families:
         fid = f"F{fam['position'] + 1:02d}"
         conn.execute(
-            "INSERT INTO code_family (id, label, definition, hue, position, created_at) "
-            "VALUES (?,?,?,?,?,?)",
-            (fid, fam["label"], fam["definition"], fam["hue"], fam["position"], now))
+            "INSERT INTO code_family (id, label, definition, hue, position, created_at, "
+            "rationale) VALUES (?,?,?,?,?,?,?)",
+            (fid, fam["label"], fam["definition"], fam["hue"], fam["position"], now,
+             fam.get("rationale", "")))
         for cid in fam["member_code_ids"]:
             conn.execute("UPDATE code SET family_id=? WHERE id=?", (fid, cid))
     conn.commit()
@@ -228,11 +230,13 @@ def persist_families(conn: sqlite3.Connection, families: list[dict]) -> None:
 def families_payload(conn: sqlite3.Connection) -> list[dict]:
     """Families ordered by ring position, each with n_codes = count of non-rejected members
     and n_sources = count of distinct origin docs among those active members (derived, no
-    schema change — >1 signals a family that was aggregated across sources)."""
+    schema change — >1 signals a family that was aggregated across sources). `rationale`
+    falls back to "" for families persisted before schema v8."""
     revs = revisions_map(conn)
     out = []
     for r in conn.execute(
-            "SELECT id, label, definition, hue, position FROM code_family ORDER BY position"):
+            "SELECT id, label, definition, hue, position, rationale FROM code_family "
+            "ORDER BY position"):
         fid = r[0]
         rows = conn.execute(
             "SELECT id, origin_doc_id FROM code WHERE family_id=?", (fid,)).fetchall()
@@ -240,7 +244,7 @@ def families_payload(conn: sqlite3.Connection) -> list[dict]:
         n_codes = len(active)
         n_sources = len({doc_id for _, doc_id in active})
         out.append({"id": fid, "label": r[1], "definition": r[2], "hue": r[3], "position": r[4],
-                    "n_codes": n_codes, "n_sources": n_sources})
+                    "rationale": r[5] or "", "n_codes": n_codes, "n_sources": n_sources})
     return out
 
 
@@ -599,13 +603,14 @@ def themes_csv(conn: sqlite3.Connection, mode: str) -> str:
     memos = _memo_map(conn, "theme")
     out = io.StringIO()
     w = csv.writer(out)
-    w.writerow(["id", "central_concept", "coverage", "claim_scope", "provenance",
+    w.writerow(["id", "label", "central_concept", "coverage", "claim_scope", "provenance",
                 "n_supporting", "supporting_code_ids", "tensions", "subthemes",
                 "key_evidence", "falsified_if", "researcher_memo"])
     for t in themes_payload(conn, mode)["themes"]:
         prov = t.get("paradigm_provenance") or {}
         w.writerow([
-            t["id"], t["central_concept"], t.get("coverage", ""), t.get("claim_scope", ""),
+            t["id"], t.get("label", ""), t["central_concept"], t.get("coverage", ""),
+            t.get("claim_scope", ""),
             "|".join(f"{k}:{v}" for k, v in prov.items()),
             len(t.get("supporting_code_ids", [])), " ".join(t.get("supporting_code_ids", [])),
             " ".join(t.get("tensions", [])),
@@ -654,7 +659,8 @@ def report_md(conn: sqlite3.Connection, proj: dict, mode: str) -> str:
         out.append("*No themes built yet.*")
         out.append("")
     for t in th["themes"]:
-        out.append(f"### {t['id']} — {t['central_concept']}")
+        heading = t.get("label") or t["central_concept"]
+        out.append(f"### {t['id']} — {heading}")
         out.append("")
         out.append(f"*{t.get('claim_scope', '')} · coverage {t.get('coverage', '')}*")
         out.append("")

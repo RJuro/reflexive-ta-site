@@ -473,21 +473,24 @@ that each level is not repeating or rescuing the others."*
    codes per family unless analytically central; target 6–10 robust families per source;
    a within-family redundancy sweep in the consolidation self-review (merge same-claim
    codes / flag subcode candidates); single-case themes use hedged language ("in this
-   account", never universals).
+   account", never universals). ✅ SHIPPED (2026-07-06)
 2. **Family rationale — the "why".** The consolidation returns a one-sentence rationale
    per family ("why these codes belong together"); stored (`code_family.rationale`,
    schema v8) and rendered in the family header/inspector. A box becomes an argument.
+   ✅ SHIPPED (2026-07-06)
 3. **Theme label / claim split.** Theorist returns a short scannable `label` (≤6 words,
    e.g. "Kinship-mediated underpayment") alongside the one-sentence `central_concept`;
    label rides in theme_v2 payload; UI cards title on the label; exports updated.
+   ✅ SHIPPED (2026-07-06)
 4. **Theme ↔ family cross-links, Python-derived (NOT model-emitted).** Family ids churn
    on re-consolidation, so supporting_family_ids must be derived at read time from
    supporting codes → their families → counts. UI: theme cards show family chips in the
    family colors; family header/inspector shows "feeds themes: T01, T03". This is the
-   connective tissue that makes the palette meaningful.
+   connective tissue that makes the palette meaningful. ✅ SHIPPED (2026-07-06)
 5. **Evidence-spread flag (computable, not promptable).** A theme whose supporting
    evidence concentrates in one section gets a quiet "narrow evidence base" chip —
    derived from sentence ids in Python, mirroring the thin-support flag.
+   ✅ SHIPPED (2026-07-06)
 
 Sequencing: implement immediately after the hierarchical per-source consolidation lands
 (same files). Items 1–2 ride on the new prompts; 3 touches theorist + themes UI; 4–5 are

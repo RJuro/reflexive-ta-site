@@ -140,7 +140,8 @@ def _prior_themes_block(themes: list[dict]) -> str:
         return "none yet — this is the first interview."
     lines = []
     for t in themes:
-        lines.append(f'[{t["id"]}] {t["central_concept"]}  · supporting: '
+        tag = f'"{t["label"]}" — ' if t.get("label") else ""
+        lines.append(f'[{t["id"]}] {tag}{t["central_concept"]}  · supporting: '
                      f'{", ".join(t["supporting_code_ids"])}  · coverage: {t.get("coverage", "?")}')
         for st in t.get("subthemes", []):
             lines.append(f'    – sub: {st.get("claim", "")}  · supporting: '
@@ -199,8 +200,14 @@ def _resolve_step_themes(raw: list, prior: list[dict], valid_codes: set, all_cod
             if ssup:
                 subs.append({"claim": str(st.get("claim", "")).strip(),
                              "supporting_code_ids": ssup})
+        # P7: label is a short scannable title, separate from the central_concept claim. On a
+        # revision, a fresh non-empty label wins (the claim sharpened); otherwise the prior
+        # theme's label is kept — mirrors how every other field accumulates across steps.
+        new_label = str(t.get("label", "")).strip()
+        label = new_label or (prior.get("label", "") if prior else "")
         theme = {
-            "id": tid, "central_concept": str(t.get("central_concept", "")).strip(),
+            "id": tid, "label": label,
+            "central_concept": str(t.get("central_concept", "")).strip(),
             "subthemes": subs, "supporting_code_ids": sup, "key_evidence_sentence_ids": kev,
             "coverage": f"{k} of {n_docs}",
             "claim_scope": "cross-case" if k >= 2 else "single-case",
