@@ -1,0 +1,10 @@
+{
+  "coverage": {
+    "critical": 202,
+    "phenomenological": 214,
+    "standard": 254
+  },
+  "n_attentional": 147,
+  "n_interpretive": 235,
+  "n_sentences_touched": 291
+}

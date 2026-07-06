@@ -10,6 +10,6 @@ Read the files in order — they are the stages of the pipeline:
 4. `4_codebook.md` — the project codebook, after the across-document reconcile (stable IDs).
 5. `5_themes.md` — candidate themes, built one interview at a time (the theorist reads each transcript + its codes against the themes so far): one claim each, line-anchored, with coverage/scope, a falsification test, and a 'how the themes emerged' trace.
 
-Run: 136 codes in the project codebook, 9 candidate themes; 2 model calls this run (cached steps skipped).
+Run: 136 codes in the project codebook, 9 candidate themes; 0 model calls this run (cached steps skipped).
 
 This is the barebones view. The same run, with standpoint provenance and an interface, is on the project page (`index.html`) and the workbench mockup.

@@ -14,14 +14,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "engine"))
 import masshine as m  # noqa: E402
+from masshine import packs  # noqa: E402
 
 DOC = sys.argv[1] if len(sys.argv) > 1 else "DP-40 GRANDE, M.txt"
-PACK = m.ROOT.parent / "packs" / "migration_oral_history" / "standpoints"
-CODERS = {
-    "standard":         (m.PROMPTS / "coder.prompt").read_text(encoding="utf-8"),
-    "critical":         (PACK / "critical_political_economy.prompt").read_text(encoding="utf-8"),
-    "phenomenological": (PACK / "phenomenological_memory.prompt").read_text(encoding="utf-8"),
-}
+CODERS = packs.panel_coders("migration_oral_history")  # standard + the pack's standpoint lenses
 
 
 def short(conn, ev, n=130):

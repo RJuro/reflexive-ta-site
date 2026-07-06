@@ -1,0 +1,13 @@
+{
+  "title": "Migration oral history",
+  "lenses": {
+    "critical": {
+      "prompt": "standpoints/critical_political_economy.prompt",
+      "blurb": "critical theory / political economy of migration standpoint"
+    },
+    "phenomenological": {
+      "prompt": "standpoints/phenomenological_memory.prompt",
+      "blurb": "phenomenological / memory standpoint"
+    }
+  }
+}

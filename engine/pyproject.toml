@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+# rootdir is engine/; make `import masshine` and `import llm` resolve to the engine dir
+# (the package/monolith and the llm client live directly under engine/).
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"

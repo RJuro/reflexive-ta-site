@@ -1,0 +1,805 @@
+[
+  {
+    "central_concept": "In this account, the child's emotional world at the moment of departure is structured entirely by the anticipation of reuniting with her absent father, with awareness of what was being left behind arriving only in retrospect.",
+    "claim_scope": "single-case",
+    "coverage": "1 of 2",
+    "falsified_if": "If a second account from a comparably-aged child showed departure experienced primarily as loss, or showed the adult narrator's perspective fully aligned with the mother's longing rather than diverging from it.",
+    "id": "T01",
+    "key_evidence_sentence_ids": [
+      "dp-40-grande-m#S6.031",
+      "dp-40-grande-m#S6.032",
+      "dp-40-grande-m#S6.034",
+      "dp-40-grande-m#S6.036",
+      "dp-40-grande-m#S6.042",
+      "dp-40-grande-m#S9.029"
+    ],
+    "subthemes": [
+      {
+        "claim": "At ten years old, leaving is felt as forward movement toward paternal reunion, not as loss or farewell.",
+        "supporting_code_ids": [
+          "C0006",
+          "C0042"
+        ]
+      },
+      {
+        "claim": "In adulthood, the cultural and linguistic costs of that departure become legible as losses the child could not have anticipated.",
+        "supporting_code_ids": [
+          "C0044",
+          "C0043"
+        ]
+      },
+      {
+        "claim": "The same childhood vantage that produced peripheral awareness of geopolitical change also produced peripheral awareness of what was being given up.",
+        "supporting_code_ids": [
+          "C0032",
+          "C0055"
+        ]
+      },
+      {
+        "claim": "The narrator's adult emotional response diverges from her mother's persistent longing, marking a generational split in how the homeland is felt.",
+        "supporting_code_ids": [
+          "C0060"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0006",
+      "C0042",
+      "C0044",
+      "C0043",
+      "C0032",
+      "C0055",
+      "C0060"
+    ],
+    "tensions": [
+      "C0033"
+    ]
+  },
+  {
+    "central_concept": "In this account, the mother-daughter pair's capacity to act during emigration is structurally dependent on diasporic male intermediaries, with the mother carrying the bureaucratic labor and the child remaining legally subsumed.",
+    "claim_scope": "cross-case",
+    "coverage": "2 of 2",
+    "falsified_if": "If a second account showed the mother-daughter pair acting with structural autonomy from male intermediaries, or showed the child as an active agent in the emigration paperwork rather than legally subsumed.",
+    "id": "T02",
+    "key_evidence_sentence_ids": [
+      "dp-40-grande-m#S1.019",
+      "dp-40-grande-m#S1.020",
+      "dp-40-grande-m#S6.004",
+      "dp-40-grande-m#S6.008",
+      "dp-40-grande-m#S6.024",
+      "dp-40-grande-m#S6.027",
+      "dp-40-grande-m#S7.005",
+      "dp-40-grande-m#S7.026"
+    ],
+    "subthemes": [
+      {
+        "claim": "The mother bears the bureaucratic burden of securing emigration approvals alone, traversing multiple courts and offices in the final month.",
+        "supporting_code_ids": [
+          "C0037",
+          "C0038"
+        ]
+      },
+      {
+        "claim": "The child's travel authorization is legally bundled into the mother's passport, marking her as a dependent rather than an agent in the process.",
+        "supporting_code_ids": [
+          "C0039"
+        ]
+      },
+      {
+        "claim": "Male diaspora intermediaries intervene at points of structural vulnerability — a returnee who speaks American restores stolen clothes, and a previously-arrived fellow passenger advocates for an upgraded berth.",
+        "supporting_code_ids": [
+          "C0014",
+          "C0012",
+          "C0013",
+          "C0046"
+        ]
+      },
+      {
+        "claim": "The journey itself is composed of repeated constrained transfers — multi-port shipping, institutional food, medical inspection — over which the travelers exercise little control.",
+        "supporting_code_ids": [
+          "C0011",
+          "C0045",
+          "C0047",
+          "C0048",
+          "C0004"
+        ]
+      },
+      {
+        "claim": "Family emigration is staged rather than unitary: brothers are bound by military service, and a brother's death reshapes which siblings can leave and when.",
+        "supporting_code_ids": [
+          "C0002",
+          "C0040",
+          "C0041"
+        ]
+      },
+      {
+        "claim": "The absent father anchors the process from the destination side through letters and prepaid tickets, coordinating a transnational division of labor.",
+        "supporting_code_ids": [
+          "C0005",
+          "C0075"
+        ]
+      },
+      {
+        "claim": "Communal provisioning among co-traveling mothers partially substitutes for the missing male provisioner of another family in the group.",
+        "supporting_code_ids": [
+          "C0050"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0014",
+      "C0038",
+      "C0037",
+      "C0039",
+      "C0012",
+      "C0013",
+      "C0046",
+      "C0011",
+      "C0045",
+      "C0047",
+      "C0048",
+      "C0004",
+      "C0050",
+      "C0002",
+      "C0040",
+      "C0041",
+      "C0005"
+    ],
+    "tensions": [
+      "C0063"
+    ]
+  },
+  {
+    "central_concept": "In this account, resettlement is structurally mediated by co-ethnic networks of regional origin — co-migrant travel, company housing alongside similar families, endogamous marriage, and chain-migration growth — making incorporation a collective project rather than an individual arrival.",
+    "claim_scope": "cross-case",
+    "coverage": "2 of 2",
+    "falsified_if": "If a second account showed the narrator resettling without recourse to pre-existing co-ethnic infrastructure — no kin, no ethnic enclave, no ethnically-coded employment — and incorporating as an isolated individual.",
+    "id": "T03",
+    "key_evidence_sentence_ids": [
+      "dp-40-grande-m#S7.029",
+      "dp-40-grande-m#S8.011",
+      "dp-40-grande-m#S8.012",
+      "dp-40-grande-m#S10.011",
+      "dp-40-grande-m#S10.017",
+      "dp-40-grande-m#S8.008",
+      "ei-845-rodwin#S8.005",
+      "ei-845-rodwin#S8.008",
+      "ei-845-rodwin#S8.010",
+      "ei-845-rodwin#S8.011",
+      "ei-845-rodwin#S8.012",
+      "ei-845-rodwin#S8.013",
+      "ei-845-rodwin#S8.014",
+      "ei-845-rodwin#S8.064",
+      "ei-845-rodwin#S8.065",
+      "ei-845-rodwin#S8.067",
+      "ei-845-rodwin#S8.068",
+      "ei-845-rodwin#S8.069",
+      "ei-845-rodwin#S8.070",
+      "ei-845-rodwin#S8.071",
+      "ei-845-rodwin#S9.013",
+      "ei-845-rodwin#S9.014",
+      "ei-845-rodwin#S10.013",
+      "ei-845-rodwin#S10.014",
+      "ei-845-rodwin#S10.016",
+      "ei-845-rodwin#S10.018",
+      "ei-845-rodwin#S11.002",
+      "ei-845-rodwin#S11.003",
+      "ei-845-rodwin#S11.004",
+      "ei-845-rodwin#S11.005",
+      "ei-845-rodwin#S11.009",
+      "ei-845-rodwin#S7.012",
+      "ei-845-rodwin#S7.013",
+      "ei-845-rodwin#S7.014",
+      "ei-845-rodwin#S7.016",
+      "ei-845-rodwin#S7.017",
+      "ei-845-rodwin#S7.047",
+      "ei-845-rodwin#S7.048",
+      "ei-845-rodwin#S10.035",
+      "ei-845-rodwin#S10.038",
+      "ei-845-rodwin#S10.040"
+    ],
+    "subthemes": [
+      {
+        "claim": "Families from the same European area travel, transfer, and ultimately resettle together in the same American town.",
+        "supporting_code_ids": [
+          "C0051",
+          "C0001"
+        ]
+      },
+      {
+        "claim": "Initial housing places the family beside co-ethnic neighbors in a dense immigrant enclave, and the family enterprise sits immediately across the street from the tenement flat.",
+        "supporting_code_ids": [
+          "C0053",
+          "C0009",
+          "C0054",
+          "C0117",
+          "C0122"
+        ]
+      },
+      {
+        "claim": "Marriage within the shared regional and occupational circle reinforces the network rather than dispersing from it, with the narrator's husband met through the bakery trade.",
+        "supporting_code_ids": [
+          "C0064",
+          "C0124"
+        ]
+      },
+      {
+        "claim": "The ethnic enclave sustains itself by attracting and absorbing successive newcomers, with the family bakery operating as a recurring kin gathering site for relatives dispersed across the city.",
+        "supporting_code_ids": [
+          "C0065",
+          "C0066",
+          "C0130"
+        ]
+      },
+      {
+        "claim": "The father's itinerant movement among mining sites, and his eventual health-driven relocation, intersect with the same kin-based infrastructure that organized arrival.",
+        "supporting_code_ids": [
+          "C0007",
+          "C0059",
+          "C0008",
+          "C0052"
+        ]
+      },
+      {
+        "claim": "Co-ethnic mediation extends into the transit itself, with the ship assigned by religion and crew provisioning according to kosher law, showing the network operative from the moment of departure rather than only at resettlement.",
+        "supporting_code_ids": [
+          "C0107",
+          "C0111"
+        ]
+      },
+      {
+        "claim": "The family business carries the family surname ('Floun's') and sits across the street from the family flat, fusing the firm, the household, and the co-ethnic network into a single structure.",
+        "supporting_code_ids": [
+          "C0129",
+          "C0089"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0001",
+      "C0051",
+      "C0053",
+      "C0009",
+      "C0054",
+      "C0010",
+      "C0063",
+      "C0064",
+      "C0065",
+      "C0066",
+      "C0007",
+      "C0059",
+      "C0052",
+      "C0008",
+      "C0107",
+      "C0111",
+      "C0117",
+      "C0122",
+      "C0124",
+      "C0129",
+      "C0130",
+      "C0089"
+    ],
+    "tensions": [
+      "C0070",
+      "C0071",
+      "C0128"
+    ]
+  },
+  {
+    "central_concept": "In this account, the narrator's memory of the home village is anchored to an integrated human-animal dwelling managed by the mother in the father's long absence, set within a landscape materially inscribed by imperial rule and wartime state coercion.",
+    "claim_scope": "single-case",
+    "coverage": "1 of 2",
+    "falsified_if": "If a second account showed the home village remembered primarily through non-domestic landmarks, or showed the father present in the household rather than absent.",
+    "id": "T04",
+    "key_evidence_sentence_ids": [
+      "dp-40-grande-m#S2.002",
+      "dp-40-grande-m#S2.007",
+      "dp-40-grande-m#S2.013",
+      "dp-40-grande-m#S2.023",
+      "dp-40-grande-m#S2.034",
+      "dp-40-grande-m#S4.002",
+      "dp-40-grande-m#S4.035",
+      "dp-40-grande-m#S4.028"
+    ],
+    "subthemes": [
+      {
+        "claim": "The father's longstanding presence in America leaves the mother as the de facto operator of the rural household and farm.",
+        "supporting_code_ids": [
+          "C0015",
+          "C0021"
+        ]
+      },
+      {
+        "claim": "The peasant house and barn are built as a single structure with animals immediately adjacent to domestic rooms, a layout the narrator describes as historically typical.",
+        "supporting_code_ids": [
+          "C0016"
+        ]
+      },
+      {
+        "claim": "Livestock are remembered as childhood companions integrated into daily domestic life, not as utility objects.",
+        "supporting_code_ids": [
+          "C0017",
+          "C0022"
+        ]
+      },
+      {
+        "claim": "The seasonal slaughter-and-preservation cycle organizes the household year, with the meat cured, weighted, and smoked for summer use.",
+        "supporting_code_ids": [
+          "C0018",
+          "C0020"
+        ]
+      },
+      {
+        "claim": "Children are obligated to participate in slaughter labor, performing necessary but unpleasant tasks like catching blood for blood sausage.",
+        "supporting_code_ids": [
+          "C0019"
+        ]
+      },
+      {
+        "claim": "Imperial rule is materially inscribed in the village through the visible presence of an Austrian elite occupying the local castle and through the imposed German language layered over Slovene as the official tongue.",
+        "supporting_code_ids": [
+          "C0029",
+          "C0030",
+          "C0031"
+        ]
+      },
+      {
+        "claim": "Wartime state coercion reshapes domestic space, requiring households to surrender rooms to refugees and imposing consumer restrictions on the civilian population.",
+        "supporting_code_ids": [
+          "C0023",
+          "C0034",
+          "C0028"
+        ]
+      },
+      {
+        "claim": "Wartime scarcity is met through rural-urban barter across the river and through strategic adaptation to environmental hazards such as hospital contamination of shared water.",
+        "supporting_code_ids": [
+          "C0035",
+          "C0025",
+          "C0026",
+          "C0027",
+          "C0033"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0015",
+      "C0016",
+      "C0017",
+      "C0018",
+      "C0019",
+      "C0020",
+      "C0021",
+      "C0022",
+      "C0029",
+      "C0030",
+      "C0031",
+      "C0023",
+      "C0034",
+      "C0028",
+      "C0035",
+      "C0025",
+      "C0026",
+      "C0027",
+      "C0033"
+    ],
+    "tensions": [
+      "C0032"
+    ]
+  },
+  {
+    "central_concept": "In this account, belonging to America is anchored in active civic practice — citizenship, habitual voting, and explicit declaration — rather than in ancestral place, and is sustained across the life course through stable residence, long-tenure industrial work, and a retrospective distance from a homeland that has politically transformed and war-traumatized.",
+    "claim_scope": "single-case",
+    "coverage": "1 of 2",
+    "falsified_if": "If a second account showed belonging to America expressed through ancestral or homeland ties rather than through civic practice, or showed no industrial-work tenure anchoring the narrator's economic life.",
+    "id": "T05",
+    "key_evidence_sentence_ids": [
+      "dp-40-grande-m#S11.023",
+      "dp-40-grande-m#S11.025",
+      "dp-40-grande-m#S11.026",
+      "dp-40-grande-m#S9.009",
+      "dp-40-grande-m#S9.010",
+      "dp-40-grande-m#S10.003",
+      "dp-40-grande-m#S10.014",
+      "dp-40-grande-m#S11.008"
+    ],
+    "subthemes": [
+      {
+        "claim": "Citizenship acquired in 1932 and ritualized voting in every subsequent election constitute a practiced, ongoing form of civic belonging.",
+        "supporting_code_ids": [
+          "C0073"
+        ]
+      },
+      {
+        "claim": "The narrator explicitly claims America as her country and expresses affective happiness at returning from Europe, marking identification as chosen rather than inherited.",
+        "supporting_code_ids": [
+          "C0074"
+        ]
+      },
+      {
+        "claim": "Long-tenure meatpacking labor — nearly three decades — anchors economic life, and the work is transmitted to the next generation within the same immigrant household.",
+        "supporting_code_ids": [
+          "C0070",
+          "C0071",
+          "C0072"
+        ]
+      },
+      {
+        "claim": "Settlement in Denver is uninterrupted from 1926 onward, and the homeland property is formally transferred to the brother, finalizing severance from the place of origin.",
+        "supporting_code_ids": [
+          "C0068",
+          "C0061"
+        ]
+      },
+      {
+        "claim": "The homeland has become politically unrecognizable — shifting from Austria-Hungary to Yugoslavia — and is associated in memory with war trauma suffered by relatives who remained.",
+        "supporting_code_ids": [
+          "C0003",
+          "C0058"
+        ]
+      },
+      {
+        "claim": "The fear of a second European war overrides the mother's wish to return, consolidating permanent emigration.",
+        "supporting_code_ids": [
+          "C0057"
+        ]
+      },
+      {
+        "claim": "Persistent transnational ties — multiple return visits — coexist with chosen American identification rather than displacing it.",
+        "supporting_code_ids": [
+          "C0067"
+        ]
+      },
+      {
+        "claim": "The mother's labor is redefined after emigration from managing agricultural animals to domestic housework, marking her adjustment into a different female work order.",
+        "supporting_code_ids": [
+          "C0056"
+        ]
+      },
+      {
+        "claim": "Generational divergence in diasporic longing — the mother's intense homesickness against the narrator's comparatively muted response — is named in the interview.",
+        "supporting_code_ids": [
+          "C0060"
+        ]
+      },
+      {
+        "claim": "German, the official language of the imperial homeland, fades from use after emigration and is later regretted as a cultural loss.",
+        "supporting_code_ids": [
+          "C0043"
+        ]
+      },
+      {
+        "claim": "The arrival in Colorado coincides with the onset of severe Depression-era hardship, framing American economic life as demanding but ultimately incorporable.",
+        "supporting_code_ids": [
+          "C0062",
+          "C0069"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0073",
+      "C0074",
+      "C0070",
+      "C0071",
+      "C0072",
+      "C0068",
+      "C0061",
+      "C0003",
+      "C0058",
+      "C0057",
+      "C0067",
+      "C0056",
+      "C0060",
+      "C0043",
+      "C0062",
+      "C0069"
+    ],
+    "tensions": [
+      "C0067"
+    ]
+  },
+  {
+    "central_concept": "In this account, transatlantic emigration is initiated by the father's recall to the military of a successor state following border changes, producing a pioneer-father pattern in which the father departs alone roughly a year ahead of the family and sends prepaid tickets for their later passage — inverting the pattern in which the mother is the primary actor.",
+    "claim_scope": "cross-case",
+    "coverage": "2 of 2",
+    "falsified_if": "If a second account showed the entire family departing together without a pioneer father, or showed that economic opportunity rather than a conscription threat was the stated precipitating cause of the father's earlier solo departure.",
+    "id": "T06",
+    "key_evidence_sentence_ids": [
+      "ei-845-rodwin#S6.039",
+      "ei-845-rodwin#S6.046",
+      "ei-845-rodwin#S6.047",
+      "ei-845-rodwin#S6.051",
+      "ei-845-rodwin#S6.052",
+      "ei-845-rodwin#S6.053",
+      "ei-845-rodwin#S6.054",
+      "ei-845-rodwin#S6.055",
+      "ei-845-rodwin#S6.058",
+      "ei-845-rodwin#S6.059",
+      "ei-845-rodwin#S6.060",
+      "ei-845-rodwin#S6.070",
+      "ei-845-rodwin#S6.071",
+      "ei-845-rodwin#S7.007",
+      "ei-845-rodwin#S7.008",
+      "ei-845-rodwin#S7.010",
+      "ei-845-rodwin#S11.011",
+      "ei-845-rodwin#S11.012",
+      "ei-845-rodwin#S11.013"
+    ],
+    "subthemes": [
+      {
+        "claim": "The father's recall to what the narrator describes as an 'underground' Russian Army — reflecting confusion of conscription claims from successor states after border changes — functions as the precipitating push factor for transatlantic emigration.",
+        "supporting_code_ids": [
+          "C0104",
+          "C0106"
+        ]
+      },
+      {
+        "claim": "The father departs roughly a year ahead of the wife and children, opens a downtown Manhattan bakery, and then summons the family with prepaid tickets, while the mother waits in London contingent on his prior decision.",
+        "supporting_code_ids": [
+          "C0075",
+          "C0001",
+          "C0131"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0075",
+      "C0104",
+      "C0106",
+      "C0001",
+      "C0131"
+    ],
+    "tensions": [
+      "C0076",
+      "C0097"
+    ]
+  },
+  {
+    "central_concept": "In this account, the mother's pre-migration baking trade — not the father's tailoring — is the portable economic infrastructure that carries the family from Poland to London to the Lower East Side, with the husband eventually entering the wife's trade and the family surname fusing household, firm, and kin network into a single structure.",
+    "claim_scope": "single-case",
+    "coverage": "1 of 2",
+    "falsified_if": "If a second account showed the father retaining his pre-migration trade in the new country, or showed the firm named by something other than the family surname, or showed the household and business geographically separated.",
+    "id": "T07",
+    "key_evidence_sentence_ids": [
+      "ei-845-rodwin#S4.021",
+      "ei-845-rodwin#S6.063",
+      "ei-845-rodwin#S8.045",
+      "ei-845-rodwin#S8.047",
+      "ei-845-rodwin#S8.049",
+      "ei-845-rodwin#S8.051",
+      "ei-845-rodwin#S8.053",
+      "ei-845-rodwin#S8.055",
+      "ei-845-rodwin#S8.057",
+      "ei-845-rodwin#S8.059",
+      "ei-845-rodwin#S8.061",
+      "ei-845-rodwin#S10.009",
+      "ei-845-rodwin#S10.033",
+      "ei-845-rodwin#S10.035",
+      "ei-845-rodwin#S10.038",
+      "ei-845-rodwin#S10.040",
+      "ei-845-rodwin#S11.002",
+      "ei-845-rodwin#S11.003",
+      "ei-845-rodwin#S11.004",
+      "ei-845-rodwin#S11.005",
+      "ei-845-rodwin#S11.009"
+    ],
+    "subthemes": [
+      {
+        "claim": "The mother's baking trade, established in Poland and replicated first in London (Commercial Road) and then in New York (Essex Street), provides occupational continuity across three countries and a co-located business-and-residence pattern.",
+        "supporting_code_ids": [
+          "C0077",
+          "C0089",
+          "C0098"
+        ]
+      },
+      {
+        "claim": "The father, identified in Poland as a tailor, enters the mother's trade and becomes a baker in the new country, inverting the conventional pattern of male occupational continuity.",
+        "supporting_code_ids": [
+          "C0115"
+        ]
+      },
+      {
+        "claim": "The family business carries the family surname ('Floun's Bakery') and operates as a kin gathering site where relatives assemble on Fridays, fusing the firm, the household, and the co-ethnic network into a single structure, and this enterprise travels with the family to Rockaway Beach after fifteen years on the Lower East Side.",
+        "supporting_code_ids": [
+          "C0129",
+          "C0130",
+          "C0122",
+          "C0123",
+          "C0127"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0077",
+      "C0115",
+      "C0098",
+      "C0129",
+      "C0130",
+      "C0123",
+      "C0089",
+      "C0122",
+      "C0127"
+    ],
+    "tensions": [
+      "C0128",
+      "C0120"
+    ]
+  },
+  {
+    "central_concept": "In this account, family emigration is not a unitary act but a selective one governed by perceived caregiving capacity: two sisters remain in Poland with the grandmother because the mother judges she cannot adequately care for them, and the timing of the mother's own move from Poland to London is positioned as coinciding with the birth of her children.",
+    "claim_scope": "cross-case",
+    "coverage": "2 of 2",
+    "falsified_if": "If a second account showed all children migrating together regardless of the mother's caregiving capacity, or showed the parents' departure from a country of origin with no extended kin available to absorb the children left behind.",
+    "id": "T08",
+    "key_evidence_sentence_ids": [
+      "ei-845-rodwin#S5.005",
+      "ei-845-rodwin#S5.007",
+      "ei-845-rodwin#S5.012",
+      "ei-845-rodwin#S5.013",
+      "ei-845-rodwin#S5.014",
+      "ei-845-rodwin#S5.015",
+      "ei-845-rodwin#S5.016",
+      "ei-845-rodwin#S5.018",
+      "ei-845-rodwin#S5.019",
+      "ei-845-rodwin#S5.020",
+      "ei-845-rodwin#S5.021",
+      "ei-845-rodwin#S5.022",
+      "ei-845-rodwin#S5.023",
+      "ei-845-rodwin#S5.026",
+      "ei-845-rodwin#S6.002",
+      "ei-845-rodwin#S6.003"
+    ],
+    "subthemes": [
+      {
+        "claim": "Two sisters are left behind in Poland with the grandmother because the mother judges she cannot adequately care for them, framing who migrates as a function of who can be provided for.",
+        "supporting_code_ids": [
+          "C0099",
+          "C0100",
+          "C0002"
+        ]
+      },
+      {
+        "claim": "The grandmother, herself only known to the narrator through photographs, is positioned as the kin-keeper who enables the parental departure, with relationships to absent kin accessed through images rather than embodied memory.",
+        "supporting_code_ids": [
+          "C0100",
+          "C0101"
+        ]
+      },
+      {
+        "claim": "The parting of the two sisters is framed as a temporary arrangement with a defined endpoint ('till one was seven years old'), not as open-ended rupture, even though it becomes permanent in practice.",
+        "supporting_code_ids": [
+          "C0103"
+        ]
+      },
+      {
+        "claim": "The mother's movement from Poland to London is positioned as coinciding with the birth of her children, suggesting that migration is timed around family formation rather than pursued independently of it.",
+        "supporting_code_ids": [
+          "C0076"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0002",
+      "C0099",
+      "C0100",
+      "C0076",
+      "C0103",
+      "C0101"
+    ],
+    "tensions": [
+      "C0075"
+    ]
+  },
+  {
+    "central_concept": "In this account, emigration at age three and a half produces a memory architecture in which recollection is fragmentary, anchored by vivid sensory and interpersonal fragments and supplemented by maternal oral tradition rather than documentary records, with biographical dates sometimes diverging from officially registered ones.",
+    "claim_scope": "single-case",
+    "coverage": "1 of 2",
+    "falsified_if": "If a second account from a similarly young emigrant showed continuous, detailed autobiographical memory of the journey and origin, or showed the speaker relying primarily on documents rather than maternal oral tradition for biographical facts.",
+    "id": "T09",
+    "key_evidence_sentence_ids": [
+      "ei-845-rodwin#S1.018",
+      "ei-845-rodwin#S1.019",
+      "ei-845-rodwin#S1.020",
+      "ei-845-rodwin#S1.022",
+      "ei-845-rodwin#S1.023",
+      "ei-845-rodwin#S1.025",
+      "ei-845-rodwin#S1.026",
+      "ei-845-rodwin#S1.027",
+      "ei-845-rodwin#S1.029",
+      "ei-845-rodwin#S1.031",
+      "ei-845-rodwin#S1.033",
+      "ei-845-rodwin#S1.034",
+      "ei-845-rodwin#S2.001",
+      "ei-845-rodwin#S2.002",
+      "ei-845-rodwin#S2.011",
+      "ei-845-rodwin#S2.012",
+      "ei-845-rodwin#S2.013",
+      "ei-845-rodwin#S2.014",
+      "ei-845-rodwin#S2.016",
+      "ei-845-rodwin#S2.017",
+      "ei-845-rodwin#S2.018",
+      "ei-845-rodwin#S2.021",
+      "ei-845-rodwin#S2.022",
+      "ei-845-rodwin#S7.057",
+      "ei-845-rodwin#S7.058",
+      "ei-845-rodwin#S7.059",
+      "ei-845-rodwin#S7.060",
+      "ei-845-rodwin#S7.061",
+      "ei-845-rodwin#S8.029",
+      "ei-845-rodwin#S8.030",
+      "ei-845-rodwin#S8.031",
+      "ei-845-rodwin#S8.034",
+      "ei-845-rodwin#S8.035",
+      "ei-845-rodwin#S8.036",
+      "ei-845-rodwin#S8.037",
+      "ei-845-rodwin#S8.039",
+      "ei-845-rodwin#S8.041"
+    ],
+    "subthemes": [
+      {
+        "claim": "Memory of the pre-verbal-era emigration is fragmentary, requiring active interviewer probing to surface any descriptive content at all, and the speaker herself signals the limits of recall at multiple points — forenames, the father's army service, Ellis Island.",
+        "supporting_code_ids": [
+          "C0082",
+          "C0088",
+          "C0093",
+          "C0134"
+        ]
+      },
+      {
+        "claim": "Specific sensory and interpersonal fragments — the icebox the family owned when most neighbors did not, the Irish neighbor who called 'Mary, Mary' to scold her for noise — function as memory anchors more durable than physical settings the speaker cannot describe, and the neighborhood's ethnic composition is preserved as a salient marker.",
+        "supporting_code_ids": [
+          "C0083",
+          "C0087",
+          "C0084",
+          "C0086"
+        ]
+      },
+      {
+        "claim": "Iconic arrival imagery (the Statue of Liberty, horse-drawn delivery wagons) marks the destination vividly, while Ellis Island processing is forgotten — showing that salient sensory and collective-symbolic content survives in memory while bureaucratic procedures do not.",
+        "supporting_code_ids": [
+          "C0112",
+          "C0116",
+          "C0118"
+        ]
+      },
+      {
+        "claim": "The mother's oral tradition — 'my mother used to say' — rather than documentary records, serves as the primary biographical authority for the narrator's own origins, with the birth certificate invoked by the interviewer rather than recalled by the speaker.",
+        "supporting_code_ids": [
+          "C0080",
+          "C0088"
+        ]
+      },
+      {
+        "claim": "Biographical and officially registered dates sometimes diverge (Christmas morning birth vs. February 9 registration), registering a persistent gap between bureaucratic documentation and lived/familial memory.",
+        "supporting_code_ids": [
+          "C0079"
+        ]
+      },
+      {
+        "claim": "The family roster recited in the interview preserves the memory of a deceased sibling (Yettie), integrating lost members into the remembered order of births.",
+        "supporting_code_ids": [
+          "C0105"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0079",
+      "C0080",
+      "C0082",
+      "C0083",
+      "C0087",
+      "C0088",
+      "C0112",
+      "C0116",
+      "C0118",
+      "C0134",
+      "C0105",
+      "C0084",
+      "C0086",
+      "C0093"
+    ],
+    "tensions": [
+      "C0114"
+    ]
+  }
+]

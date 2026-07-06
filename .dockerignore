@@ -1,0 +1,23 @@
+.git
+.gitignore
+.claude
+.codex
+.DS_Store
+
+# dev-only project material — never in the deployed image
+design
+content
+minimax_docs
+tools
+transcripts_sample
+
+# engine dev/runtime state — secrets and local data must not be baked into the image
+engine/.venv
+engine/.env
+engine/data
+engine/exports
+engine/.pytest_cache
+engine/tests
+
+**/__pycache__
+**/*.pyc

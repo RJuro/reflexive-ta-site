@@ -1,0 +1,91 @@
+"""Sequential theming replayed from cached raw steps (zero LLM calls) — pins the deterministic
+resolution in _resolve_step_themes / theorize_walk: stable ids, accumulated support, coverage
+derived from evidence (never trusted to the model), scope tracking coverage, grounded anchors,
+and paradigm provenance that sums to the supporting-code count.
+
+Because the fixtures carry a full theme_steps cache, the whole walk REPLAYS — the autouse
+`_no_live_llm` guard proves no model call escapes.
+"""
+import json
+import os
+
+import masshine as m
+from conftest import GOLDEN
+
+
+def _assert_golden(name, obj):
+    path = GOLDEN / name
+    payload = json.dumps(obj, indent=2, ensure_ascii=False, sort_keys=True)
+    if os.environ.get("UPDATE_GOLDEN") or not path.exists():
+        path.write_text(payload, encoding="utf-8")
+        return
+    assert path.read_text(encoding="utf-8") == payload, f"golden drift in {name}"
+
+
+def _transcripts(state):
+    return {d: m.transcript_block_from_sentences(state["docs"][d]["sentences"],
+                                                 state["docs"][d]["sections"])
+            for d in state["order"]}
+
+
+def _valid_sents(state):
+    return {d: {s["id"] for s in state["docs"][d]["sentences"]} for d in state["order"]}
+
+
+def _qualified(state):
+    return {f"{d}#{s['id']}" for d in state["order"]
+            for s in state["docs"][d]["sentences"]}
+
+
+def _theme_invariants(themes, codebook, n_docs, qualified, origin=None):
+    ids = set()
+    for t in themes:
+        assert t["id"] not in ids, "theme ids must be unique"
+        ids.add(t["id"])
+        assert t["supporting_code_ids"], "a theme must keep at least one grounded support"
+        assert set(t["supporting_code_ids"]) <= set(codebook), "support ids must be real codes"
+        k, of = t["coverage"].split(" of ")
+        assert int(of) == n_docs
+        assert 1 <= int(k) <= n_docs, f"coverage {t['coverage']} out of range"
+        assert t["claim_scope"] == ("cross-case" if int(k) >= 2 else "single-case")
+        for q in t["key_evidence_sentence_ids"]:
+            assert q in qualified, f"fabricated anchor {q}"
+        if origin is not None:
+            prov = t["paradigm_provenance"]
+            assert sum(prov.values()) == len(t["supporting_code_ids"])
+            assert set(prov) <= set(origin.values())
+
+
+def test_project_walk_replays_and_holds_invariants(project_state):
+    themes, codebook, snaps, fails = m.theorize_project_sequential(
+        project_state["order"], project_state["project_codebook"],
+        _transcripts(project_state), _valid_sents(project_state),
+        raw_cache=project_state["theme_steps"])
+    assert fails == []
+    assert len(snaps) == len(project_state["order"])
+    _theme_invariants(themes, codebook, len(project_state["order"]), _qualified(project_state))
+    _assert_golden("project_themes.json", themes)
+
+
+def test_panel_walk_replays_with_provenance(panel_state):
+    themes, codebook, origin, snaps, fails = m.theorize_panel_sequential(
+        panel_state["order"], {d: panel_state["docs"][d]["panel"] for d in panel_state["order"]},
+        _transcripts(panel_state), _valid_sents(panel_state),
+        raw_cache=panel_state["theme_steps"])
+    assert fails == []
+    _theme_invariants(themes, codebook, len(panel_state["order"]), _qualified(panel_state), origin)
+    # every panel code carries a lens origin
+    assert set(origin.values()) <= {"standard", "critical", "phenomenological"}
+    _assert_golden("panel_themes.json", themes)
+
+
+def test_coverage_never_leaks_from_unseen_interviews(project_state):
+    # after the FIRST interview's snapshot, no theme may claim coverage beyond "1 of N"
+    _, _, snaps, _ = m.theorize_project_sequential(
+        project_state["order"], project_state["project_codebook"],
+        _transcripts(project_state), _valid_sents(project_state),
+        raw_cache=project_state["theme_steps"])
+    first_doc, first_snap = snaps[0]
+    for t in first_snap:
+        k = int(t["coverage"].split(" of ")[0])
+        assert k == 1, f"{t['id']} leaked coverage {t['coverage']} at step 1"

@@ -1,0 +1,606 @@
+[
+  {
+    "central_concept": "In the narrators' accounts, the household absorbs the unpaid costs of social reproduction across the migration arc.",
+    "claim_scope": "cross-case",
+    "coverage": "2 of 2",
+    "falsified_if": "The narrators' accounts show that institutional or state support, rather than the household itself, bears the costs of social reproduction across the migration arc.",
+    "id": "T01",
+    "key_evidence_sentence_ids": [
+      "dp-40-grande-m#S2.002",
+      "dp-40-grande-m#S2.003",
+      "dp-40-grande-m#S3.036",
+      "dp-40-grande-m#S10.007",
+      "dp-40-grande-m#S11.030",
+      "ei-845-rodwin#S4.020",
+      "ei-845-rodwin#S4.022",
+      "ei-845-rodwin#S5.029",
+      "ei-845-rodwin#S7.005",
+      "ei-845-rodwin#S7.006",
+      "ei-845-rodwin#S8.025",
+      "ei-845-rodwin#S8.026",
+      "ei-845-rodwin#S9.018",
+      "ei-845-rodwin#S9.019"
+    ],
+    "paradigm_provenance": {
+      "critical": 18,
+      "phenomenological": 3,
+      "standard": 5
+    },
+    "subthemes": [
+      {
+        "claim": "The migrating household is transnationally divided and reconstituted in stages, with kin in the sending society absorbing the reproduction costs of family members who cannot migrate.",
+        "supporting_code_ids": [
+          "C0283",
+          "C0289",
+          "C0333",
+          "C0340",
+          "C0341",
+          "C0342",
+          "C0345",
+          "C0361",
+          "C0389"
+        ]
+      },
+      {
+        "claim": "In the receiving society, the household operates as the unit of labor mobilization, with children's formal schooling subordinated to the family enterprise and the bodily costs of work privately absorbed.",
+        "supporting_code_ids": [
+          "C0310",
+          "C0311",
+          "C0330",
+          "C0331",
+          "C0355",
+          "C0356",
+          "C0360",
+          "C0408"
+        ]
+      },
+      {
+        "claim": "The kin network in the receiving society functions as the primary reception and support infrastructure, with the family home and workplace operating as the standing site of kin gathering.",
+        "supporting_code_ids": [
+          "C0264",
+          "C0329",
+          "C0400"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0101",
+      "C0104",
+      "C0109",
+      "C0112",
+      "C0116",
+      "C0152",
+      "C0171",
+      "C0264",
+      "C0283",
+      "C0289",
+      "C0310",
+      "C0311",
+      "C0330",
+      "C0331",
+      "C0333",
+      "C0340",
+      "C0341",
+      "C0342",
+      "C0345",
+      "C0355",
+      "C0356",
+      "C0360",
+      "C0361",
+      "C0389",
+      "C0400",
+      "C0408"
+    ],
+    "tensions": [
+      "C0088",
+      "C0252",
+      "C0320",
+      "C0323"
+    ]
+  },
+  {
+    "central_concept": "In the narrators' accounts, macro-structural forces author the migration trajectory.",
+    "claim_scope": "cross-case",
+    "coverage": "2 of 2",
+    "falsified_if": "The narrators' accounts show migration driven by named individual choice without state, war, or labor-market forces, and without personal-emotional framing of structural causes.",
+    "id": "T02",
+    "key_evidence_sentence_ids": [
+      "dp-40-grande-m#S1.010",
+      "dp-40-grande-m#S7.024",
+      "dp-40-grande-m#S9.019",
+      "dp-40-grande-m#S10.021",
+      "dp-40-grande-m#S11.045",
+      "ei-845-rodwin#S3.053",
+      "ei-845-rodwin#S3.060",
+      "ei-845-rodwin#S5.012",
+      "ei-845-rodwin#S5.019",
+      "ei-845-rodwin#S5.024",
+      "ei-845-rodwin#S10.014"
+    ],
+    "paradigm_provenance": {
+      "critical": 10,
+      "phenomenological": 5,
+      "standard": 5
+    },
+    "subthemes": [
+      {
+        "claim": "These forces include state conscription, the dissolution and shifting of national borders, war and geopolitical upheaval, state bureaucratic gatekeeping, US labor demand, and economic crisis.",
+        "supporting_code_ids": [
+          "C0277",
+          "C0290",
+          "C0291",
+          "C0337",
+          "C0338",
+          "C0344",
+          "C0346",
+          "C0386"
+        ]
+      },
+      {
+        "claim": "The narrative registers these forces obliquely through personal-emotional framings — in-law conflict, conjugal loyalty, longing, homesickness, belonging — that locate causation in private feeling rather than naming structural forces directly.",
+        "supporting_code_ids": [
+          "C0279",
+          "C0280",
+          "C0339",
+          "C0343",
+          "C0375",
+          "C0376",
+          "C0388",
+          "C0420"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0099",
+      "C0100",
+      "C0133",
+      "C0157",
+      "C0277",
+      "C0279",
+      "C0280",
+      "C0290",
+      "C0291",
+      "C0337",
+      "C0338",
+      "C0339",
+      "C0343",
+      "C0344",
+      "C0346",
+      "C0375",
+      "C0376",
+      "C0386",
+      "C0388",
+      "C0420"
+    ],
+    "tensions": [
+      "C0063",
+      "C0222",
+      "C0376"
+    ]
+  },
+  {
+    "central_concept": "In the narrators' accounts, migrant transit is a site of structural segmentation in which class, ethnicity, and religion organize the migrant's experience.",
+    "claim_scope": "cross-case",
+    "coverage": "2 of 2",
+    "falsified_if": "The narrators' accounts show transit as an unstructured or purely individual experience without class, ethnic, or religious organization.",
+    "id": "T03",
+    "key_evidence_sentence_ids": [
+      "dp-40-grande-m#S1.019",
+      "dp-40-grande-m#S1.020",
+      "dp-40-grande-m#S8.005",
+      "dp-40-grande-m#S8.011",
+      "dp-40-grande-m#S6.035",
+      "ei-845-rodwin#S6.003",
+      "ei-845-rodwin#S6.005",
+      "ei-845-rodwin#S6.013",
+      "ei-845-rodwin#S6.014",
+      "ei-845-rodwin#S6.018",
+      "ei-845-rodwin#S6.020",
+      "ei-845-rodwin#S6.023",
+      "ei-845-rodwin#S6.025",
+      "ei-845-rodwin#S6.026",
+      "ei-845-rodwin#S6.039",
+      "ei-845-rodwin#S6.045"
+    ],
+    "paradigm_provenance": {
+      "critical": 7,
+      "phenomenological": 6,
+      "standard": 10
+    },
+    "subthemes": [
+      {
+        "claim": "Migrant bodies are subject to class stratification (steerage, money-throwing economy) and ethnic-religious segmentation (designated shipboard sections, kosher provision) within the transit infrastructure.",
+        "supporting_code_ids": [
+          "C0293",
+          "C0294",
+          "C0295",
+          "C0297",
+          "C0300",
+          "C0347",
+          "C0348",
+          "C0350"
+        ]
+      },
+      {
+        "claim": "Community infrastructure — prior-migrant brokers, co-ethnic shipboard staff, and stranger-care networks — partially offsets exposure, sustaining the migrant's religious-cultural life and providing emergency care for vulnerable bodies.",
+        "supporting_code_ids": [
+          "C0296",
+          "C0298",
+          "C0299",
+          "C0349",
+          "C0351",
+          "C0390",
+          "C0392",
+          "C0394",
+          "C0397",
+          "C0398"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0002",
+      "C0066",
+      "C0135",
+      "C0144",
+      "C0218",
+      "C0293",
+      "C0294",
+      "C0295",
+      "C0296",
+      "C0297",
+      "C0298",
+      "C0299",
+      "C0300",
+      "C0347",
+      "C0348",
+      "C0349",
+      "C0350",
+      "C0351",
+      "C0390",
+      "C0392",
+      "C0394",
+      "C0397",
+      "C0398"
+    ],
+    "tensions": [
+      "C0146",
+      "C0222",
+      "C0394"
+    ]
+  },
+  {
+    "central_concept": "In Mary Grande's account, the homeland is constituted in memory as a coherent, integrated lifeworld.",
+    "claim_scope": "single-case",
+    "coverage": "1 of 2",
+    "falsified_if": "Mary Grande's account shows the homeland as fragmented, inaccessible, or recalled only through inherited transmission rather than as a coherent remembered lifeworld.",
+    "id": "T04",
+    "key_evidence_sentence_ids": [
+      "dp-40-grande-m#S2.007",
+      "dp-40-grande-m#S2.008",
+      "dp-40-grande-m#S2.034",
+      "dp-40-grande-m#S5.029",
+      "dp-40-grande-m#S6.041"
+    ],
+    "paradigm_provenance": {
+      "critical": 2,
+      "phenomenological": 1
+    },
+    "subthemes": [],
+    "supporting_code_ids": [
+      "C0105",
+      "C0111",
+      "C0211"
+    ],
+    "tensions": [
+      "C0092",
+      "C0252",
+      "C0111"
+    ]
+  },
+  {
+    "central_concept": "In the narrators' accounts, structural hardship is recounted as unremarkable and ordinary rather than affectively dramatic, reproducing the natural attitude in which deprivation is the taken-for-granted horizon of daily life.",
+    "claim_scope": "cross-case",
+    "coverage": "2 of 2",
+    "falsified_if": "The narrators' accounts show strong emotional elaboration of hardship, or if structural conditions are narrated as exceptional ruptures rather than as the taken-for-granted horizon of daily life.",
+    "id": "T05",
+    "key_evidence_sentence_ids": [
+      "dp-40-grande-m#S3.034",
+      "dp-40-grande-m#S4.004",
+      "dp-40-grande-m#S4.009",
+      "dp-40-grande-m#S4.012",
+      "dp-40-grande-m#S4.015",
+      "ei-845-rodwin#S4.056",
+      "ei-845-rodwin#S8.017",
+      "ei-845-rodwin#S8.035",
+      "ei-845-rodwin#S10.003",
+      "ei-845-rodwin#S10.007",
+      "ei-845-rodwin#S10.016",
+      "ei-845-rodwin#S10.024"
+    ],
+    "paradigm_provenance": {
+      "critical": 4,
+      "phenomenological": 22,
+      "standard": 9
+    },
+    "subthemes": [
+      {
+        "claim": "The recounting deploys stock phrases, low-intensity positive evaluations, memory gaps, and dysfluencies as typifications that flatten affect into familiar categories and contain structural ruptures within the routine.",
+        "supporting_code_ids": [
+          "C0260",
+          "C0281",
+          "C0292",
+          "C0320",
+          "C0323",
+          "C0325",
+          "C0365",
+          "C0370",
+          "C0374",
+          "C0378",
+          "C0383",
+          "C0384",
+          "C0385",
+          "C0388",
+          "C0393",
+          "C0402",
+          "C0404",
+          "C0405",
+          "C0407",
+          "C0411",
+          "C0415",
+          "C0416",
+          "C0421"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0030",
+      "C0031",
+      "C0033",
+      "C0118",
+      "C0119",
+      "C0123",
+      "C0126",
+      "C0188",
+      "C0199",
+      "C0200",
+      "C0201",
+      "C0202",
+      "C0260",
+      "C0281",
+      "C0292",
+      "C0320",
+      "C0323",
+      "C0325",
+      "C0365",
+      "C0370",
+      "C0374",
+      "C0378",
+      "C0383",
+      "C0384",
+      "C0385",
+      "C0388",
+      "C0393",
+      "C0402",
+      "C0404",
+      "C0405",
+      "C0407",
+      "C0411",
+      "C0415",
+      "C0416",
+      "C0421"
+    ],
+    "tensions": [
+      "C0195",
+      "C0202",
+      "C0240",
+      "C0280",
+      "C0404"
+    ]
+  },
+  {
+    "central_concept": "In Minnie Rodwin's account, the homeland is inaccessible to direct memory and is constituted through inherited transmission and fragmentary sensory scene-fragments at the autobiography threshold.",
+    "claim_scope": "single-case",
+    "coverage": "1 of 2",
+    "falsified_if": "Minnie Rodwin's account shows continuous, direct autobiographical memory of England and Poland, or if the homeland is constituted primarily through her own sensory experience rather than through inherited transmission.",
+    "id": "T06",
+    "key_evidence_sentence_ids": [
+      "ei-845-rodwin#S1.022",
+      "ei-845-rodwin#S1.023",
+      "ei-845-rodwin#S2.003",
+      "ei-845-rodwin#S2.006",
+      "ei-845-rodwin#S2.016",
+      "ei-845-rodwin#S2.018",
+      "ei-845-rodwin#S2.026",
+      "ei-845-rodwin#S4.013",
+      "ei-845-rodwin#S4.015",
+      "ei-845-rodwin#S7.018",
+      "ei-845-rodwin#S7.019",
+      "ei-845-rodwin#S10.021"
+    ],
+    "paradigm_provenance": {
+      "phenomenological": 24,
+      "standard": 7
+    },
+    "subthemes": [
+      {
+        "claim": "Pre-memorial self-knowledge is socially transmitted through the mother's voice, family photographs, official documents, and inherited narrative rather than direct recollection.",
+        "supporting_code_ids": [
+          "C0266",
+          "C0270",
+          "C0274",
+          "C0288",
+          "C0302",
+          "C0363",
+          "C0366",
+          "C0367",
+          "C0368",
+          "C0369",
+          "C0372",
+          "C0375",
+          "C0379",
+          "C0380",
+          "C0381",
+          "C0382",
+          "C0387",
+          "C0399",
+          "C0410",
+          "C0414",
+          "C0419"
+        ]
+      },
+      {
+        "claim": "Earliest memories take the form of halting sensory scene-fragments — a neighbor's call, a household object, a stranger's care — organized around immediate encounter rather than continuous narrative.",
+        "supporting_code_ids": [
+          "C0272",
+          "C0300",
+          "C0370",
+          "C0371",
+          "C0373",
+          "C0391",
+          "C0395",
+          "C0396",
+          "C0401",
+          "C0407"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0266",
+      "C0270",
+      "C0272",
+      "C0274",
+      "C0288",
+      "C0300",
+      "C0302",
+      "C0363",
+      "C0366",
+      "C0367",
+      "C0368",
+      "C0369",
+      "C0370",
+      "C0371",
+      "C0372",
+      "C0373",
+      "C0375",
+      "C0379",
+      "C0380",
+      "C0381",
+      "C0382",
+      "C0387",
+      "C0391",
+      "C0395",
+      "C0396",
+      "C0399",
+      "C0401",
+      "C0407",
+      "C0410",
+      "C0414",
+      "C0419"
+    ],
+    "tensions": [
+      "C0302",
+      "C0402"
+    ]
+  },
+  {
+    "central_concept": "In Minnie Rodwin's account, the family ethnic enterprise operates as the spatial-social anchor of immigrant settlement, fusing commerce, kinship, labor mobilization, and intra-ethnic marriage into a single institutional form.",
+    "claim_scope": "single-case",
+    "coverage": "1 of 2",
+    "falsified_if": "Minnie Rodwin's account shows the family enterprise as marginal or failing, or shows the kin network and marriage market organized independently of the enterprise.",
+    "id": "T07",
+    "key_evidence_sentence_ids": [
+      "ei-845-rodwin#S3.063",
+      "ei-845-rodwin#S5.008",
+      "ei-845-rodwin#S5.036",
+      "ei-845-rodwin#S7.041",
+      "ei-845-rodwin#S7.042",
+      "ei-845-rodwin#S7.062",
+      "ei-845-rodwin#S7.065",
+      "ei-845-rodwin#S9.005",
+      "ei-845-rodwin#S9.018",
+      "ei-845-rodwin#S9.024",
+      "ei-845-rodwin#S9.026",
+      "ei-845-rodwin#S9.029",
+      "ei-845-rodwin#S10.005",
+      "ei-845-rodwin#S10.011"
+    ],
+    "paradigm_provenance": {
+      "critical": 11,
+      "phenomenological": 5,
+      "standard": 12
+    },
+    "subthemes": [
+      {
+        "claim": "The transferable artisanal trade (the bakery) crosses the migration intact, providing the material continuity between the sending and receiving societies and enabling a gendered occupational transformation within the household.",
+        "supporting_code_ids": [
+          "C0262",
+          "C0269",
+          "C0276",
+          "C0304",
+          "C0327",
+          "C0332",
+          "C0336",
+          "C0353",
+          "C0354",
+          "C0364"
+        ]
+      },
+      {
+        "claim": "The enterprise doubles as kin social hub and intra-ethnic marriage market, with the family name and the workplace-residence site organizing the social world of the immigrant community.",
+        "supporting_code_ids": [
+          "C0305",
+          "C0306",
+          "C0313",
+          "C0314",
+          "C0315",
+          "C0317",
+          "C0319",
+          "C0321",
+          "C0326",
+          "C0331",
+          "C0352",
+          "C0358",
+          "C0359",
+          "C0362",
+          "C0406",
+          "C0413",
+          "C0417",
+          "C0418"
+        ]
+      }
+    ],
+    "supporting_code_ids": [
+      "C0262",
+      "C0269",
+      "C0276",
+      "C0304",
+      "C0305",
+      "C0306",
+      "C0313",
+      "C0314",
+      "C0315",
+      "C0317",
+      "C0319",
+      "C0321",
+      "C0326",
+      "C0327",
+      "C0331",
+      "C0332",
+      "C0336",
+      "C0352",
+      "C0353",
+      "C0354",
+      "C0358",
+      "C0359",
+      "C0362",
+      "C0364",
+      "C0406",
+      "C0413",
+      "C0417",
+      "C0418"
+    ],
+    "tensions": [
+      "C0416"
+    ]
+  }
+]

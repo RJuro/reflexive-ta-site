@@ -1,5 +1,6 @@
-# Claude Code internal state — never public
+# Agent tool internal state — never public
 .claude/
+.codex/
 
 # macOS
 .DS_Store
