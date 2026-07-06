@@ -428,6 +428,17 @@
     color: var(--fg); text-decoration: none; font-size: 12.5px;
   }
   .export-item:hover { border-color: var(--accent); }
+  /* code families (P6) */
+  .fam { border: 1px solid var(--hairline); border-radius: 10px; background: var(--surface); margin-bottom: 8px; overflow: hidden; }
+  .fam__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 13px; cursor: pointer; user-select: none; }
+  .fam__head:hover { background: var(--bg); }
+  .fam__head .lens-dot { align-self: center; }
+  .fam__chev { color: var(--faint); font-size: 10px; flex: none; }
+  .fam__label { font-weight: 600; font-size: 13px; white-space: nowrap; }
+  .fam__def { color: var(--faint); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .fam__count { color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; flex: none; }
+  .fam__body { padding: 4px 10px 10px; }
+  .fam__body .code-row { margin-bottom: 4px; }
   .notes-row__main textarea {
     width: 100%; resize: none; border: 1px solid var(--hairline); border-radius: 7px;
     background: var(--surface); padding: 7px 9px; font-size: 12.5px; line-height: 1.5; outline: none;
@@ -451,7 +462,7 @@
   <div class="toasts" id="toasts"></div>
   <div id="sheet-root"></div>
   <input type="file" id="file-input" accept=".txt,.md" hidden>
-  <script src="/api.js?v=9"></script>
-  <script src="/app.js?v=9"></script>
+  <script src="/api.js?v=11"></script>
+  <script src="/app.js?v=11"></script>
 </body>
 </html>

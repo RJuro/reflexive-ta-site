@@ -11,6 +11,7 @@ from pathlib import Path
 
 from . import packs, projects, runner, store
 from .coding import code_document, code_sections_panel
+from .consolidate import consolidate_codebook
 from .db import new_run, project_db
 from .ingest import ingest
 from .reconcile import reconcile_project
@@ -78,9 +79,11 @@ def code_work(pid: str, mode: str, recode: bool = False):
             proj = projects.get_project(pid)
             coders = packs.panel_coders(proj["pack_id"]) if mode == "panel" else None
             total = len(order)
+            new_docs = []  # doc ids coded THIS run (not already in the checkpoint before we started)
             for idx, doc_id in enumerate(order, 1):
                 if doc_id in docs:
                     continue
+                new_docs.append(doc_id)
                 progress(stage="coding", doc_id=doc_id, done=idx - 1, total=total,
                          message=f"coding {names[doc_id]}")
                 entry = store.doc_entry(conn, doc_id, names[doc_id])
@@ -107,10 +110,22 @@ def code_work(pid: str, mode: str, recode: bool = False):
                 state["project_codebook"] = reconcile_project(
                     conn, run, [docs[d]["codes"] for d in order])
                 runner.save_checkpoint(cp, state)
+            # a code-table rewrite drops family_id (P6) — flag families stale if any exist
+            if conn.execute("SELECT 1 FROM code_family LIMIT 1").fetchone():
+                store.set_families_stale(conn, True)
             counts = store.code_counts(conn)
+            # A newly-coded doc under an existing theme set silently under-covers the corpus —
+            # only recode_work set the stale flag before, so freshly coded NEW documents never
+            # surfaced a "bring this into the themes" action. theme_work's raw_cache replay makes
+            # extending themes to the new doc(s) free for the already-themed ones (see theme_work).
+            if new_docs:
+                n_themes = conn.execute(
+                    "SELECT COUNT(*) FROM theme_v2 WHERE mode=?", (mode,)).fetchone()[0]
+                if n_themes:
+                    store.set_themes_stale(conn, mode, True)
         finally:
             conn.close()
-        return {"mode": mode, "docs": len(order), "code_counts": counts}
+        return {"mode": mode, "docs": len(order), "code_counts": counts, "new_docs": new_docs}
     return work
 
 
@@ -172,6 +187,9 @@ def recode_work(pid: str, doc_id: str, mode: str):
                          (mode, stale_from))
             conn.commit()
             store.set_themes_stale(conn, mode, True)
+            # a code-table rewrite drops family_id (P6) — flag families stale if any exist
+            if conn.execute("SELECT 1 FROM code_family LIMIT 1").fetchone():
+                store.set_families_stale(conn, True)
             n_addr = store.mark_feedback_addressed(conn, doc_id=doc_id)
             counts = store.code_counts(conn)
             after_labels = store.doc_code_labels(conn, doc_id)  # P4.11: snapshot after persisting
@@ -228,4 +246,26 @@ def theme_work(pid: str, mode: str, feedback: bool = False):
             conn.close()
         return {"mode": mode, "themes": len(themes), "failures": fails,
                 "feedback_used": bool(guidance)}
+    return work
+
+
+def consolidate_work(pid: str):
+    """P6: group the whole codebook into 8–15 code families (ONE LLM call). Reads open
+    family comments as guidance, persists families + hues, clears the staleness flag, and
+    marks those comments addressed — the same shape as theme_work's feedback handling."""
+    def work(progress):
+        conn = project_db(projects.project_db_path(pid))
+        try:
+            codes = store.codes_payload(conn)
+            guidance = store.compile_family_guidance(conn) or None
+            progress(stage="consolidate", message="grouping the codebook into families")
+            families = consolidate_codebook(codes, guidance=guidance)
+            store.persist_families(conn, families)
+            store.set_families_stale(conn, False)
+            n_addr = store.mark_feedback_addressed(conn, target_type="family")
+            unfiled = next((f for f in families if f["label"] == "Unfiled"), None)
+        finally:
+            conn.close()
+        return {"families": len(families), "unfiled": len(unfiled["member_code_ids"]) if unfiled else 0,
+                "comments_addressed": n_addr, "feedback_used": bool(guidance)}
     return work

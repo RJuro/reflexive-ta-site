@@ -117,7 +117,8 @@ def delete_document_rows(conn: sqlite3.Connection, doc_id: str) -> dict:
 
 def _code_row(r) -> dict:
     return {"id": r[0], "coder": r[1], "label": r[2], "definition": r[3], "code_type": r[4],
-            "evidence": json.loads(r[5]), "model_rationale": r[6], "origin_doc_id": r[7]}
+            "evidence": json.loads(r[5]), "model_rationale": r[6], "origin_doc_id": r[7],
+            "family_id": r[8] if len(r) > 8 else None}
 
 
 def persist_panel_codes(conn: sqlite3.Connection, run_id: str, order: list[str],
@@ -144,7 +145,7 @@ def persist_panel_codes(conn: sqlite3.Connection, run_id: str, order: list[str],
 def codes_payload(conn: sqlite3.Connection, coder: str | None = None,
                   doc_id: str | None = None) -> list[dict]:
     q = ("SELECT id, coder, label, definition, code_type, evidence_ids, model_rationale, "
-         "origin_doc_id FROM code")
+         "origin_doc_id, family_id FROM code")
     where, args = [], []
     if coder:
         where.append("coder = ?"); args.append(coder)
@@ -169,7 +170,7 @@ def panel_by_doc_from_db(conn: sqlite3.Connection, doc_id: str) -> dict:
     panel: dict[str, list] = {}
     for r in conn.execute(
             "SELECT id, coder, label, definition, code_type, evidence_ids, model_rationale, "
-            "origin_doc_id FROM code WHERE origin_doc_id=? ORDER BY id", (doc_id,)):
+            "origin_doc_id, family_id FROM code WHERE origin_doc_id=? ORDER BY id", (doc_id,)):
         panel.setdefault(r[1], []).append(_code_row(r))
     return panel
 
@@ -199,6 +200,55 @@ def friction_payload(conn: sqlite3.Connection, doc_id: str) -> dict:
                       "n_coders": len(cm)})
     items.sort(key=lambda x: (x["kind"] != "interpretive", -x["n_coders"]))
     return {"coverage": fr["coverage"], "coders": fr["coders"], "friction": items}
+
+
+# ---- code families (P6: codebook consolidation) --------------------------------------------------
+# One consolidation pass groups the whole codebook into 8–15 families (consolidate.py proposes,
+# validates); this is the persistence half. persist_panel_codes/`code` rewrites lose family_id —
+# jobs.code_work/recode_work flag `families_stale` whenever that happens and any families exist.
+
+def persist_families(conn: sqlite3.Connection, families: list[dict]) -> None:
+    """Replace the family table wholesale and re-tag member codes' family_id. `families` is
+    consolidate.consolidate_codebook's output: each already carries position/hue and validated
+    member_code_ids."""
+    conn.execute("DELETE FROM code_family")
+    conn.execute("UPDATE code SET family_id=NULL")
+    now = _now()
+    for fam in families:
+        fid = f"F{fam['position'] + 1:02d}"
+        conn.execute(
+            "INSERT INTO code_family (id, label, definition, hue, position, created_at) "
+            "VALUES (?,?,?,?,?,?)",
+            (fid, fam["label"], fam["definition"], fam["hue"], fam["position"], now))
+        for cid in fam["member_code_ids"]:
+            conn.execute("UPDATE code SET family_id=? WHERE id=?", (fid, cid))
+    conn.commit()
+
+
+def families_payload(conn: sqlite3.Connection) -> list[dict]:
+    """Families ordered by ring position, each with n_codes = count of non-rejected members."""
+    revs = revisions_map(conn)
+    out = []
+    for r in conn.execute(
+            "SELECT id, label, definition, hue, position FROM code_family ORDER BY position"):
+        fid = r[0]
+        member_ids = [row[0] for row in conn.execute(
+            "SELECT id FROM code WHERE family_id=?", (fid,))]
+        n_codes = sum(1 for cid in member_ids if not revs.get(cid, {}).get("rejected"))
+        out.append({"id": fid, "label": r[1], "definition": r[2], "hue": r[3], "position": r[4],
+                    "n_codes": n_codes})
+    return out
+
+
+def set_families_stale(conn: sqlite3.Connection, flag: bool) -> None:
+    conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('families_stale', ?)",
+                 (1 if flag else 0,))
+    conn.commit()
+
+
+def families_stale(conn: sqlite3.Connection) -> bool:
+    row = conn.execute("SELECT value FROM meta WHERE key='families_stale'").fetchone()
+    return bool(row and row[0])
 
 
 # ---- themes -------------------------------------------------------------------------------------
@@ -453,6 +503,18 @@ def compile_guidance(conn: sqlite3.Connection, doc_id: str | None = None) -> str
     return "\n".join(lines)
 
 
+def compile_family_guidance(conn: sqlite3.Connection) -> str:
+    """Open comments on families (target_type='family') as plain-text guidance for a
+    re-consolidation — same shape as compile_guidance's lines, kept separate because family
+    comments are keyed by family label, not a code/theme/sentence context."""
+    lines: list[str] = []
+    for c in list_comments(conn, target_type="family", status="open"):
+        ctx = c["context"]
+        where = f'the family "{ctx.get("label", c["target_id"])}"'
+        lines.append(f"- On {where}: {c['body']}")
+    return "\n".join(lines)
+
+
 def mark_feedback_addressed(conn: sqlite3.Connection, doc_id: str | None = None,
                             target_type: str | None = None) -> int:
     """Flip open comments to 'addressed' after a re-run consumed them (scoped like compile)."""
@@ -495,6 +557,7 @@ def export_payload(conn: sqlite3.Connection, mode: str) -> dict:
         "codes": codes,
         "themes": th["themes"],
         "themes_stale": th["stale"],
+        "families": families_payload(conn),
         "memos": list_memos(conn),
         "comments": list_comments(conn),
     }
@@ -508,16 +571,18 @@ def codes_csv(conn: sqlite3.Connection) -> str:
     import csv
     import io
     memos = _memo_map(conn, "code")
+    fam_labels = {f["id"]: f["label"] for f in families_payload(conn)}
     out = io.StringIO()
     w = csv.writer(out)
     w.writerow(["id", "lens", "type", "status", "label", "machine_label", "definition",
-                "origin_doc", "n_evidence", "evidence_ids", "exemplar_quote",
+                "origin_doc", "family", "n_evidence", "evidence_ids", "exemplar_quote",
                 "model_rationale", "researcher_memo"])
     for c in codes_payload(conn):
         w.writerow([
             c["id"], c["coder"], c["code_type"], c["status"],
             c["researcher_label"] or c["label"], c["label"], c["definition"],
-            c["origin_doc_id"], len(c["evidence"]), " ".join(c["evidence"]),
+            c["origin_doc_id"], fam_labels.get(c.get("family_id"), ""),
+            len(c["evidence"]), " ".join(c["evidence"]),
             _safe_quote(conn, c["evidence"][0]) if c["evidence"] else "",
             c["model_rationale"], memos.get(c["id"], ""),
         ])

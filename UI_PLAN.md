@@ -390,7 +390,7 @@ lobotomy.*
 
 ## Plan
 
-1. **Consolidation pass → code families** *(answers ~80% of the review)*.
+1. ✅ SHIPPED (2026-07-06): **Consolidation pass → code families** — `consolidate.prompt` + `consolidate.py` (one LLM call, Python-validated: invented/rejected ids dropped, first-claim wins, Unfiled catch-all), schema v7 (`code_family` + `code.family_id`), `POST /consolidate` job with family-note guidance, staleness on codes rewrite, family grouping UI + inspector pane + exports.
    New job kind `consolidate`: ONE LLM call over the codebook proposes 8–15 families —
    `{label, definition, member_code_ids}` — with grounding rules (members must be real
    code ids; Python validates and drops inventions; unassigned codes go to an explicit
@@ -430,7 +430,7 @@ lobotomy.*
 paid re-run to validate; 5–6 are small and can ride along with any of it; 7 whenever a
 damaged project actually matters (Johnson/Brozinskas does).
 
-### P6 addendum — semantic color palette for code families (2026-07-06)
+### P6 addendum — semantic color palette for code families (2026-07-06) — ✅ SHIPPED: hue = round(360·position/n) from the model's semantic-ring order, stored per family; muted oklch(60% 0.08 h) dots/tints in codebook + inspector only; transcript untouched
 
 Once codes are consolidated into families (item 1), color them hierarchically:
 

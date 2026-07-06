@@ -128,8 +128,11 @@ def resolve_ev(conn: sqlite3.Connection, qualified: str) -> str:
 # call already reads the whole transcript, so these ride the same LLM call at ~0 extra cost).
 # v6 adds identity-lite authorship: `comment.author`, `memo.author` (nullable — a coauthor's
 # display name, asked once client-side and stamped locally; no accounts, no auth change).
+# v7 adds the codebook consolidation pass (P6): `code_family` (one row per family, with the
+# deterministic ring-position hue) and `code.family_id` (nullable — set only for codes a
+# consolidation run placed).
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 def init_project_db(conn: sqlite3.Connection) -> None:
@@ -175,6 +178,10 @@ def init_project_db(conn: sqlite3.Connection) -> None:
             updated_at TEXT,
             PRIMARY KEY (target_type, target_id)
         );
+        CREATE TABLE IF NOT EXISTS code_family (
+            id TEXT, label TEXT, definition TEXT, hue INTEGER, position INTEGER, created_at TEXT,
+            PRIMARY KEY (id)
+        );
         """
     )
     _migrate(conn)
@@ -206,6 +213,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
     memo_cols = {r[1] for r in conn.execute("PRAGMA table_info(memo)")}
     if "author" not in memo_cols:
         conn.execute("ALTER TABLE memo ADD COLUMN author TEXT")
+    if "family_id" not in code_cols:
+        conn.execute("ALTER TABLE code ADD COLUMN family_id TEXT")
 
 
 def project_db(path) -> sqlite3.Connection:

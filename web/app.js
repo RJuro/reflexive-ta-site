@@ -17,6 +17,7 @@
     sel: null,                 // {type:'sentence'|'code'|'theme', id}
     jobs: {},                  // jobId → job row (being watched)
     cb: { q: '', lens: '', type: '', rejected: false },
+    families: { families: [], stale: false }, cbGroup: null, famOpen: new Set(),
     notesFilter: 'open',        // notes view (P3.9): 'all' | 'open' | 'addressed' | 'dismissed'
     renaming: false,
     showArchived: false,        // home view: include archived projects
@@ -56,6 +57,8 @@
     return seen.length ? order.filter(l => seen.includes(l)) : [];
   }
   const label = c => c.researcher_label || c.label;
+  const famColor = (hue, a) => a != null ? `oklch(60% 0.08 ${hue} / ${a})` : `oklch(60% 0.08 ${hue})`;
+  const famById = fid => (S.families?.families || []).find(f => f.id === fid);
   const KINDS = { transcript: 'Interview transcript', fieldnotes: 'Field notes', focusgroup: 'Focus group', document: 'Document', other: 'Other source' };
   const cleanName = n => (n || '').replace(/\.(txt|md)$/i, '');
   // Display title: LLM/human title wins; falls back to the cleaned filename (today's behavior) —
@@ -140,6 +143,14 @@
       (docId ? c.doc_id === docId : true)).length;
   }
   const openThemeNotes = () => S.comments.filter(c => c.status === 'open' && c.target_type === 'theme').length;
+  // How many coded sources aren't reflected in the current theme walk yet (P4.x: coding a new
+  // doc into an already-themed project sets themes_stale but doesn't clear theme_steps — the
+  // gap is exactly the coded docs minus the ones theme_work has replayed/walked so far).
+  const nNewThemeSources = () => {
+    const coded = (S.detail?.documents || []).filter(d => (d.status || '').startsWith('coded')).length;
+    const themed = S.detail?.n_themed_docs ?? 0;
+    return Math.max(0, coded - themed);
+  };
   const doc = () => (S.detail?.documents || []).find(d => d.doc_id === S.docId);
   const docById = id => (S.detail?.documents || []).find(d => d.doc_id === id);
   const anyCoded = () => (S.detail?.documents || []).some(d => (d.status || '').startsWith('coded'));
@@ -152,13 +163,14 @@
     const detail = await API.project(pid);
     S.detail = detail;
     S.mode = detail.mode || (detail.project.pack_id ? 'panel' : 'standard');
-    const [codes, themes, comments, memos] = await Promise.all([
+    const [codes, themes, comments, memos, families] = await Promise.all([
       API.codes(pid).catch(() => []),
       API.themes(pid, S.mode).catch(() => ({ themes: [], snapshots: [], stale: false })),
       API.comments(pid).catch(() => []),
       API.memos(pid).catch(() => []),
+      API.families(pid).catch(() => ({ families: [], stale: false })),
     ]);
-    S.codes = codes; S.themes = themes; S.comments = comments;
+    S.codes = codes; S.themes = themes; S.comments = comments; S.families = families;
     S.memos = {};
     for (const m of memos) S.memos[`${m.target_type}:${m.target_id}`] = m;
     if (!S.docId || !detail.documents.find(d => d.doc_id === S.docId))
@@ -222,7 +234,7 @@
   async function refreshCodes() { S.codes = await API.codes(S.pid).catch(() => S.codes); }
 
   // ---- jobs ------------------------------------------------------------------------------------
-  const JOB_LABEL = { ingest: 'Reading source', code_standard: 'Coding', code_panel: 'Coding · panel', recode: 'Re-coding with feedback', theme: 'Building themes' };
+  const JOB_LABEL = { ingest: 'Reading source', code_standard: 'Coding', code_panel: 'Coding · panel', recode: 'Re-coding with feedback', theme: 'Building themes', consolidate: 'Consolidating codebook' };
   function watchJob(jobId, kind, reattach) {
     if (S.jobs[jobId]) return;
     S.jobs[jobId] = { id: jobId, kind, status: 'running', progress: {} };
@@ -621,7 +633,15 @@
     if (S.view === 'doc' && S.docId && openCount(S.docId) > 0)
       return { label: `Re-code with feedback · ${openCount(S.docId)}`, fn: () => runRecode(S.docId), hint: 'your notes ride along' };
     if (!S.themes?.themes.length && anyCoded()) return { label: 'Build themes', fn: () => runThemes(false), hint: 'calls the model · takes minutes' };
-    if (S.themes?.stale) return { label: openThemeNotes() ? 'Rebuild themes with feedback' : 'Rebuild themes', fn: () => runThemes(openThemeNotes() > 0) };
+    if (S.themes?.stale) {
+      const n = nNewThemeSources();
+      const fb = openThemeNotes() > 0;
+      if (n > 0 && !fb) {
+        return { label: `Extend themes · ${n} new source${n > 1 ? 's' : ''}`, fn: () => runThemes(false),
+                 hint: 'already-themed sources replay free — only new sources call the model' };
+      }
+      return { label: fb ? 'Rebuild themes with feedback' : 'Rebuild themes', fn: () => runThemes(fb) };
+    }
     if (openThemeNotes() > 0) return { label: `Rebuild themes with feedback · ${openThemeNotes()}`, fn: () => runThemes(true) };
     return null;
   }
@@ -1065,14 +1085,72 @@
       const qq = q.toLowerCase();
       list = list.filter(x => label(x).toLowerCase().includes(qq) || (x.definition || '').toLowerCase().includes(qq));
     }
-    const groups = {};
-    for (const x of list) (groups[x.coder] ||= []).push(x);
-    const order = lenses.filter(l => groups[l]);
+    const fams = S.families?.families || [];
+    const grouping = fams.length && (S.cbGroup || 'family') === 'family' ? 'family' : 'lens';
+    const rowFor = (x, hue) => {
+      const notes = commentsFor('code', x.id).filter(n => n.status === 'open').length;
+      return `<button class="code-row ${x.status === 'rejected' ? 'is-rejected' : ''} ${S.sel?.type === 'code' && S.sel.id === x.id ? 'is-active' : ''}" data-cid="${x.id}"
+          ${hue != null ? `style="border-left:2px solid ${famColor(hue, 0.55)}"` : ''}>
+        ${notes ? '<span class="note-dot"></span>' : ''}
+        <span class="lens-dot" style="background:${lensColor(x.coder)};flex:none;align-self:center"></span>
+        <span class="code-row__label">${esc(label(x))}</span>
+        <span class="code-row__meta"><span class="tag">${x.code_type}</span> · ${x.evidence.length}</span>
+      </button>`;
+    };
+    let listing;
+    if (!list.length) {
+      listing = `<p class="empty">${S.codes.length ? 'Nothing matches the filter.' : 'No codes yet — run coding first.'}</p>`;
+    } else if (grouping === 'family') {
+      const byFam = {};
+      for (const x of list) (byFam[x.family_id || '_none'] ||= []).push(x);
+      listing = fams.map(f => {
+        const members = byFam[f.id] || [];
+        const open = S.famOpen.has(f.id) || (q && members.length > 0);
+        const famNotes = commentsFor('family', f.id).filter(n => n.status === 'open').length;
+        return `<div class="fam" style="border-left:3px solid ${famColor(f.hue)}">
+          <div class="fam__head" data-fam-toggle="${f.id}">
+            <span class="fam__chev">${open ? '▾' : '▸'}</span>
+            <span class="lens-dot" style="background:${famColor(f.hue)}"></span>
+            <span class="fam__label">${esc(f.label)}</span>
+            ${famNotes ? '<span class="note-dot"></span>' : ''}
+            <span class="fam__def">${esc(f.definition)}</span>
+            <span class="fam__count">${members.length}${members.length !== f.n_codes ? ` of ${f.n_codes}` : ''}</span>
+            <button class="btn-bare" data-fam-open="${f.id}" title="Memo & notes">✎</button>
+          </div>
+          ${open ? `<div class="fam__body">${members.length
+            ? members.map(x => rowFor(x, f.hue)).join('')
+            : '<p class="empty">No codes match the current filter.</p>'}</div>` : ''}
+        </div>`;
+      }).join('') + ((byFam._none || []).length ? `
+        <div class="lens-head">not yet filed · ${byFam._none.length}</div>
+        ${byFam._none.map(x => rowFor(x, null)).join('')}` : '');
+    } else {
+      const groups = {};
+      for (const x of list) (groups[x.coder] ||= []).push(x);
+      const order = lenses.filter(l => groups[l]);
+      listing = order.map(l => `
+        <div class="lens-head"><span class="lens-dot" style="background:${lensColor(l)}"></span>${esc(l)} · ${groups[l].length}</div>
+        ${groups[l].map(x => {
+          const notes = commentsFor('code', x.id).filter(n => n.status === 'open').length;
+          return `<button class="code-row ${x.status === 'rejected' ? 'is-rejected' : ''} ${S.sel?.type === 'code' && S.sel.id === x.id ? 'is-active' : ''}" data-cid="${x.id}">
+            ${notes ? '<span class="note-dot"></span>' : ''}
+            <span class="code-row__label">${esc(label(x))}</span>
+            <span class="code-row__meta"><span class="tag">${x.code_type}</span> · ${x.evidence.length}</span>
+          </button>`;
+        }).join('')}`).join('');
+    }
     c.innerHTML = `<div class="panel">
       <h1>Codebook</h1>
-      <p class="sub">${S.codes.length} codes${S.mode === 'panel' ? ` from ${lenses.length} blind lenses` : ''}. Rename or reject a code and the model hears about it on the next re-code.</p>
+      <p class="sub">${S.codes.length} codes${S.mode === 'panel' ? ` from ${lenses.length} blind lenses` : ''}${fams.length ? `, ${fams.length} families` : ''}. Rename or reject a code and the model hears about it on the next re-code.</p>
+      ${S.families?.stale && fams.length ? `<div class="banner">⟳ The codebook changed since these families were built.
+        <div class="tb-spacer"></div>
+        ${isViewer() ? '' : '<button class="btn-quiet" id="cb-reconsolidate">Re-consolidate</button>'}</div>` : ''}
       <div class="filterbar">
         <input type="search" id="cb-q" placeholder="Search codes…" value="${esc(q)}">
+        ${fams.length ? `<span class="seg" id="cb-group">
+          <button data-v="family" class="${grouping === 'family' ? 'is-active' : ''}">Families</button>
+          <button data-v="lens" class="${grouping === 'lens' ? 'is-active' : ''}">Lenses</button>
+        </span>` : ''}
         ${lenses.length > 1 ? `<span class="seg" id="cb-lens">
           <button data-v="" class="${lens === '' ? 'is-active' : ''}">All</button>
           ${lenses.map(l => `<button data-v="${l}" class="${lens === l ? 'is-active' : ''}">${esc(l)}</button>`).join('')}
@@ -1083,18 +1161,9 @@
           <button data-v="latent" class="${type === 'latent' ? 'is-active' : ''}">Latent</button>
         </span>
         <label class="check"><input type="checkbox" id="cb-rej" ${rejected ? 'checked' : ''}> rejected</label>
+        ${!isViewer() && S.codes.length ? `<button class="btn-quiet" id="cb-consolidate">${fams.length ? 'Re-consolidate' : 'Consolidate codebook'}</button>` : ''}
       </div>
-      ${list.length ? order.map(l => `
-        <div class="lens-head"><span class="lens-dot" style="background:${lensColor(l)}"></span>${esc(l)} · ${groups[l].length}</div>
-        ${groups[l].map(x => {
-          const notes = commentsFor('code', x.id).filter(n => n.status === 'open').length;
-          return `<button class="code-row ${x.status === 'rejected' ? 'is-rejected' : ''} ${S.sel?.type === 'code' && S.sel.id === x.id ? 'is-active' : ''}" data-cid="${x.id}">
-            ${notes ? '<span class="note-dot"></span>' : ''}
-            <span class="code-row__label">${esc(label(x))}</span>
-            <span class="code-row__meta"><span class="tag">${x.code_type}</span> · ${x.evidence.length}</span>
-          </button>`;
-        }).join('')}`).join('')
-      : `<p class="empty">${S.codes.length ? 'Nothing matches the filter.' : 'No codes yet — run coding first.'}</p>`}
+      ${listing}
     </div>`;
     const qEl = $('cb-q');
     qEl.addEventListener('input', () => { S.cb.q = qEl.value; renderContent(); const el2 = $('cb-q'); el2.focus(); el2.setSelectionRange(el2.value.length, el2.value.length); });
@@ -1105,17 +1174,66 @@
     $('cb-rej').addEventListener('change', e => { S.cb.rejected = e.target.checked; renderContent(); });
     c.querySelectorAll('[data-cid]').forEach(b =>
       b.addEventListener('click', () => select('code', b.dataset.cid)));
+    $('cb-group')?.querySelectorAll('button').forEach(b =>
+      b.addEventListener('click', () => { S.cbGroup = b.dataset.v; renderContent(); }));
+    c.querySelectorAll('[data-fam-toggle]').forEach(h =>
+      h.addEventListener('click', e => {
+        if (e.target.closest('[data-fam-open]')) return;
+        const fid = h.dataset.famToggle;
+        if (S.famOpen.has(fid)) S.famOpen.delete(fid); else S.famOpen.add(fid);
+        renderContent();
+      }));
+    c.querySelectorAll('[data-fam-open]').forEach(b =>
+      b.addEventListener('click', e => { e.stopPropagation(); select('family', b.dataset.famOpen); }));
+    const kick = () => { const n = S.codes.filter(x => x.status !== 'rejected').length; openConsolidateSheet(n); };
+    $('cb-consolidate')?.addEventListener('click', kick);
+    $('cb-reconsolidate')?.addEventListener('click', kick);
+  }
+
+  function openConsolidateSheet(nCodes) {
+    const root = $('sheet-root');
+    const has = (S.families?.families || []).length > 0;
+    root.innerHTML = `
+      <div class="sheet-wrap" id="sheet-bg">
+        <div class="sheet">
+          <h2>${has ? 'Re-consolidate the codebook' : 'Consolidate the codebook'}</h2>
+          <p class="hint" style="font-size:12px;line-height:1.5;margin:0 0 6px">
+            One model call groups ${nCodes} active codes into 8–15 families — the compact view of
+            the codebook, with every code and its evidence kept underneath.${has ? ' Existing families are replaced; your open family notes ride along.' : ''}
+          </p>
+          <div class="sheet__foot">
+            <button class="btn-quiet" id="cs-cancel">Cancel</button>
+            <button class="primary" id="cs-go">${has ? 'Re-consolidate' : 'Consolidate'}</button>
+          </div>
+        </div>
+      </div>`;
+    const close = () => { root.innerHTML = ''; };
+    $('cs-cancel').addEventListener('click', close);
+    $('sheet-bg').addEventListener('click', e => { if (e.target.id === 'sheet-bg') close(); });
+    $('cs-go').addEventListener('click', async () => {
+      close();
+      try { const { job_id } = await API.consolidate(S.pid); watchJob(job_id, 'consolidate'); }
+      catch (e) { toast(String(e.message || e), true); }
+    });
   }
 
   function renderThemes(c) {
     const th = S.themes?.themes || [];
     const lenses = lensList();
+    const staleN = S.themes?.stale ? nNewThemeSources() : 0;
+    const fb = openThemeNotes() > 0;
+    const bannerText = staleN > 0 && !fb
+      ? `${staleN} source${staleN > 1 ? 's' : ''} aren't in these themes yet.`
+      : `The codebook changed since these themes were built.`;
+    const bannerBtnLabel = staleN > 0 && !fb
+      ? `Extend themes · ${staleN} new source${staleN > 1 ? 's' : ''}`
+      : `Rebuild themes${fb ? ' with feedback' : ''}`;
     c.innerHTML = `<div class="panel">
       <h1>Themes</h1>
       <p class="sub">Each theme is a claim with its evidence and paradigm provenance — which lenses independently support it. Select a theme to write your memo or leave a note for the model.</p>
-      ${S.themes?.stale ? `<div class="banner">⟳ The codebook changed since these themes were built.
+      ${S.themes?.stale ? `<div class="banner">⟳ ${bannerText}
         <div class="tb-spacer"></div>
-        <button class="btn-quiet" id="th-rebuild">Rebuild themes${openThemeNotes() ? ' with feedback' : ''}</button></div>` : ''}
+        <button class="btn-quiet" id="th-rebuild" ${staleN > 0 && !fb ? `title="already-themed sources replay free — only new sources call the model"` : ''}>${bannerBtnLabel}</button></div>` : ''}
       ${th.length ? th.map(t => {
         const prov = t.paradigm_provenance || {};
         const provChips = lenses.filter(l => prov[l]).map(l =>
@@ -1142,7 +1260,7 @@
         </article>`;
       }).join('') : `<p class="empty">No themes yet — ${anyCoded() ? 'build them from the codebook.' : 'run coding first.'}</p>`}
     </div>`;
-    $('th-rebuild')?.addEventListener('click', () => runThemes(openThemeNotes() > 0));
+    $('th-rebuild')?.addEventListener('click', () => runThemes(fb));
     c.querySelectorAll('[data-tid]').forEach(card =>
       card.addEventListener('click', e => {
         if (e.target.closest('[data-doc],[data-code]')) return;
@@ -1530,6 +1648,7 @@
             </div>`}
           ${c.researcher_label ? `<p class="orig-label">machine label: ${esc(c.label)}</p>` : ''}
           <p class="code-item__type" style="margin-bottom:8px">${c.code_type} · ${esc(c.coder)} · ${c.evidence.length} sentence${c.evidence.length > 1 ? 's' : ''}${rejected ? ' · <b style="color:var(--red)">rejected</b>' : ''}</p>
+          ${c.family_id && famById(c.family_id) ? `<p style="margin:0 0 8px"><button class="chip" data-fam-chip="${c.family_id}" style="cursor:pointer"><span class="lens-dot" style="background:${famColor(famById(c.family_id).hue)}"></span>${esc(famById(c.family_id).label)}</button></p>` : ''}
           <p class="insp-def">${esc(c.definition)}</p>
         </div>
         ${isViewer() ? '' : `
@@ -1546,6 +1665,7 @@
         ${notesBlock('code', c.id, c.origin_doc_id, { label: label(c) },
           'Notes ride along when this source is re-coded. Rename/reject are also passed on.')}`;
       $('insp-x').addEventListener('click', closeInspector);
+      box.querySelector('[data-fam-chip]')?.addEventListener('click', () => select('family', c.family_id));
       $('act-rename')?.addEventListener('click', () => { S.renaming = true; renderInspector(); });
       $('rn-save')?.addEventListener('click', () => {
         const v = $('rn-input').value.trim();
@@ -1586,6 +1706,29 @@
       $('insp-x').addEventListener('click', closeInspector);
       wireMemo(box, 'theme', t.id, { claim: t.central_concept });
       wireNotes(box, 'theme', t.id, null, { claim: t.central_concept });
+      return;
+    }
+
+    if (type === 'family') {
+      const f = famById(id);
+      if (!f) { closeInspector(); return; }
+      box.innerHTML = `
+        <div class="insp-head"><span class="sid">${esc(f.id)}</span><h2>Code family</h2>
+          <button class="insp-close" id="insp-x">✕</button></div>
+        <div class="insp-sec">
+          <div class="insp-title-row">
+            <span class="lens-dot" style="background:${famColor(f.hue)};align-self:center"></span>
+            <h1 class="insp-title">${esc(f.label)}</h1>
+          </div>
+          <p class="insp-def">${esc(f.definition)}</p>
+          <p class="code-item__type" style="margin-top:6px">${f.n_codes} code${f.n_codes === 1 ? '' : 's'}</p>
+        </div>
+        ${memoBlock('family', f.id, { label: f.label })}
+        ${notesBlock('family', f.id, null, { label: f.label },
+          'Notes are considered when the codebook is re-consolidated.')}`;
+      $('insp-x').addEventListener('click', closeInspector);
+      wireMemo(box, 'family', f.id, { label: f.label });
+      wireNotes(box, 'family', f.id, null, { label: f.label });
     }
   }
 

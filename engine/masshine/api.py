@@ -125,7 +125,7 @@ class RecodeReq(BaseModel):
 
 
 class CommentReq(BaseModel):
-    target_type: str                # 'sentence' | 'code' | 'theme' | 'document'
+    target_type: str                # 'sentence' | 'code' | 'theme' | 'document' | 'family'
     target_id: str
     doc_id: str | None = None
     body: str
@@ -144,7 +144,7 @@ class ReviseReq(BaseModel):
 
 
 class MemoReq(BaseModel):
-    target_type: str                # 'code' | 'theme' | 'document' | 'project'
+    target_type: str                # 'code' | 'theme' | 'document' | 'project' | 'family'
     target_id: str
     body: str                       # empty body deletes the memo
     context: dict | None = None
@@ -192,12 +192,17 @@ def get_project(pid: str):
         open_comments = store.open_comment_counts(conn)
         n_themes = conn.execute(
             "SELECT COUNT(*) FROM theme_v2 WHERE mode=?", (mode,)).fetchone()[0]
+        n_themed_docs = conn.execute(
+            "SELECT COUNT(*) FROM theme_step WHERE mode=?", (mode,)).fetchone()[0]
         stale = store.themes_stale(conn, mode)
+        n_families = conn.execute("SELECT COUNT(*) FROM code_family").fetchone()[0]
+        families_stale = store.families_stale(conn)
     finally:
         conn.close()
     return {"project": proj, "documents": docs, "code_counts": counts, "mode": mode,
             "open_comments": open_comments, "n_themes": n_themes, "themes_stale": stale,
-            "active_jobs": projects.active_jobs(pid)}
+            "n_themed_docs": n_themed_docs, "active_jobs": projects.active_jobs(pid),
+            "n_families": n_families, "families_stale": families_stale}
 
 
 @app.patch("/projects/{pid}")
@@ -404,12 +409,33 @@ def get_themes(pid: str, mode: str = "standard"):
         conn.close()
 
 
+# ---- codebook consolidation (P6) ------------------------------------------------------------
+
+@app.post("/projects/{pid}/consolidate")
+def run_consolidate(pid: str):
+    """Group the codebook into 8–15 code families — ONE model call, follows run_recode's shape."""
+    _require_project(pid)
+    job = projects.create_job(pid, "consolidate", {})
+    jobs.submit(job["id"], jobs.consolidate_work(pid))
+    return {"job_id": job["id"]}
+
+
+@app.get("/projects/{pid}/families")
+def get_families(pid: str):
+    _require_project(pid)
+    conn = _conn(pid)
+    try:
+        return {"families": store.families_payload(conn), "stale": store.families_stale(conn)}
+    finally:
+        conn.close()
+
+
 # ---- researcher feedback: comments (for the model) + memos (for the researcher) -----------------
 
 @app.post("/projects/{pid}/comments")
 def post_comment(pid: str, req: CommentReq):
     _require_project(pid)
-    if req.target_type not in ("sentence", "code", "theme", "document"):
+    if req.target_type not in ("sentence", "code", "theme", "document", "family"):
         raise HTTPException(400, "bad target_type")
     if not req.body.strip():
         raise HTTPException(400, "empty comment")
@@ -461,7 +487,7 @@ def del_comment(pid: str, cid: str):
 @app.put("/projects/{pid}/memos")
 def put_memo(pid: str, req: MemoReq):
     _require_project(pid)
-    if req.target_type not in ("code", "theme", "document", "project"):
+    if req.target_type not in ("code", "theme", "document", "project", "family"):
         raise HTTPException(400, "bad target_type")
     conn = _conn(pid)
     try:
