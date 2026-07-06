@@ -7,6 +7,7 @@ Serve:  .venv/bin/uvicorn app:app   (engine/app.py re-exports this app)
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from contextlib import asynccontextmanager
@@ -22,11 +23,33 @@ from .db import project_db
 from .ingest import _slug
 
 
+def _maybe_seed_demo() -> None:
+    """First boot on an empty data volume → seed the bundled demo project (0 LLM calls; see
+    seed.import_cache). Skipped once any project exists, so this never re-runs or overwrites
+    real work. Opt out with MASSHINE_SEED_DEMO=0 (e.g. a fresh deployment for real research)."""
+    if os.environ.get("MASSHINE_SEED_DEMO", "1") in ("0", "false", "False"):
+        return
+    try:
+        if projects.list_projects():
+            return
+        seed_dir = ROOT / "seed_data"
+        cache = seed_dir / "panel_2interview.json"
+        if not cache.exists():
+            return
+        from .seed import import_cache
+        pid = import_cache(cache, "Migration panel (demo)", "migration_oral_history",
+                           source_dir=seed_dir)
+        print(f"[startup] seeded demo project {pid}", flush=True)
+    except Exception as e:  # a seeding hiccup must never block the app from starting
+        print(f"[startup] demo seed skipped: {type(e).__name__}: {e}", flush=True)
+
+
 @asynccontextmanager
 async def _lifespan(_app):
     n = projects.reset_stale_jobs()  # jobs left mid-flight by a crash → interrupted (resumable)
     if n:
         print(f"[startup] reset {n} stale job(s) to interrupted", flush=True)
+    _maybe_seed_demo()
     yield
 
 

@@ -38,9 +38,19 @@ every redeploy wipes all projects: SQLite state lives at `/data/registry.db` and
 Coolify's health check at that path. The image also carries a self-contained Docker
 `HEALTHCHECK` hitting the same endpoint.
 
+## Demo project (auto-seeded)
+
+On first boot, if the mounted `/data` volume has zero projects, the app seeds one
+automatically from `engine/seed_data/` — "Migration panel (demo)", the same 2-interview,
+3-lens panel run shown in local dev (421 codes, 7 themes), reconstructed with **zero LLM
+calls** from a cached run. This only happens once: any later restart or redeploy sees an
+existing project and skips it, so it never overwrites real work. To deploy without the
+demo (e.g. a fresh instance for real research), set `MASSHINE_SEED_DEMO=0`.
+
 ## After first deploy
 
 Open the app URL, enter the PIN when the browser's Basic-auth prompt appears (if
-`MASSHINE_PIN` is set), create a project, add a source (`.txt`/`.md`), and run coding.
-Coding/theming take several minutes and call the paid MiniMax API on every run — anyone
-with the PIN can trigger one.
+`MASSHINE_PIN` is set) — the demo project should already be there to explore. To add real
+data: create a project, add a source (`.txt`/`.md`), and run coding. Coding/theming take
+several minutes and call the paid MiniMax API on every run — anyone with the PIN can
+trigger one.

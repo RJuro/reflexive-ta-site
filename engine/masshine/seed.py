@@ -24,10 +24,9 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _rebuild_doc(conn, run, doc_id, doc):
+def _rebuild_doc(conn, run, doc_id, doc, source_dir: Path):
     """Insert document/section/sentence rows with offsets recovered from the source transcript."""
-    raw = (ROOT.parent / "transcripts_sample" / doc["name"]).read_text(
-        encoding="utf-8", errors="replace")
+    raw = (source_dir / doc["name"]).read_text(encoding="utf-8", errors="replace")
     offs = _line_offsets(raw)
     n_lines = len(offs) - 1
     secs, bounds = [], {}
@@ -70,7 +69,12 @@ def _rebuild_doc(conn, run, doc_id, doc):
 
 
 def import_cache(cache_path: Path, name: str | None = None,
-                 pack_id: str = "migration_oral_history") -> str:
+                 pack_id: str = "migration_oral_history",
+                 source_dir: Path | None = None) -> str:
+    """`source_dir` is where each doc's raw transcript (`doc["name"]`) is read from — defaults to
+    the dev sample corpus; a bundled demo seed (see api._maybe_seed_demo) points this at
+    engine/seed_data/ instead, so it never depends on the (gitignored) transcripts_sample/."""
+    source_dir = source_dir or (ROOT.parent / "transcripts_sample")
     st = json.loads(Path(cache_path).read_text(encoding="utf-8"))
     order = st["order"]
     sample_doc = st["docs"][order[0]]
@@ -81,7 +85,7 @@ def import_cache(cache_path: Path, name: str | None = None,
     try:
         run = new_run(conn, "import-cache")
         for doc_id in order:
-            _rebuild_doc(conn, run, doc_id, st["docs"][doc_id])
+            _rebuild_doc(conn, run, doc_id, st["docs"][doc_id], source_dir)
         conn.commit()
 
         if mode == "panel":
