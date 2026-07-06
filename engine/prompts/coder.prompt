@@ -5,21 +5,57 @@ The section's sentences are listed, each prefixed with its ID, like `[S2.007]`. 
 IDs are your evidence anchors. NEVER quote, copy, or rewrite the text — cite the
 sentence IDs that support each code.
 
-Code at the level of analytically coherent idea units within speaker turns. Produce
-semantic codes (surface content — what is said) and, where the text warrants, latent
-codes (underlying meaning, assumption, framing — don't force one).
+QUALITY BAR — emit a code only when it passes all four tests:
+1. grounded — directly supported by the cited sentence IDs;
+2. distinct — not already captured by another code you are emitting;
+3. portable — the analytic idea could plausibly recur in another interview;
+4. analytically useful — it helps explain a pattern, relation, tension, practice,
+   meaning, or mechanism, not merely record that something happened.
+Leaving material uncoded is acceptable: a passage that is purely procedural,
+chronological, repetitive, or thin often warrants no code at all. Do not code
+interview logistics, archival framing, or isolated biographical facts unless they
+carry a broader analytic idea.
 
-Code at ONE consistent level of abstraction: each code names an analytic idea that could
-recur across other interviews, not a one-off plot point. Do NOT emit a code that is merely
-a literal event or itinerary step ("travelled to Trieste", "took the train to Chicago",
-"arrived and met father") — a chain of such steps is narrative, not analysis. Code the
-CONCEPT the events illustrate (e.g. staged multi-leg transit, reliance on kin at each
-hop), citing the relevant sentences, rather than logging each leg as its own code. If a
-passage is pure chronology with no analytic point, code little or nothing there.
+Code at a mid-level of abstraction: each code names an analytic idea that could recur
+across other interviews — neither a vague umbrella topic ("family", "work",
+"migration") nor a one-off plot point. Do NOT emit a code that is merely a literal
+event or itinerary step ("travelled to Trieste", "took the train to Chicago",
+"arrived and met father") — a chain of such steps is narrative, not analysis. Code
+the CONCEPT the events illustrate (e.g. staged multi-leg transit, reliance on kin at
+each hop), citing the relevant sentences, rather than logging each leg as its own code.
+
+Produce semantic codes (surface content — what is said) and, where the text warrants,
+latent codes (underlying meaning, assumption, framing). A semantic code stays close to
+what the participant says or does. A latent code requires evidence of an underlying
+meaning, framing, assumption, or relation — don't force one, and don't produce a
+latent code where a semantic code carries the point. Preserve the participant's
+meaning level: do not replace their practical, moral, religious, or emotional language
+with abstract theory unless several cited sentences support the abstraction.
+
+Mark uncertainty instead of asserting it away: when the participant reports an
+interpretation, motive, threat, or cause the transcript cannot independently
+establish, code it as perceived / reported / framed ("perceived deliberate sabotage",
+not "sabotage by co-worker").
+
+LABELS, DEFINITIONS, RATIONALES
+- A label is a plain analytic phrase a researcher scanning a codebook would understand
+  ("family interference in care routines") — not a literary or theory-heavy coinage
+  ("care work as proof of belonging").
+- A definition states what phenomenon the code captures, in terms portable across
+  interviews — not a summary of this excerpt. No proper names, one-off places, or
+  event-specific details unless unavoidable.
+- The rationale justifies the code from the cited sentence IDs and must not introduce
+  a second analytic claim. If that extra claim is itself strong and portable, make it
+  its own code; otherwise leave it as unreported reasoning.
 
 For each code give: label, definition (one sentence), code_type ("semantic" or
 "latent"), evidence_sentence_ids (one or more of the listed IDs), and a brief rationale
 (the model's note, not the researcher's memo).
+
+Before returning, silently review your list once: merge codes that make the same
+analytic point (prefer one broader-but-precise code over several narrow siblings),
+remove codes that fail the quality bar, and downgrade latent claims the cited
+evidence does not carry.
 
 Return ONLY JSON, no prose or code fences:
 {"codes": [{"label": "...", "definition": "...", "code_type": "semantic|latent",
