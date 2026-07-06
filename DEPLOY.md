@@ -22,6 +22,7 @@ directory.
 | `MASSHINE_API_KEY` | yes | MiniMax API key — set only here, never commit it |
 | `MASSHINE_MODEL` | no | defaults to `MiniMax-M3` |
 | `MASSHINE_PIN` | recommended | gates the whole site behind HTTP Basic auth (any username, this string as the password). Unset = no auth at all — fine for a private network, not for a public link. |
+| `MASSHINE_VIEW_PIN` | optional | a second, read-only PIN for coauthors: anyone using it can browse everything but gets 403 on any change — no runs, no notes, no deletes. Editors use `MASSHINE_PIN` as before. |
 | `MASSHINE_DATA_DIR` | already set | baked into the image as `/data` — leave it unless you also move the volume below |
 | `MASSHINE_RETRIES` | no | extra whole-call retries on a mid-stream idle death; default 0 |
 | `MASSHINE_LLM_LOG` | no | set to `1` to append a per-call JSONL ledger to `exports/` (not persisted unless that path is also volume-mounted — skip for now) |

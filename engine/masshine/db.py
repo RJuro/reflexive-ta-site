@@ -13,7 +13,8 @@ def init_db(conn: sqlite3.Connection) -> None:
         """
         CREATE TABLE IF NOT EXISTS run (id TEXT PRIMARY KEY, created_at TEXT, note TEXT);
         CREATE TABLE IF NOT EXISTS document (
-            id TEXT PRIMARY KEY, run_id TEXT, path TEXT, text TEXT, text_hash TEXT, char_len INTEGER
+            id TEXT PRIMARY KEY, run_id TEXT, path TEXT, text TEXT, text_hash TEXT, char_len INTEGER,
+            title TEXT, summary TEXT
         );
         CREATE TABLE IF NOT EXISTS section (
             id TEXT, doc_id TEXT, gist TEXT,
@@ -123,8 +124,12 @@ def resolve_ev(conn: sqlite3.Connection, qualified: str) -> str:
 # revisions (rename / reject). Both compile into a guidance block the model sees on re-runs.
 # v4 adds researcher memos (analytic writing — persisted, never sent to the model) and a source
 # `kind` on documents (interview / field notes / focus group / document / other).
+# v5 adds LLM-authored document front-matter (`title`, `summary` — nullable; the structure()
+# call already reads the whole transcript, so these ride the same LLM call at ~0 extra cost).
+# v6 adds identity-lite authorship: `comment.author`, `memo.author` (nullable — a coauthor's
+# display name, asked once client-side and stamped locally; no accounts, no auth change).
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 6
 
 
 def init_project_db(conn: sqlite3.Connection) -> None:
@@ -188,9 +193,19 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE document ADD COLUMN created_at TEXT")
     if "kind" not in cols:
         conn.execute("ALTER TABLE document ADD COLUMN kind TEXT DEFAULT 'transcript'")
+    if "title" not in cols:
+        conn.execute("ALTER TABLE document ADD COLUMN title TEXT")
+    if "summary" not in cols:
+        conn.execute("ALTER TABLE document ADD COLUMN summary TEXT")
     code_cols = {r[1] for r in conn.execute("PRAGMA table_info(code)")}
     if "coder" not in code_cols:
         conn.execute("ALTER TABLE code ADD COLUMN coder TEXT NOT NULL DEFAULT 'standard'")
+    comment_cols = {r[1] for r in conn.execute("PRAGMA table_info(comment)")}
+    if "author" not in comment_cols:
+        conn.execute("ALTER TABLE comment ADD COLUMN author TEXT")
+    memo_cols = {r[1] for r in conn.execute("PRAGMA table_info(memo)")}
+    if "author" not in memo_cols:
+        conn.execute("ALTER TABLE memo ADD COLUMN author TEXT")
 
 
 def project_db(path) -> sqlite3.Connection:

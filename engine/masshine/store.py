@@ -35,20 +35,22 @@ def doc_entry(conn: sqlite3.Connection, doc_id: str, filename: str) -> dict:
 
 def document_list(conn: sqlite3.Connection) -> list[dict]:
     rows = conn.execute(
-        "SELECT id, filename, status, created_at, kind FROM document "
+        "SELECT id, filename, status, created_at, kind, title, summary FROM document "
         "ORDER BY created_at, id").fetchall()
     out = []
-    for doc_id, filename, status, created, kind in rows:
+    for doc_id, filename, status, created, kind, title, summary in rows:
         ns = conn.execute("SELECT COUNT(*) FROM section WHERE doc_id=?", (doc_id,)).fetchone()[0]
         nt = conn.execute("SELECT COUNT(*) FROM sentence WHERE doc_id=?", (doc_id,)).fetchone()[0]
         out.append({"doc_id": doc_id, "filename": filename, "status": status,
                     "created_at": created, "kind": kind or "transcript",
+                    "title": title, "summary": summary,
                     "n_sections": ns, "n_sentences": nt})
     return out
 
 
 def reading_payload(conn: sqlite3.Connection, doc_id: str) -> dict | None:
-    row = conn.execute("SELECT id, filename FROM document WHERE id=?", (doc_id,)).fetchone()
+    row = conn.execute(
+        "SELECT id, filename, title, summary FROM document WHERE id=?", (doc_id,)).fetchone()
     if not row:
         return None
     secs = conn.execute(
@@ -59,9 +61,56 @@ def reading_payload(conn: sqlite3.Connection, doc_id: str) -> dict | None:
             "ORDER BY char_start", (doc_id,)):
         by_sec.setdefault(sec, []).append(
             {"id": sid, "text": resolve(conn, doc_id, sid), "char_start": cs, "char_end": ce})
-    return {"id": row[0], "filename": row[1],
+    return {"id": row[0], "filename": row[1], "title": row[2], "summary": row[3],
             "sections": [{"id": s[0], "gist": s[1], "sentences": by_sec.get(s[0], [])}
                          for s in secs]}
+
+
+def rename_document(conn: sqlite3.Connection, doc_id: str, title: str) -> bool:
+    """Human override of the LLM title — same philosophy as researcher_label on codes: the
+    override always wins in docTitle()/document_list(), but nothing else about the document
+    changes (sections/sentences/codes are untouched)."""
+    cur = conn.execute("UPDATE document SET title=? WHERE id=?", (title, doc_id))
+    conn.commit()
+    return cur.rowcount > 0
+
+
+def delete_document_rows(conn: sqlite3.Connection, doc_id: str) -> dict:
+    """DB-side half of document deletion (P2.6/F3): drop the doc's own rows (document/section/
+    sentence), drop codes that ORIGINATED on this doc, and for every remaining code strip any
+    evidence entries that reference this doc — deleting the code outright if that empties its
+    evidence (a code with zero grounded evidence is not a code). Also removes comments/memos
+    that target this document. Checkpoint files and theme_step invalidation are NOT handled
+    here (they live outside the project DB) — callers must also pop the doc from both mode
+    checkpoints and clear theme_step, mirroring jobs.recode_work's invalidation dance.
+    Returns counts for the caller/API response."""
+    codes_deleted = 0
+    codes_stripped = 0
+    rows = conn.execute("SELECT id, evidence_ids, origin_doc_id FROM code").fetchall()
+    for code_id, ev_json, origin_doc_id in rows:
+        if origin_doc_id == doc_id:
+            conn.execute("DELETE FROM code WHERE id=?", (code_id,))
+            codes_deleted += 1
+            continue
+        evidence = json.loads(ev_json or "[]")
+        kept = [e for e in evidence if not e.startswith(f"{doc_id}#")]
+        if len(kept) != len(evidence):
+            if kept:
+                conn.execute("UPDATE code SET evidence_ids=? WHERE id=?",
+                             (json.dumps(kept), code_id))
+                codes_stripped += 1
+            else:
+                conn.execute("DELETE FROM code WHERE id=?", (code_id,))
+                codes_deleted += 1
+    conn.execute(
+        "DELETE FROM comment WHERE doc_id=? OR (target_type='document' AND target_id=?)",
+        (doc_id, doc_id))
+    conn.execute("DELETE FROM memo WHERE target_type='document' AND target_id=?", (doc_id,))
+    conn.execute("DELETE FROM sentence WHERE doc_id=?", (doc_id,))
+    conn.execute("DELETE FROM section WHERE doc_id=?", (doc_id,))
+    conn.execute("DELETE FROM document WHERE id=?", (doc_id,))
+    conn.commit()
+    return {"codes_deleted": codes_deleted, "codes_stripped": codes_stripped}
 
 
 # ---- codes --------------------------------------------------------------------------------------
@@ -193,26 +242,55 @@ def code_counts(conn: sqlite3.Connection) -> dict:
         "SELECT coder, COUNT(*) FROM code GROUP BY coder")}
 
 
+def doc_code_labels(conn: sqlite3.Connection, doc_id: str) -> list[tuple[str, str]]:
+    """[(coder, label)] for every code currently originating on `doc_id` — a recode's before/after
+    snapshot (P4.11). Label-based (not id-based): a recode assigns fresh Cxxxx ids, so ids churn
+    even for a code whose meaning didn't change; (coder, label) pairs are the stable comparison."""
+    return [(r[0], r[1]) for r in conn.execute(
+        "SELECT coder, label FROM code WHERE origin_doc_id=? ORDER BY id", (doc_id,))]
+
+
+def diff_code_labels(before: list[tuple[str, str]], after: list[tuple[str, str]],
+                     cap: int = 20) -> dict:
+    """Set-diff two (coder,label) snapshots from doc_code_labels — the feedback loop's visible
+    payoff after a re-code. Lists are capped at `cap` entries with a `more_n` overflow count each,
+    so a big diff doesn't bloat the job row; `kept_n` is the size of the intersection."""
+    before_set, after_set = set(before), set(after)
+    new = sorted(after_set - before_set)
+    dropped = sorted(before_set - after_set)
+    kept_n = len(before_set & after_set)
+    return {
+        "new": [{"coder": c, "label": l} for c, l in new[:cap]],
+        "new_more_n": max(0, len(new) - cap),
+        "dropped": [{"coder": c, "label": l} for c, l in dropped[:cap]],
+        "dropped_more_n": max(0, len(dropped) - cap),
+        "kept_n": kept_n,
+    }
+
+
 # ---- researcher feedback (schema v3) --------------------------------------------------------
 # Comments and revisions are the researcher's voice in the loop. They are stored with a JSON
 # `context` snapshot (label / quote / lens at write time) so their meaning survives the id churn
 # a recode causes, and they compile into a plain-text guidance block the model reads on re-runs.
 
 def add_comment(conn: sqlite3.Connection, target_type: str, target_id: str,
-                doc_id: str | None, body: str, context: dict | None = None) -> dict:
+                doc_id: str | None, body: str, context: dict | None = None,
+                author: str | None = None) -> dict:
     cid = "N" + uuid.uuid4().hex[:8]
+    created = _now()
     conn.execute(
         "INSERT INTO comment (id, target_type, target_id, doc_id, body, context, status, "
-        "created_at) VALUES (?,?,?,?,?,?, 'open', ?)",
-        (cid, target_type, target_id, doc_id, body, json.dumps(context or {}), _now()))
+        "created_at, author) VALUES (?,?,?,?,?,?, 'open', ?, ?)",
+        (cid, target_type, target_id, doc_id, body, json.dumps(context or {}), created, author))
     conn.commit()
     return {"id": cid, "target_type": target_type, "target_id": target_id, "doc_id": doc_id,
-            "body": body, "context": context or {}, "status": "open"}
+            "body": body, "context": context or {}, "status": "open", "created_at": created,
+            "author": author}
 
 
 def list_comments(conn: sqlite3.Connection, doc_id: str | None = None,
                   target_type: str | None = None, status: str | None = None) -> list[dict]:
-    q = ("SELECT id, target_type, target_id, doc_id, body, context, status, created_at "
+    q = ("SELECT id, target_type, target_id, doc_id, body, context, status, created_at, author "
          "FROM comment")
     where, args = [], []
     if doc_id:
@@ -225,7 +303,8 @@ def list_comments(conn: sqlite3.Connection, doc_id: str | None = None,
         q += " WHERE " + " AND ".join(where)
     q += " ORDER BY created_at"
     return [{"id": r[0], "target_type": r[1], "target_id": r[2], "doc_id": r[3], "body": r[4],
-             "context": json.loads(r[5] or "{}"), "status": r[6], "created_at": r[7]}
+             "context": json.loads(r[5] or "{}"), "status": r[6], "created_at": r[7],
+             "author": r[8]}
             for r in conn.execute(q, args)]
 
 
@@ -262,7 +341,7 @@ def delete_comment(conn: sqlite3.Connection, cid: str) -> bool:
 # ---- memos (researcher's analytic writing — persisted, NEVER sent to the model) --------------
 
 def set_memo(conn: sqlite3.Connection, target_type: str, target_id: str, body: str,
-             context: dict | None = None) -> dict:
+             context: dict | None = None, author: str | None = None) -> dict:
     """Upsert the memo for one target; an empty body deletes it (a memo is a living document,
     not a thread)."""
     if not body.strip():
@@ -270,23 +349,25 @@ def set_memo(conn: sqlite3.Connection, target_type: str, target_id: str, body: s
                      (target_type, target_id))
         conn.commit()
         return {"target_type": target_type, "target_id": target_id, "body": ""}
+    updated = _now()
     conn.execute(
-        "INSERT INTO memo (target_type, target_id, body, context, updated_at) "
-        "VALUES (?,?,?,?,?) ON CONFLICT(target_type, target_id) "
+        "INSERT INTO memo (target_type, target_id, body, context, updated_at, author) "
+        "VALUES (?,?,?,?,?,?) ON CONFLICT(target_type, target_id) "
         "DO UPDATE SET body=excluded.body, context=excluded.context, "
-        "updated_at=excluded.updated_at",
-        (target_type, target_id, body, json.dumps(context or {}), _now()))
+        "updated_at=excluded.updated_at, author=excluded.author",
+        (target_type, target_id, body, json.dumps(context or {}), updated, author))
     conn.commit()
-    return {"target_type": target_type, "target_id": target_id, "body": body}
+    return {"target_type": target_type, "target_id": target_id, "body": body,
+            "updated_at": updated, "author": author}
 
 
 def list_memos(conn: sqlite3.Connection, target_type: str | None = None) -> list[dict]:
-    q = "SELECT target_type, target_id, body, context, updated_at FROM memo"
+    q = "SELECT target_type, target_id, body, context, updated_at, author FROM memo"
     args: list = []
     if target_type:
         q += " WHERE target_type=?"; args.append(target_type)
     return [{"target_type": r[0], "target_id": r[1], "body": r[2],
-             "context": json.loads(r[3] or "{}"), "updated_at": r[4]}
+             "context": json.loads(r[3] or "{}"), "updated_at": r[4], "author": r[5]}
             for r in conn.execute(q, args)]
 
 
@@ -464,6 +545,122 @@ def themes_csv(conn: sqlite3.Connection, mode: str) -> str:
             t.get("falsified_if", ""), memos.get(t["id"], ""),
         ])
     return out.getvalue()
+
+
+def _collapse(t: str) -> str:
+    return " ".join((t or "").split())
+
+
+def report_md(conn: sqlite3.Connection, proj: dict, mode: str) -> str:
+    """Narrative Markdown report (P3.10/F8): title block, themes with anchor quotes resolved
+    verbatim, a codebook appendix grouped by lens, and an open-notes appendix. Built fresh from
+    the DB (not render_md.py's checkpoint-shaped renderers — those read in-memory run state;
+    this reads the persisted project the way the other export endpoints do)."""
+    docs = document_list(conn)
+    codes = codes_payload(conn)
+    by_id = {c["id"]: c for c in codes}
+    th = themes_payload(conn, mode)
+    memos_code = _memo_map(conn, "code")
+    memos_theme = _memo_map(conn, "theme")
+    generated = _now()[:10]
+
+    out: list[str] = []
+    out.append(f"# {proj['name']}")
+    out.append("")
+    out.append(f"*Generated {generated} · {proj.get('pack_id') or 'standard coding'} · "
+               f"{len(docs)} source(s) · {len(codes)} codes · {len(th['themes'])} themes*")
+    out.append("")
+    out.append("## Sources")
+    out.append("")
+    for d in docs:
+        title = (d.get("title") or "").strip() or d["filename"]
+        out.append(f"- **{title}** — {d['n_sentences']} sentences, {d['n_sections']} sections")
+        if d.get("summary"):
+            out.append(f"  {_collapse(d['summary'])}")
+    out.append("")
+
+    out.append("## Themes")
+    out.append("")
+    if not th["themes"]:
+        out.append("*No themes built yet.*")
+        out.append("")
+    for t in th["themes"]:
+        out.append(f"### {t['id']} — {t['central_concept']}")
+        out.append("")
+        out.append(f"*{t.get('claim_scope', '')} · coverage {t.get('coverage', '')}*")
+        out.append("")
+        prov = t.get("paradigm_provenance") or {}
+        if prov:
+            out.append("**Provenance:** " + ", ".join(f"{k} {v}" for k, v in
+                        sorted(prov.items(), key=lambda kv: -kv[1])))
+            out.append("")
+        if t.get("subthemes"):
+            out.append("**Sub-themes:**")
+            for st in t["subthemes"]:
+                out.append(f"- {st.get('claim', '')}")
+            out.append("")
+        anchors = (t.get("key_evidence_sentence_ids") or [])[:5]
+        if anchors:
+            out.append("**Anchored in:**")
+            for q in anchors:
+                quote = _safe_quote(conn, q) or q
+                out.append(f"- `{q}` — “{quote}”")
+            out.append("")
+        tensions = [by_id[c].get("researcher_label") or by_id[c]["label"]
+                    for c in t.get("tensions", []) if c in by_id]
+        if tensions:
+            out.append("**Tensions:** " + "; ".join(tensions))
+            out.append("")
+        if t.get("falsified_if"):
+            out.append(f"**Falsified if:** {t['falsified_if']}")
+            out.append("")
+        memo = memos_theme.get(t["id"])
+        if memo:
+            out.append(f"**Researcher memo:** {memo}")
+            out.append("")
+
+    out.append("## Codebook appendix")
+    out.append("")
+    active = [c for c in codes if c["status"] != "rejected"]
+    rejected = [c for c in codes if c["status"] == "rejected"]
+    by_lens: dict[str, list] = {}
+    for c in active:
+        by_lens.setdefault(c["coder"], []).append(c)
+    for lens in by_lens:
+        group = by_lens[lens]
+        out.append(f"### {lens} · {len(group)} codes")
+        out.append("")
+        for c in group:
+            lbl = c.get("researcher_label") or c["label"]
+            out.append(f"- **{lbl}** ({c['code_type']}) — {c['definition']} "
+                       f"[{len(c['evidence'])} evidence]")
+            if c["evidence"]:
+                out.append(f"  - exemplar: “{_safe_quote(conn, c['evidence'][0])}”")
+            memo = memos_code.get(c["id"])
+            if memo:
+                out.append(f"  - researcher memo: {memo}")
+        out.append("")
+    if rejected:
+        out.append("### Rejected codes")
+        out.append("")
+        for c in rejected:
+            lbl = c.get("researcher_label") or c["label"]
+            out.append(f"- ~~{lbl}~~ ({c['coder']} · {c['code_type']})")
+        out.append("")
+
+    notes = list_comments(conn, status="open")
+    out.append("## Open notes appendix")
+    out.append("")
+    if not notes:
+        out.append("*No open notes.*")
+    else:
+        for n in notes:
+            who = f"{n['author']} · " if n.get("author") else ""
+            ctx = n.get("context") or {}
+            where = ctx.get("quote") or ctx.get("label") or ctx.get("claim") or n["target_id"]
+            out.append(f"- ({n['target_type']}) {who}{n['body']} — _{_collapse(str(where))}_")
+    out.append("")
+    return "\n".join(out)
 
 
 def set_themes_stale(conn: sqlite3.Connection, mode: str, stale: bool) -> None:

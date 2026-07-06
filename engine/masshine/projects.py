@@ -11,6 +11,7 @@ resumable checkpoints, and exports.
 from __future__ import annotations
 
 import json
+import shutil
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -44,6 +45,11 @@ def _registry() -> sqlite3.Connection:
         );
         """
     )
+    # forward-only registry migration (no versioned schema here — just guarded ALTERs, same
+    # spirit as db._migrate for project DBs): P2.5 project lifecycle needs an archived flag.
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(project)")}
+    if "archived" not in cols:
+        conn.execute("ALTER TABLE project ADD COLUMN archived INTEGER DEFAULT 0")
     conn.commit()
     return conn
 
@@ -84,27 +90,68 @@ def create_project(name: str, pack_id: str | None = None) -> dict:
                  (pid, name, pack_id, _now()))
     conn.commit()
     conn.close()
-    return {"id": pid, "name": name, "pack_id": pack_id, "created_at": _now()}
+    return {"id": pid, "name": name, "pack_id": pack_id, "created_at": _now(), "archived": False}
 
 
 def _project_row(r) -> dict:
-    return {"id": r[0], "name": r[1], "pack_id": r[2], "created_at": r[3]}
+    return {"id": r[0], "name": r[1], "pack_id": r[2], "created_at": r[3],
+            "archived": bool(r[4]) if len(r) > 4 else False}
 
 
-def list_projects() -> list[dict]:
+def list_projects(include_archived: bool = False) -> list[dict]:
     conn = _registry()
-    rows = conn.execute("SELECT id, name, pack_id, created_at FROM project "
-                        "ORDER BY created_at DESC").fetchall()
+    q = "SELECT id, name, pack_id, created_at, archived FROM project"
+    if not include_archived:
+        q += " WHERE archived = 0"
+    q += " ORDER BY created_at DESC"
+    rows = conn.execute(q).fetchall()
     conn.close()
     return [_project_row(r) for r in rows]
 
 
 def get_project(pid: str) -> dict | None:
     conn = _registry()
-    r = conn.execute("SELECT id, name, pack_id, created_at FROM project WHERE id = ?",
+    r = conn.execute("SELECT id, name, pack_id, created_at, archived FROM project WHERE id = ?",
                      (pid,)).fetchone()
     conn.close()
     return _project_row(r) if r else None
+
+
+def rename_project(pid: str, name: str) -> dict | None:
+    conn = _registry()
+    cur = conn.execute("UPDATE project SET name = ? WHERE id = ?", (name, pid))
+    conn.commit()
+    conn.close()
+    if not cur.rowcount:
+        return None
+    return get_project(pid)
+
+
+def set_archived(pid: str, flag: bool) -> dict | None:
+    conn = _registry()
+    cur = conn.execute("UPDATE project SET archived = ? WHERE id = ?", (1 if flag else 0, pid))
+    conn.commit()
+    conn.close()
+    if not cur.rowcount:
+        return None
+    return get_project(pid)
+
+
+def delete_project(pid: str) -> bool:
+    """Delete a project permanently: registry row + its job rows + the whole project directory
+    (project DB, uploads, checkpoints, exports). Irreversible — callers gate this behind an
+    explicit confirmation (type-the-name sheet in the UI)."""
+    conn = _registry()
+    cur = conn.execute("DELETE FROM project WHERE id = ?", (pid,))
+    conn.execute("DELETE FROM job WHERE project_id = ?", (pid,))
+    conn.commit()
+    conn.close()
+    if not cur.rowcount:
+        return False
+    d = project_dir(pid)
+    if d.exists():
+        shutil.rmtree(d)
+    return True
 
 
 # ---- jobs ----------------------------------------------------------------------------------------

@@ -242,55 +242,212 @@ frictionless over weeks (lifecycle, provenance, export).*
 ## The plan
 
 ### P1 — Trust & data quality *(do first; small)*
-1. **Encoding-aware ingestion (F1).** Read bytes → try strict UTF-8 → fall back to cp1252 →
-   normalize NFC; if replacement chars would remain, surface a data-quality warning on the
-   document instead of silently corrupting. Same fix in `seed.py`. Add a repair path for
-   already-ingested docs (re-read the stored upload). Test with the two known cp1252 files.
-2. **LLM front-matter at ingest (F4).** Extend `structure.prompt`'s schema to
-   `{title, summary, sections}` — one call, no new latency. Schema v5: `document.title`,
-   `document.summary`. UI: sidebar rows, doc header ("Mary Grande — Yugoslavia to Ellis
-   Island, 1920"), and the abstract under the header. Title is editable (human override
-   wins — same pattern as `researcher_label` on codes).
-3. **Render section gists (F6).** Quiet section headers inside the transcript + a slim
-   sticky mini-TOC for jump navigation. Zero backend work.
+1. **Encoding-aware ingestion (F1).** ✅ SHIPPED (2026-07-06): `ingest.read_source()` reads
+   bytes → strict UTF-8 → cp1252 fallback → last-resort utf-8/replace, then NFC-normalizes.
+   Wired into `ingest.ingest()` (replacing the old `errors="replace"` read) and `seed._rebuild_doc`.
+   Verified end-to-end with the two known cp1252 sample files (`DP-5 JOHNSON`, `NPS-101 KEMPF`)
+   plus new unit tests. Skipped: the "data-quality warning" surfaced on the document and the
+   re-read repair path for already-ingested docs — not requested by the P1/P2 spec that drove
+   this pass; flagging as a follow-up if genuinely-corrupted docs turn out to exist in the wild.
+2. **LLM front-matter at ingest (F4).** ✅ SHIPPED (2026-07-06): `structure.prompt` now returns
+   `{title, summary, sections}`; `ingest.structure()` tolerates both shapes (defaults to
+   `None`/`None`). Schema v5: `document.title`, `document.summary` (nullable). UI: sidebar rows,
+   doc header, and a quiet abstract paragraph under the header meta line — all with graceful
+   NULL fallback to the cleaned filename (verified pixel-for-pixel unchanged on the real demo
+   project, which predates this migration). Skipped: an inline title-edit affordance in the doc
+   header itself — the PATCH endpoint (P2.6) exists and is human-override-capable, but the UI
+   entry point for editing a doc's title today is the sidebar ⋯ → Rename, not an in-header edit.
+3. **Render section gists (F6).** ✅ SHIPPED (2026-07-06): quiet section headers (small caps,
+   hairline rule) inserted into the transcript wherever a new section starts, plus a collapsible
+   "On this page" TOC under the doc summary that jump-scrolls to a section's first sentence.
 
 ### P2 — Orientation & lifecycle *(the "it behaves like an app" tier)*
-4. **Explicit Home (F2).** Breadcrumb `Projects / ‹name›` in the toolbar (both halves
-   clickable), Esc closes inspector → second Esc goes home.
-5. **Project + document lifecycle (F3).** `PATCH /projects/{pid}` (rename),
-   `DELETE /projects/{pid}` (type-name-to-confirm), `archived` flag (hidden by default,
-   toggle in Projects view); document rename/delete with a "N theme steps will be
-   invalidated" warning wired to the existing staleness machinery.
-6. **Legible references (F5).** Every sid chip everywhere gets: hover tooltip with the
-   verbatim quote + source title; source-qualified label when the project has >1 doc
-   ("Grande · S1.019"); a highlight-flash on jump arrival; history-friendly back (jump
-   pushes state so browser-back returns to the theme/codebook you left).
+4. **Explicit Home (F2).** ✅ SHIPPED (2026-07-06): toolbar left is now a real breadcrumb
+   (`Projects / ‹project name› / ‹view or doc title›`), both non-current segments clickable.
+   Skipped: the Esc-closes-inspector → second-Esc-goes-home keyboard affordance — not
+   implemented in this pass (mouse navigation via the breadcrumb covers F2's core complaint).
+5. **Project + document lifecycle (F3).** ✅ SHIPPED (2026-07-06): registry gains an `archived`
+   column (guarded ALTER); `rename_project`/`set_archived`/`delete_project`/`list_projects
+   (include_archived=)`; `PATCH`/`DELETE /projects/{pid}`, list gains `?archived=1`. Documents:
+   `PATCH`/`DELETE /projects/{pid}/documents/{doc_id}` with the full cascade (codes originated
+   there deleted, cross-doc evidence stripped, comments/memos targeting the doc removed, both
+   mode checkpoints popped, all theme_steps cleared, themes flagged stale). Frontend: project
+   cards get quiet hover actions (rename inline, archive/unarchive, delete-with-type-to-confirm)
+   plus a "Show archived" toggle; sidebar source rows get a ⋯ overflow (rename inline / delete
+   with an explicit "codes removed, themes must be rebuilt" warning).
+6. **Legible references (F5).** ✅ SHIPPED (2026-07-06): sid chips (theme anchors, evidence rows,
+   friction chips) show a `Source · S1.019` prefix once the project has >1 document; hovering
+   any chip shows a quiet tooltip with the verbatim sentence (async-filled via `ensureDocsLoaded`
+   if not yet cached) and source title; jump arrival gets a `.s--flash` fade; `switchView`/
+   `openDocView` push history state and a `popstate` handler restores view/doc/selection so
+   browser-back returns you from a jump to where you came from.
 
 ### P3 — The coauthor tier
-7. **Identity-lite (F7).** Ask a display name once (localStorage), stamp it + timestamp on
-   comments/memos ("RJ · 2h ago"). No accounts, no auth change.
-8. **Viewer vs editor.** Optional `MASSHINE_VIEW_PIN`: viewers browse everything, run/feedback
-   buttons hidden. Protects the MiniMax budget from curious clicks.
-9. **Notes review queue.** An "All notes" view (open feedback across the project, grouped by
-   target) — the pre-flight check before pressing *Re-code with feedback*.
+7. **Identity-lite (F7).** ✅ SHIPPED (2026-07-06): schema v6 adds `comment.author`/`memo.author`
+   (nullable). `store.add_comment`/`set_memo` accept `author=`; `POST /comments` and
+   `PUT /memos` carry an optional `author` field. Frontend: first note/memo write opens a
+   one-input sheet ("How should your notes be signed?"), stored in `localStorage
+   masshine_author` and stamped on every subsequent write (`ensureAuthor()`). Notes render
+   "RJ · 2h ago" (relative-time helper `timeAgo`, author before status); memos show
+   "edited by RJ · 2h ago" subtly beneath the textarea when an author is present. No accounts.
+8. **Viewer vs editor.** ✅ SHIPPED (2026-07-06): optional `MASSHINE_VIEW_PIN` in `auth.py` —
+   a password matching it (and not the editor `MASSHINE_PIN`) resolves role "viewer": GET/HEAD
+   pass, everything else 403s with `{"detail": "view-only access"}`; the editor PIN still
+   resolves "editor" (full access); no `MASSHINE_PIN` at all means no auth, role "editor".
+   `GET /me` returns `{"role": ...}` computed from the same logic (reachable under either
+   role; editor when no PIN is configured). Frontend fetches `/me` at init into `S.role` and
+   gates every mutating affordance behind `isViewer()`: primary action button, Add source,
+   sidebar doc overflow (⋯), code rename/reject, project rename/archive/delete, the home
+   create-project form; notes show a "Notes are read-only in view mode" hint instead of the
+   compose box, memo textareas render `readonly` with muted styling. All reads render normally.
+9. **Notes review queue.** ✅ SHIPPED (2026-07-06): new sidebar "Notes" item (Project group,
+   open-count badge) and view `notes` — every comment grouped by target type (Sentences /
+   Codes / Themes / Sources), each row showing status, author + relative time, body, a context
+   quote/label snippet, and a "Jump" button (sentence → `openDocView`; code → `openCodeView`;
+   theme → themes view + select; document → `openDocView`). Filter segmented control All /
+   Open / Addressed / Dismissed. Row actions reuse the existing edit/dismiss/delete handlers.
+   Frontend-only, built on the existing comments API.
 10. **Export (F8).** ✅ SHIPPED (2026-07-06): `GET /projects/{pid}/export` (self-contained
     JSON — codes with resolved quotes + revisions applied, full themes, memos, comments),
     `/export/codes.csv` and `/export/themes.csv` (flat, spreadsheet-ready), plus a quiet
-    toolbar "Export" button opening a three-option sheet. Still open: a rendered Markdown
-    *report* via `render_md` (narrative form, for appendices).
+    toolbar "Export" button opening a four-option sheet (see below for the fourth). The
+    Markdown report is now also shipped: `GET /projects/{pid}/export/report.md` — a narrative
+    report built fresh from the DB (`store.report_md`, not `render_md.py`'s checkpoint-shaped
+    renderers): title block (name, pack, generated date, sources with titles/summaries +
+    sentence counts), themes (claim, coverage, scope, provenance, subthemes, up to 5 anchor
+    quotes resolved verbatim, tensions as code labels, falsified_if, researcher memo), a
+    codebook appendix grouped by lens (label with researcher override winning, type,
+    definition, evidence count + one exemplar quote, researcher memo; rejected codes in a
+    struck-through list at the end), and an open-notes appendix. Same `Content-Disposition`
+    attachment pattern as the sibling export endpoints. Toolbar sheet: "Report · Markdown —
+    narrative report for reading/appendix".
 
 ### P4 — Provenance as the hero *(the differentiator)*
-11. **Feedback diff after re-code.** Snapshot the codebook before a recode; after, show
-    "12 new codes · 3 dropped · your note on S1.019 → 2 new codes". This makes the loop —
-    the product's core claim — *visible*. (Table `code_history` or reuse checkpoint diffing.)
-12. **Analysis dashboard.** Project landing: codes per lens, sentence coverage %, friction
-    counts, themes + staleness, open notes, last runs (job history — F9 — lives here too).
+11. **Feedback diff after re-code.** ✅ SHIPPED (2026-07-06): `store.doc_code_labels` snapshots
+    a document's `[(coder, label)]` before `jobs.recode_work` pops it and again after
+    persisting; `store.diff_code_labels` set-diffs the two snapshots (label-based, since ids
+    churn on recode) into `{new, new_more_n, dropped, dropped_more_n, kept_n}` (capped at 20
+    per list). The job result carries `diff` and `notes_applied`. Frontend: when a `recode`
+    job completes, `watchJob` toasts "Re-code done — N new codes, M dropped" and opens a quiet
+    two-column details sheet (new / dropped labels, lens-dotted, capped-list overflow counts,
+    "your N notes rode along") — the feedback loop's payoff, made visible.
+12. **Analysis dashboard.** ✅ SHIPPED (2026-07-06): new view `overview` (sidebar "Overview",
+    top of the Project group) — now the default landing view when a project with documents
+    loads (a doc explicitly chosen via URL/history still opens straight to doc view). Cards:
+    codes per lens (lens-dotted counts), sentence coverage per source (coded/total + bar),
+    themes count with a stale-rebuild shortcut, open notes count linking to the Notes view,
+    and "Recent activity" — last 8 jobs from `GET /projects/{pid}/jobs` (kind, status,
+    relative time, duration when timestamps allow, error tail on failure). Quiet cards, no
+    charts/libraries. (Per-source friction counts were skipped — panel friction is already
+    one click away via the Friction view, and computing it per-doc here would mean N extra
+    requests on every dashboard load for marginal value.)
 
 ### P5 — Reading comfort *(polish)*
-13. In-document search; `j/k` sentence navigation; sentence id revealed in the margin on
-    hover/selection (ids are currently visible only after clicking).
-14. Coding-density minimap per document (see where the analysis concentrates at a glance).
+13. ✅ SHIPPED (2026-07-06): in-document search (`/` focuses it) filters client-side, highlights
+    matching sentences (quiet amber `.s--match`), shows "n of m", Enter/Shift+Enter and the
+    ↑/↓ buttons cycle matches reusing the existing `.s--flash` jump animation. `j`/`k` move the
+    sentence selection up/down and scroll it into view, active only when no input/textarea is
+    focused. Sentence id revealed in a fixed-position left-margin gutter on hover (and for the
+    current selection) via `getBoundingClientRect` positioning — never reflows the text column.
+14. ✅ SHIPPED (2026-07-06): coding-density minimap — a slim (6px) fixed strip at the right edge
+    of the transcript, one `<div>` cell per sentence (sampled evenly above an 800-cell cap),
+    tinted by active-code count (transparent at 0, increasing accent opacity above that), a
+    viewport band that tracks scroll position, click-to-jump via `openDocView`. Pure CSS/JS
+    flex column, no canvas.
 
 **Sequencing:** P1 is a half-day and removes the two things that actively erode trust
 (mojibake, wrong titles). P2 makes it feel like a real app. P3 is what coauthor-sharing
 actually needs. P4 is the demo-day differentiator. Ship P1+P2 together, then P3.
+
+---
+
+# P6 — Codebook consolidation (external review, 2026-07-06)
+
+*Prompted by a reviewer's assessment of a real standard-mode run (Johnson + Brozinskas,
+two ~1-hour transcripts → 234 active codes, 1,229 evidence links, 11 themes). Verdict:
+"substantively sane, impressively grounded, but overcoded and too eager to theorize —
+good raw material, not yet a clean qualitative coding scheme." This confirms the
+granularity problem first measured on the demo panel (164/112/145). The design response:
+keep the machine-exhaustive base layer (coverage, provenance, and falsifiability depend
+on dense grounding) and add the missing curation layer on top — consolidation, not
+lobotomy.*
+
+## Diagnosis (why 234 codes happen)
+
+1. **Blind per-section parallel coding** — the coder can't see it is re-proposing
+   near-variants of concepts it already produced for other sections.
+2. **Reconcile merges restatements, not siblings** — by design (guardrail against
+   theme-as-bucket). "Opportunity pull" / "career stagnation push" / "extended
+   deliberation" share a *family*, not an identity, so nothing collapses them.
+3. **No stage in the pipeline owns consolidation.** That is the architectural gap.
+4. Reviewer's secondary points, all confirmed: latent codes occasionally overreach
+   without stated warrant (note: the run was standard mode — the standpoint panel is
+   the designed discipline for exactly this); evidence presentation mixes exemplar and
+   exhaustive (one code with 42 excerpts, 17 singletons); cross-doc merged codes carry a
+   single `origin_doc_id` with no scope marker; one theme rests on a single code
+   ("may be a memo, not a theme"); mojibake in the export (cp1252 — fix shipped in P1,
+   but projects ingested before it carry the damage in stored text).
+
+## Plan
+
+1. **Consolidation pass → code families** *(answers ~80% of the review)*.
+   New job kind `consolidate`: ONE LLM call over the codebook proposes 8–15 families —
+   `{label, definition, member_code_ids}` — with grounding rules (members must be real
+   code ids; Python validates and drops inventions; unassigned codes go to an explicit
+   "unfiled" family, never silently lost). Schema: `code_family` table +
+   `code.family_id`. Codebook UI groups by family, collapsed by default (the 35–50-unit
+   view a human can hold), fine codes + evidence intact underneath. Families are
+   researcher-correctable (rename/reject) and re-runs of `consolidate` respect open
+   feedback via the existing guidance compiler. Exports gain a `family` column.
+2. **Merge as a researcher correction.** Extend the revision machinery
+   (rename/reject/restore) with `merge` (code A absorbed into B: evidence unions at
+   read time, guidance tells the model "the researcher merged X into Y" on re-runs).
+   UI: multi-select in the codebook → "Merge into…". A later `split` is the inverse
+   (needs per-evidence reassignment — defer until asked for).
+3. **Scope marker.** Derive `scope: doc-local | cross-case` per code in Python from its
+   evidence doc-spread; chip in the codebook/inspector + export column. Makes the
+   reviewer's "conceptually messy" cross-doc merges visible so the researcher can
+   comment/split them instead of discovering them in an export.
+4. **Coder restraint (the long-deferred prompt edit).** `coder.prompt`: per-section code
+   budget ("typically 3–8; only codes that would matter for a cross-interview
+   codebook"), and latent codes must state an explicit *interpretive warrant* (what in
+   the text licenses the inference) — thin-warrant latents are dropped at parse time.
+   Then re-run the Johnson/Brozinskas pair and measure the delta (target: meaningfully
+   under ~120 base codes for two 1-hour transcripts without losing the reviewer's
+   "strongest codes" list).
+5. **Evidence presentation.** Store everything (falsifiability needs it), *show*
+   exemplars: 3–5 quotes + "N more" in inspector and exports (JSON keeps the full list;
+   CSV gains an `exemplar_quotes` column while keeping full ids).
+6. **Thin-support flags on themes.** Python-only: a theme whose support is a single
+   code (or a single document when N>1) gets a quiet "thin support — consider a memo"
+   chip. The reviewer's "posthumous completion" case, automated.
+7. **Re-ingest repair.** For projects ingested before the encoding fix: re-read the
+   stored upload with the new reader, rebuild the sentence index, and invalidate
+   codes/themes with the standard staleness machinery (or simply document re-upload as
+   the path if the surgery proves risky).
+
+**Sequencing:** 1–3 are one coherent build (schema + job + UI + corrections); 4 needs a
+paid re-run to validate; 5–6 are small and can ride along with any of it; 7 whenever a
+damaged project actually matters (Johnson/Brozinskas does).
+
+### P6 addendum — semantic color palette for code families (2026-07-06)
+
+Once codes are consolidated into families (item 1), color them hierarchically:
+
+- **Hue = family, assigned around the OKLCH wheel** at constant low chroma (~0.08) and
+  fixed lightness (~60%) so every family color is a muted sibling of the existing
+  palette — distinct but never loud. OKLCH's perceptual uniformity makes equal hue
+  steps look balanced for free.
+- **Semantic closeness → hue proximity.** The consolidation LLM call additionally
+  returns the families in a "semantic ring" order (adjacent = most related; same call,
+  no extra cost); hue is assigned by ring position, so related families sit next to
+  each other on the wheel. Member codes inherit the family hue with small
+  lightness/chroma steps (shades of one color = one conceptual neighborhood).
+- **Where color appears (and where it must not):** family tint on codebook rows /
+  family headers, code chips in the inspector, and the density minimap cells. The
+  transcript reading surface stays neutral (dotted underlines as today) — color must
+  not undo the quiet.
+- **Collision rule:** lens identity keeps its small dot glyph; family identity is the
+  hue. Two different dimensions, two different visual channels — never both as color.
+- Hue stored on the family row at consolidation time (deterministic, stable across
+  sessions, consistent in exports).

@@ -98,6 +98,39 @@ def test_revision_folding_and_codes_payload(conn):
     assert store.codes_payload(conn)[0]["status"] == "active"
 
 
+# ---- P4.11: feedback diff after re-code ------------------------------------------------------
+
+def test_doc_code_labels_scopes_by_origin_doc(conn):
+    _seed_code(conn, "C0001", "doc-a", label="A label")
+    _seed_code(conn, "C0002", "doc-b", label="Other doc's code")
+    assert store.doc_code_labels(conn, "doc-a") == [("standard", "A label")]
+
+
+def test_diff_code_labels_new_dropped_kept():
+    before = [("standard", "Old code"), ("standard", "Kept code"), ("critical", "Kept 2")]
+    after = [("standard", "Kept code"), ("critical", "Kept 2"), ("standard", "New code")]
+    diff = store.diff_code_labels(before, after)
+    assert diff["new"] == [{"coder": "standard", "label": "New code"}]
+    assert diff["dropped"] == [{"coder": "standard", "label": "Old code"}]
+    assert diff["kept_n"] == 2
+    assert diff["new_more_n"] == 0 and diff["dropped_more_n"] == 0
+
+
+def test_diff_code_labels_caps_lists_with_overflow_count():
+    before = [("standard", f"Old {i}") for i in range(25)]
+    after = [("standard", f"New {i}") for i in range(30)]
+    diff = store.diff_code_labels(before, after, cap=20)
+    assert len(diff["new"]) == 20 and diff["new_more_n"] == 10
+    assert len(diff["dropped"]) == 20 and diff["dropped_more_n"] == 5
+    assert diff["kept_n"] == 0
+
+
+def test_diff_code_labels_identical_snapshots_is_empty_diff():
+    same = [("standard", "A"), ("critical", "B")]
+    diff = store.diff_code_labels(same, list(same))
+    assert diff["new"] == [] and diff["dropped"] == [] and diff["kept_n"] == 2
+
+
 # ---- guidance compilation --------------------------------------------------------------------
 
 def test_compile_guidance_scoping(conn):

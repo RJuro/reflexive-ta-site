@@ -133,6 +133,7 @@ def recode_work(pid: str, doc_id: str, mode: str):
             names = dict(rows)
             if doc_id not in order:
                 raise RuntimeError(f"no document {doc_id}")
+            before_labels = store.doc_code_labels(conn, doc_id)  # P4.11: snapshot before popping
             state["order"] = order
             docs = state.setdefault("docs", {})
             docs.pop(doc_id, None)
@@ -173,10 +174,13 @@ def recode_work(pid: str, doc_id: str, mode: str):
             store.set_themes_stale(conn, mode, True)
             n_addr = store.mark_feedback_addressed(conn, doc_id=doc_id)
             counts = store.code_counts(conn)
+            after_labels = store.doc_code_labels(conn, doc_id)  # P4.11: snapshot after persisting
+            diff = store.diff_code_labels(before_labels, after_labels)
         finally:
             conn.close()
         return {"mode": mode, "doc_id": doc_id, "feedback_used": bool(guidance),
-                "comments_addressed": n_addr, "code_counts": counts}
+                "comments_addressed": n_addr, "notes_applied": n_addr, "code_counts": counts,
+                "diff": diff}
     return work
 
 

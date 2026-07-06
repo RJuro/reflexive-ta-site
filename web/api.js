@@ -15,10 +15,13 @@ window.MASSHINE_API = (() => {
   });
 
   const api = {
+    me: () => j('/me'),
     packs: () => j('/packs'),
-    projects: () => j('/projects'),
+    projects: (archived = false) => j('/projects' + (archived ? '?archived=1' : '')),
     createProject: (name, pack_id) => j('/projects', json('POST', { name, pack_id })),
     project: pid => j(`/projects/${pid}`),
+    patchProject: (pid, payload) => j(`/projects/${pid}`, json('PATCH', payload)),
+    deleteProject: pid => j(`/projects/${pid}`, { method: 'DELETE' }),
 
     upload: (pid, file, kind = 'transcript') => {
       const fd = new FormData();
@@ -27,6 +30,8 @@ window.MASSHINE_API = (() => {
       return j(`/projects/${pid}/documents`, { method: 'POST', body: fd });
     },
     document: (pid, doc) => j(`/projects/${pid}/documents/${doc}`),
+    patchDocument: (pid, doc, title) => j(`/projects/${pid}/documents/${doc}`, json('PATCH', { title })),
+    deleteDocument: (pid, doc) => j(`/projects/${pid}/documents/${doc}`, { method: 'DELETE' }),
 
     codes: (pid, params = {}) => j(`/projects/${pid}/codes?` + new URLSearchParams(params)),
     friction: (pid, doc) => j(`/projects/${pid}/friction/${doc}`),

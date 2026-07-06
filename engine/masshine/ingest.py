@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import re
 import sqlite3
+import unicodedata
 from pathlib import Path
 
 import spacy
@@ -19,6 +20,24 @@ from .config import PROMPTS
 # format-independent — only document STRUCTURE needs the LLM.
 _NLP = spacy.blank("en")
 _NLP.add_pipe("sentencizer")
+
+
+def read_source(path: Path) -> str:
+    """Read a source file, tolerant of encoding. Most uploads are clean UTF-8; a handful of
+    older transcripts are Windows-1252 (curly apostrophes etc. at 0x92) which utf-8 rejects.
+    Strategy: strict UTF-8 first (the common, lossless case) → cp1252 (a superset of
+    latin-1 that recovers the Windows "smart quote" range cleanly) → last-resort utf-8 with
+    replacement (never raises). Then normalize to NFC so downstream string ops (offsets,
+    `raw.find`) see a single canonical form."""
+    raw_bytes = Path(path).read_bytes()
+    try:
+        text = raw_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            text = raw_bytes.decode("cp1252")
+        except UnicodeDecodeError:
+            text = raw_bytes.decode("utf-8", errors="replace")
+    return unicodedata.normalize("NFC", text)
 
 
 def _slug(path: Path) -> str:
@@ -39,10 +58,17 @@ def _numbered(raw: str) -> str:
                    for i, ln in enumerate(raw.splitlines(keepends=True), start=1))
 
 
-def structure(raw: str) -> list[dict]:
-    """LLM 1-shot → sections (gist + line range + char range)."""
+def structure(raw: str) -> tuple[str | None, str | None, list[dict]]:
+    """LLM 1-shot → (title, summary, sections[gist + line range + char range]).
+
+    title/summary are new (front-matter, F4): the model may omit them (old prompt caches,
+    or a model that forgets) — both default to None so callers can fall back gracefully."""
     system = (PROMPTS / "structure.prompt").read_text(encoding="utf-8")
     data = llm.chat_json(system, _numbered(raw), label="structure")
+    title = data.get("title")
+    title = str(title).strip() or None if title is not None else None
+    summary = data.get("summary")
+    summary = str(summary).strip() or None if summary is not None else None
     offs = _line_offsets(raw)
     n_lines = len(offs) - 1
     sections = []
@@ -54,7 +80,7 @@ def structure(raw: str) -> list[dict]:
             "start_line": a, "end_line": b,
             "char_start": offs[a - 1], "char_end": offs[b],
         })
-    return sections
+    return title, summary, sections
 
 
 def sentence_index(raw: str, sections: list[dict]) -> list[dict]:
@@ -75,16 +101,18 @@ def sentence_index(raw: str, sections: list[dict]) -> list[dict]:
 
 
 def ingest(conn: sqlite3.Connection, run_id: str, path: Path) -> tuple[str, list[dict], list[dict]]:
-    raw = path.read_text(encoding="utf-8", errors="replace")
+    raw = read_source(path)
     doc_id = _slug(path)
-    sections = structure(raw)
+    title, summary, sections = structure(raw)
     sents = sentence_index(raw, sections)
     conn.execute("DELETE FROM sentence WHERE doc_id = ?", (doc_id,))
     conn.execute("DELETE FROM section WHERE doc_id = ?", (doc_id,))
     conn.execute("DELETE FROM document WHERE id = ?", (doc_id,))
     conn.execute(
-        "INSERT INTO document (id, run_id, path, text, text_hash, char_len) VALUES (?,?,?,?,?,?)",
-        (doc_id, run_id, str(path), raw, hashlib.sha256(raw.encode()).hexdigest()[:16], len(raw)),
+        "INSERT INTO document (id, run_id, path, text, text_hash, char_len, title, summary) "
+        "VALUES (?,?,?,?,?,?,?,?)",
+        (doc_id, run_id, str(path), raw, hashlib.sha256(raw.encode()).hexdigest()[:16], len(raw),
+         title, summary),
     )
     conn.executemany(
         "INSERT INTO section (id, doc_id, gist, start_line, end_line, char_start, char_end) "

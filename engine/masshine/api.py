@@ -12,12 +12,12 @@ from pathlib import Path
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Form, HTTPException, Response, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Request, Response, UploadFile
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import jobs, packs, projects, store
-from .auth import PinAuthMiddleware
+from . import jobs, packs, projects, runner, store
+from .auth import PinAuthMiddleware, resolve_role
 from .config import ROOT
 from .db import project_db
 from .ingest import _slug
@@ -62,11 +62,30 @@ def health():
     return {"ok": True}
 
 
+@app.get("/me")
+def me(request: Request):
+    """Which role the current credentials resolve to (P3.8). No MASSHINE_PIN configured, or the
+    editor PIN presented -> 'editor'; the (optional) view PIN -> 'viewer'. The middleware already
+    rejected anything else with a 401 before this handler runs, so here it can only be editor or
+    viewer — this endpoint must stay reachable for GETs under either role."""
+    role = resolve_role(request) or "editor"
+    return {"role": role}
+
+
 # ---- request models -----------------------------------------------------------------------------
 
 class NewProject(BaseModel):
     name: str
     pack_id: str | None = None
+
+
+class ProjectPatch(BaseModel):
+    name: str | None = None
+    archived: bool | None = None
+
+
+class DocumentPatch(BaseModel):
+    title: str
 
 
 class CodeReq(BaseModel):
@@ -90,6 +109,7 @@ class CommentReq(BaseModel):
     doc_id: str | None = None
     body: str
     context: dict | None = None     # snapshot (label/quote/lens) — keeps meaning across recodes
+    author: str | None = None       # display name (identity-lite, P3.7) — no accounts
 
 
 class CommentPatch(BaseModel):
@@ -107,6 +127,7 @@ class MemoReq(BaseModel):
     target_id: str
     body: str                       # empty body deletes the memo
     context: dict | None = None
+    author: str | None = None       # display name (identity-lite, P3.7) — no accounts
 
 
 def _require_project(pid: str) -> dict:
@@ -135,8 +156,8 @@ def create_project(req: NewProject):
 
 
 @app.get("/projects")
-def list_projects():
-    return projects.list_projects()
+def list_projects(archived: bool = False):
+    return projects.list_projects(include_archived=archived)
 
 
 @app.get("/projects/{pid}")
@@ -156,6 +177,30 @@ def get_project(pid: str):
     return {"project": proj, "documents": docs, "code_counts": counts, "mode": mode,
             "open_comments": open_comments, "n_themes": n_themes, "themes_stale": stale,
             "active_jobs": projects.active_jobs(pid)}
+
+
+@app.patch("/projects/{pid}")
+def patch_project(pid: str, req: ProjectPatch):
+    """Rename and/or archive/unarchive a project (F3 lifecycle)."""
+    _require_project(pid)
+    if req.name is not None:
+        name = req.name.strip()
+        if not name:
+            raise HTTPException(400, "name cannot be empty")
+        projects.rename_project(pid, name)
+    if req.archived is not None:
+        projects.set_archived(pid, req.archived)
+    return projects.get_project(pid)
+
+
+@app.delete("/projects/{pid}")
+def delete_project(pid: str):
+    """Permanently delete a project: registry row, job rows, and the whole project directory
+    (project DB, uploads, checkpoints, exports). The UI gates this behind a type-the-name
+    confirm sheet — there is no undo."""
+    _require_project(pid)
+    projects.delete_project(pid)
+    return {"ok": True}
 
 
 # ---- documents ----------------------------------------------------------------------------------
@@ -200,6 +245,69 @@ def get_document(pid: str, doc_id: str):
     if not payload:
         raise HTTPException(404, f"no document {doc_id}")
     return payload
+
+
+@app.patch("/projects/{pid}/documents/{doc_id}")
+def patch_document(pid: str, doc_id: str, req: DocumentPatch):
+    """Human override of the LLM-authored title (same philosophy as researcher_label on codes)."""
+    _require_project(pid)
+    title = req.title.strip()
+    if not title:
+        raise HTTPException(400, "title cannot be empty")
+    conn = _conn(pid)
+    try:
+        if not conn.execute("SELECT 1 FROM document WHERE id=?", (doc_id,)).fetchone():
+            raise HTTPException(404, f"no document {doc_id}")
+        store.rename_document(conn, doc_id, title)
+    finally:
+        conn.close()
+    return {"ok": True, "doc_id": doc_id, "title": title}
+
+
+def _pop_doc_from_checkpoint(pid: str, mode: str, doc_id: str) -> None:
+    """Remove a deleted document from one mode's checkpoint: drop it from docs/order and clear
+    theme_steps entirely (any step downstream of this doc's position may reference its codes;
+    simplest safe move — matching jobs.recode_work's stale_from dance — is to clear every step
+    and let the next theme build re-walk from scratch)."""
+    cp = projects.checkpoint_path(pid, mode)
+    state = runner.load_checkpoint(cp)
+    if not state:
+        return
+    changed = False
+    if doc_id in state.get("docs", {}):
+        del state["docs"][doc_id]
+        changed = True
+    if doc_id in state.get("order", []):
+        state["order"] = [d for d in state["order"] if d != doc_id]
+        changed = True
+    if state.get("theme_steps"):
+        state["theme_steps"] = {}
+        changed = True
+    state.pop("project_codebook", None)
+    if changed:
+        runner.save_checkpoint(cp, state)
+
+
+@app.delete("/projects/{pid}/documents/{doc_id}")
+def delete_document(pid: str, doc_id: str):
+    """Delete a source and everything derived from it: its own rows, codes it originated,
+    evidence references to it on other codes (dropping codes left with none), its comments and
+    memos, its entry in both mode checkpoints, and — because codes/ids may have shifted — every
+    theme_step (both modes), with themes flagged stale so the UI offers a rebuild."""
+    _require_project(pid)
+    conn = _conn(pid)
+    try:
+        if not conn.execute("SELECT 1 FROM document WHERE id=?", (doc_id,)).fetchone():
+            raise HTTPException(404, f"no document {doc_id}")
+        counts = store.delete_document_rows(conn, doc_id)
+        for mode in ("standard", "panel"):
+            _pop_doc_from_checkpoint(pid, mode, doc_id)
+            conn.execute("DELETE FROM theme_step WHERE mode=?", (mode,))
+            store.set_themes_stale(conn, mode, True)
+        conn.commit()
+    finally:
+        conn.close()
+    return {"ok": True, "doc_id": doc_id, **counts}
 
 
 # ---- coding -------------------------------------------------------------------------------------
@@ -287,7 +395,7 @@ def post_comment(pid: str, req: CommentReq):
     conn = _conn(pid)
     try:
         return store.add_comment(conn, req.target_type, req.target_id, req.doc_id,
-                                 req.body.strip(), req.context)
+                                 req.body.strip(), req.context, req.author)
     finally:
         conn.close()
 
@@ -336,7 +444,8 @@ def put_memo(pid: str, req: MemoReq):
         raise HTTPException(400, "bad target_type")
     conn = _conn(pid)
     try:
-        return store.set_memo(conn, req.target_type, req.target_id, req.body, req.context)
+        return store.set_memo(conn, req.target_type, req.target_id, req.body, req.context,
+                              req.author)
     finally:
         conn.close()
 
@@ -425,6 +534,21 @@ def export_themes_csv(pid: str):
     return Response(content=body, media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition":
                              f'attachment; filename="masshine-{_proj_slug(proj["name"])}-themes.csv"'})
+
+
+@app.get("/projects/{pid}/export/report.md")
+def export_report_md(pid: str):
+    """Narrative Markdown report (P3.10/F8) — readable prose for appendices/reading, built fresh
+    from the DB: title block, themes with anchor quotes, a codebook appendix by lens, open notes."""
+    proj = _require_project(pid)
+    conn = _conn(pid)
+    try:
+        body = store.report_md(conn, proj, _mode_of(proj))
+    finally:
+        conn.close()
+    return Response(content=body, media_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition":
+                             f'attachment; filename="masshine-{_proj_slug(proj["name"])}-report.md"'})
 
 
 # ---- jobs + usage -------------------------------------------------------------------------------

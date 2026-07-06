@@ -75,3 +75,40 @@ def test_export_themes_csv(seeded):
 def test_export_unknown_project_404s():
     client = TestClient(app)
     assert client.get("/projects/Pnope/export").status_code == 404
+
+
+def test_export_report_md_has_theme_claim_quote_code_and_filename(seeded):
+    conn = project_db(projects.project_db_path(seeded))
+    try:
+        store.set_memo(conn, "code", "C0001", "a researcher memo on this code")
+    finally:
+        conn.close()
+    client = TestClient(app)
+    r = client.get(f"/projects/{seeded}/export/report.md")
+    assert r.status_code == 200
+    assert "text/markdown" in r.headers["content-type"]
+    assert 'filename="masshine-export-demo-report.md"' in r.headers["content-disposition"]
+    body = r.text
+    assert body.startswith("# Export Demo")
+
+    conn = project_db(projects.project_db_path(seeded))
+    try:
+        th = store.themes_payload(conn, "panel")
+        codes = store.codes_payload(conn)
+    finally:
+        conn.close()
+    # a theme claim appears
+    assert th["themes"][0]["central_concept"] in body
+    # an anchor quote is resolved verbatim (not just the bare sentence id)
+    anchor_sid = th["themes"][0]["key_evidence_sentence_ids"][0]
+    conn = project_db(projects.project_db_path(seeded))
+    try:
+        from masshine.db import resolve_ev
+        quote = " ".join(resolve_ev(conn, anchor_sid).split())
+    finally:
+        conn.close()
+    assert quote in body
+    # a code label appears in the codebook appendix
+    assert codes[0]["label"] in body
+    # the researcher memo made it into the appendix
+    assert "a researcher memo on this code" in body

@@ -14,7 +14,7 @@ from pathlib import Path
 from . import packs, projects, runner, store
 from .config import ROOT
 from .db import new_run, project_db
-from .ingest import _line_offsets
+from .ingest import _line_offsets, read_source
 from .reconcile import _write_codebook
 from .themes import (theorize_panel_sequential, theorize_project_sequential,
                      transcript_block_from_sentences)
@@ -25,8 +25,12 @@ def _now() -> str:
 
 
 def _rebuild_doc(conn, run, doc_id, doc, source_dir: Path):
-    """Insert document/section/sentence rows with offsets recovered from the source transcript."""
-    raw = (source_dir / doc["name"]).read_text(encoding="utf-8", errors="replace")
+    """Insert document/section/sentence rows with offsets recovered from the source transcript.
+
+    Uses read_source (utf-8 → cp1252 → replace fallback) — the two bundled seed transcripts are
+    valid UTF-8 (verified), so this is a no-op for them; it only changes behavior for genuinely
+    non-utf8 cached sources, keeping the `raw.find(text)` offset-recovery below unaffected."""
+    raw = read_source(source_dir / doc["name"])
     offs = _line_offsets(raw)
     n_lines = len(offs) - 1
     secs, bounds = [], {}
@@ -57,9 +61,9 @@ def _rebuild_doc(conn, run, doc_id, doc, source_dir: Path):
     conn.execute("DELETE FROM document WHERE id=?", (doc_id,))
     conn.execute(
         "INSERT INTO document (id, run_id, path, text, text_hash, char_len, filename, status, "
-        "created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        "created_at, title, summary) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         (doc_id, run, doc["name"], raw, hashlib.sha256(raw.encode()).hexdigest()[:16],
-         len(raw), doc["name"], "coded", _now()))
+         len(raw), doc["name"], "coded", _now(), doc.get("title"), doc.get("summary")))
     conn.executemany(
         "INSERT INTO section (id, doc_id, gist, start_line, end_line, char_start, char_end) "
         "VALUES (:id,:doc_id,:gist,:start_line,:end_line,:char_start,:char_end)", secs)

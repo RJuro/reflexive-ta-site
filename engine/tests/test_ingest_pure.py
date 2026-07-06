@@ -1,10 +1,12 @@
 """Ingest-layer pure functions: slug, line offsets, numbering, spaCy sentence indexing, and
 structure() line-range clamping (with a mocked LLM). All offsets must index the source exactly
 (P1: text is resolved from offsets, never regenerated)."""
+import sqlite3
 from pathlib import Path
 
 import llm
 import masshine as m
+from masshine.db import init_db, new_run
 
 RAW = (
     "\tPHILLIPS:\tThis is an interview. It has two sentences here.\n"
@@ -50,7 +52,8 @@ def test_structure_clamps_out_of_range_lines(monkeypatch):
     n_lines = len(RAW.splitlines())
     monkeypatch.setattr(llm, "chat_json", lambda *a, **k: {
         "sections": [{"gist": "whole", "start_line": -5, "end_line": 9999}]})
-    secs = m.structure(RAW)
+    title, summary, secs = m.structure(RAW)
+    assert title is None and summary is None  # old-shape LLM response: front-matter omitted
     assert len(secs) == 1
     s = secs[0]
     assert s["start_line"] == 1
@@ -58,3 +61,58 @@ def test_structure_clamps_out_of_range_lines(monkeypatch):
     assert s["char_start"] == 0
     assert s["char_end"] == len(RAW)
     assert s["gist"] == "whole"
+
+
+def test_structure_reads_title_and_summary_when_present(monkeypatch):
+    monkeypatch.setattr(llm, "chat_json", lambda *a, **k: {
+        "title": "  Grande — Yugoslavia to Ellis Island  ",
+        "summary": "  Covers the journey and arrival.  ",
+        "sections": [{"gist": "whole", "start_line": 1, "end_line": len(RAW.splitlines())}]})
+    title, summary, secs = m.structure(RAW)
+    assert title == "Grande — Yugoslavia to Ellis Island"
+    assert summary == "Covers the journey and arrival."
+    assert len(secs) == 1
+
+
+def test_ingest_writes_title_and_summary_to_document_row(tmp_path, monkeypatch):
+    monkeypatch.setattr(llm, "chat_json", lambda *a, **k: {
+        "title": "Grande — Yugoslavia to Ellis Island, 1920",
+        "summary": "Covers the journey and arrival.",
+        "sections": [{"gist": "whole", "start_line": 1, "end_line": len(RAW.splitlines())}]})
+    p = tmp_path / "grande.txt"
+    p.write_text(RAW, encoding="utf-8")
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    run = new_run(conn, "test")
+    doc_id, secs, sents = m.ingest(conn, run, p)
+    row = conn.execute("SELECT title, summary FROM document WHERE id=?", (doc_id,)).fetchone()
+    assert row == ("Grande — Yugoslavia to Ellis Island, 1920", "Covers the journey and arrival.")
+
+
+def test_ingest_leaves_title_and_summary_null_when_model_omits_them(tmp_path, monkeypatch):
+    monkeypatch.setattr(llm, "chat_json", lambda *a, **k: {
+        "sections": [{"gist": "whole", "start_line": 1, "end_line": len(RAW.splitlines())}]})
+    p = tmp_path / "grande.txt"
+    p.write_text(RAW, encoding="utf-8")
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    run = new_run(conn, "test")
+    doc_id, secs, sents = m.ingest(conn, run, p)
+    row = conn.execute("SELECT title, summary FROM document WHERE id=?", (doc_id,)).fetchone()
+    assert row == (None, None)
+
+
+def test_ingest_reads_cp1252_source_without_mojibake(tmp_path, monkeypatch):
+    """P1.1 end-to-end: a cp1252 upload (curly apostrophe at 0x92) must not bake a replacement
+    char into document.text — the exact bug in DP-5 JOHNSON / NPS-101 KEMPF."""
+    monkeypatch.setattr(llm, "chat_json", lambda *a, **k: {
+        "sections": [{"gist": "whole", "start_line": 1, "end_line": 1}]})
+    p = tmp_path / "cp1252.txt"
+    p.write_bytes(b"PHILLIPS:\tLet\x92s start the interview.\n")
+    conn = sqlite3.connect(":memory:")
+    init_db(conn)
+    run = new_run(conn, "test")
+    doc_id, secs, sents = m.ingest(conn, run, p)
+    text = conn.execute("SELECT text FROM document WHERE id=?", (doc_id,)).fetchone()[0]
+    assert "�" not in text  # no replacement-char mojibake
+    assert "Let’s start" in text

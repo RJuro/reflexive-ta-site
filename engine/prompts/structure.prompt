@@ -10,5 +10,11 @@ text. Each section's gist says WHAT IS DISCUSSED (the topic), never what it mean
 Cover the whole transcript with contiguous, non-overlapping sections. Skip the
 front-matter / metadata header that precedes the dialogue.
 
+Also return a display title and a short descriptive abstract for the whole transcript:
+- title: who/what this is, ≤60 characters, e.g. "Mary Grande — Yugoslavia to Ellis Island, 1920".
+- summary: 2–3 sentences describing what the transcript covers. Descriptive only — no
+  interpretation, no analysis, just what a reader would find inside.
+
 Return ONLY JSON, no prose and no code fences:
-{"sections": [{"gist": "<one descriptive line>", "start_line": <int>, "end_line": <int>}, ...]}
+{"title": "<display title, ≤60 chars>", "summary": "<2-3 sentence descriptive abstract>",
+ "sections": [{"gist": "<one descriptive line>", "start_line": <int>, "end_line": <int>}, ...]}
