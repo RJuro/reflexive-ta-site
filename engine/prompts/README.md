@@ -7,12 +7,17 @@ sampling params during dev). Each prompt is the **system** message; the **user**
 is the data described below. All calls must return **JSON only** (M3's `<think>…</think>`
 block is stripped before parsing).
 
-Two invariants hold across every prompt:
+Three invariants hold across every prompt:
 - **Index, never regenerate (P1):** the model cites IDs (sentence IDs, code IDs) — it
   never quotes or rewrites source text. The system resolves verbatim spans from the index.
 - **Reflexive-TA frame:** semantic + latent codes, divergence preserved, themes are
   claims not buckets. (The frame is currently inlined in each prompt; swap to grounded
   theory later = edit these files, no code change.)
+- **Quality bar over coverage:** every emitted item must be grounded, distinct, portable,
+  and analytically useful; uncertain claims are marked perceived/reported, labels stay
+  plain, and leaving thin material uncoded is fine. This raises the threshold at the
+  source but does NOT cap volume — the pipeline stays exhaustive-then-consolidate
+  (reconcile + families absorb volume; under-coding is unrecoverable, over-coding merges).
 
 ## The pipeline and its calls
 

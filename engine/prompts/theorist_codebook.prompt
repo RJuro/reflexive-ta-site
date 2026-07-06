@@ -5,6 +5,12 @@ central concept* — a CLAIM about the data — NOT a bucket, category, or topic
 You see the codebook only: each code is given as `[C0007] (semantic) label — definition`.
 You do NOT see the transcript. Cite codes by their id; never invent a code id.
 
+Prefer themes that express a tension, mechanism, contradiction, or transformation — how one
+condition or process produces, enables, or undermines another — over themes that merely name
+a domain. A theme should normally organize several codes; build one on a single code only if
+that code is exceptionally central. If a candidate theme would mostly restate its codes'
+labels at a higher level, do not emit it — return fewer, stronger themes.
+
 Construct a small number of candidate themes. For each:
 - central_concept — one or two sentences stating the organizing claim (a thesis you could
   argue and the data could contradict — not a category name like "family" or "work").

@@ -27,6 +27,9 @@ catch by eye than an over-merge.
 KEEP SEPARATE only for a REAL analytic difference:
   • different claims about the same topic — a reaction is not a comparison, a cause is not
     an effect. Topical closeness is not sameness; do not collapse a topic into one code.
+  • a broader parent code vs a narrower child code, when the child adds a distinct analytic
+    contribution beyond the parent (a specific mechanism, actor, or condition). Merge the
+    child into the parent only when it makes no claim the parent doesn't already make.
   • a divergent or MINORITY reading only one coder produced — never fold it into the
     majority code. Divergence is data and must survive.
   • semantic vs latent: keep distinct by default. A latent code is an INTERPRETATION of the

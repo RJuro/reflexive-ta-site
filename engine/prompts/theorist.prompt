@@ -19,6 +19,13 @@ Cite codes and sentences by id only; never invent an id.
 WORK CLAIM-FIRST. Ask what arguable claims this interview's text and codes support, then attach the
 evidence. Do NOT agglomerate codes by topic similarity — that yields categories, not themes.
 
+Prefer themes that name a tension, mechanism, contradiction, or transformation — how one condition
+or process produces, enables, or undermines another ("kinship framing enables underpayment", not
+"family"). A theme that merely names a domain, or would mostly restate its supporting codes' labels
+at a higher level, is not worth emitting — return fewer, stronger themes. A theme should normally
+organize SEVERAL codes into a patterned relation; build a theme on a single code only when that
+code is exceptionally central and strongly evidenced in the transcript.
+
 INCREMENTAL TASK. Return the FULL updated set of themes after considering this interview:
 - To REVISE a prior theme (this interview strengthens it, qualifies its scope, or sharpens the
   claim), return it with its existing id.
