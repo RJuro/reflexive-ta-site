@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import jobs, packs, projects, runner, store
-from .auth import PinAuthMiddleware, resolve_role
+from .auth import PinAuthMiddleware, resolve_role, role_for_pin, set_auth_cookie, COOKIE_NAME
 from .config import ROOT
 from .db import project_db
 from .ingest import _slug
@@ -69,7 +69,28 @@ def me(request: Request):
     rejected anything else with a 401 before this handler runs, so here it can only be editor or
     viewer — this endpoint must stay reachable for GETs under either role."""
     role = resolve_role(request) or "editor"
+    return {"role": role, "pin_required": bool(os.environ.get("MASSHINE_PIN"))}
+
+
+class PinReq(BaseModel):
+    pin: str
+
+
+@app.post("/auth/pin")
+def auth_pin(req: PinReq, request: Request, response: Response):
+    """The styled PIN screen posts here; a correct PIN (either role) sets an HttpOnly session
+    cookie so the browser never sees the native Basic-auth dialog. Exempt from the middleware."""
+    role = role_for_pin(req.pin)
+    if role is None:
+        raise HTTPException(401, "wrong PIN")
+    set_auth_cookie(response, request, req.pin)
     return {"role": role}
+
+
+@app.post("/auth/logout")
+def auth_logout(response: Response):
+    response.delete_cookie(COOKIE_NAME, path="/")
+    return {"ok": True}
 
 
 # ---- request models -----------------------------------------------------------------------------

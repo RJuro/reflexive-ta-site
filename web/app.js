@@ -717,6 +717,18 @@
     });
     $('home-archived').addEventListener('change', e => { S.showArchived = e.target.checked; renderContent(); });
     await renderHomeList();
+    if (S.pinRequired && !$('home-signout')) {
+      const out = document.createElement('button');
+      out.id = 'home-signout';
+      out.className = 'btn-bare';
+      out.style.marginTop = '18px';
+      out.textContent = S.role === 'viewer' ? 'Sign out (viewing)' : 'Sign out';
+      out.addEventListener('click', async () => {
+        try { await API.logout(); } catch (e) { /* cookie may already be gone */ }
+        location.reload();
+      });
+      $('home-list')?.after(out);
+    }
   }
 
   async function renderHomeList() {
@@ -1622,7 +1634,8 @@
 
   // ---- init --------------------------------------------------------------------------------------
   async function init() {
-    try { S.role = (await API.me()).role; } catch (e) { S.role = 'editor'; }
+    try { const me = await API.me(); S.role = me.role; S.pinRequired = !!me.pin_required; }
+    catch (e) { S.role = 'editor'; S.pinRequired = false; }
     try { S.packs = await API.packs(); } catch (e) { S.packs = []; }
     const qp = new URLSearchParams(location.search);
     const pid = qp.get('project');

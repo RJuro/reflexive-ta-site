@@ -54,6 +54,9 @@ window.MASSHINE_API = (() => {
     revise: (pid, code_id, action, new_label) =>
       j(`/projects/${pid}/codes/${code_id}/revise`, json('POST', { action, new_label })),
 
+    login: pin => j('/auth/pin', json('POST', { pin })),
+    logout: () => j('/auth/logout', { method: 'POST' }),
+
     job: id => j(`/jobs/${id}`),
     jobs: pid => j(`/projects/${pid}/jobs`),
   };
