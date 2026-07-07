@@ -139,8 +139,12 @@ class CommentPatch(BaseModel):
 
 
 class ReviseReq(BaseModel):
-    action: str                     # 'rename' | 'reject' | 'restore'
-    new_label: str | None = None
+    action: str                     # 'rename' | 'reject' | 'restore' | 'merge'
+    new_label: str | None = None    # 'merge': the SURVIVOR code id (see db.py's revision comment)
+
+
+class FamilyPatch(BaseModel):
+    family_id: str | None = None    # null = unfile
 
 
 class MemoReq(BaseModel):
@@ -197,12 +201,15 @@ def get_project(pid: str):
         stale = store.themes_stale(conn, mode)
         n_families = conn.execute("SELECT COUNT(*) FROM code_family").fetchone()[0]
         families_stale = store.families_stale(conn)
+        n_pending_proposals = conn.execute(
+            "SELECT COUNT(*) FROM merge_proposal WHERE status='pending'").fetchone()[0]
     finally:
         conn.close()
     return {"project": proj, "documents": docs, "code_counts": counts, "mode": mode,
             "open_comments": open_comments, "n_themes": n_themes, "themes_stale": stale,
             "n_themed_docs": n_themed_docs, "active_jobs": projects.active_jobs(pid),
-            "n_families": n_families, "families_stale": families_stale}
+            "n_families": n_families, "families_stale": families_stale,
+            "n_pending_proposals": n_pending_proposals}
 
 
 @app.patch("/projects/{pid}")
@@ -430,6 +437,118 @@ def get_families(pid: str):
         conn.close()
 
 
+@app.patch("/projects/{pid}/codes/{code_id}/family")
+def patch_code_family(pid: str, code_id: str, req: FamilyPatch):
+    """Direct family reassignment (P8a) — the trivial authority once families exist. null
+    unfiles the code (family_id -> NULL)."""
+    _require_project(pid)
+    conn = _conn(pid)
+    try:
+        if not conn.execute("SELECT 1 FROM code WHERE id=?", (code_id,)).fetchone():
+            raise HTTPException(404, f"no code {code_id}")
+        if req.family_id is not None:
+            if not conn.execute(
+                    "SELECT 1 FROM code_family WHERE id=?", (req.family_id,)).fetchone():
+                raise HTTPException(400, f"no family {req.family_id}")
+        conn.execute("UPDATE code SET family_id=? WHERE id=?", (req.family_id, code_id))
+        conn.commit()
+    finally:
+        conn.close()
+    return {"ok": True, "code_id": code_id, "family_id": req.family_id}
+
+
+# ---- compress pass: the actual codebook collapse (P8a) ---------------------------------------
+
+@app.post("/projects/{pid}/compress")
+def run_compress(pid: str):
+    """Propose within-family merge groups — one model call per family (>=4 active codes), plus
+    the no-family batch if it qualifies. Nothing merges until a proposal is accepted."""
+    _require_project(pid)
+    job = projects.create_job(pid, "compress", {})
+    jobs.submit(job["id"], jobs.compress_work(pid))
+    return {"job_id": job["id"]}
+
+
+@app.get("/projects/{pid}/merge-proposals")
+def get_merge_proposals(pid: str, status: str | None = None):
+    _require_project(pid)
+    conn = _conn(pid)
+    try:
+        return store.merge_proposals_payload(conn, status=status)
+    finally:
+        conn.close()
+
+
+def _cycle_check(conn, code_id: str, survivor_id: str) -> bool:
+    """True if merging code_id -> survivor_id would create a cycle: i.e. survivor_id's own
+    merge chain (unresolved, one hop at a time) eventually leads back to code_id."""
+    raw = store.revisions_map(conn, resolve_chains=False)
+    seen = set()
+    cur = survivor_id
+    depth = 0
+    while cur and depth < 10:
+        if cur == code_id:
+            return True
+        if cur in seen:
+            break
+        seen.add(cur)
+        cur = raw.get(cur, {}).get("merged_into")
+        depth += 1
+    return False
+
+
+@app.post("/projects/{pid}/merge-proposals/{mpid}/accept")
+def accept_merge_proposal(pid: str, mpid: str):
+    """Apply a pending proposal's merges: each absorbed code -> merge revision into the
+    survivor; if the proposal carries a merged_label, also a rename revision on the survivor.
+    Marks the proposal accepted and returns updated counts."""
+    _require_project(pid)
+    conn = _conn(pid)
+    try:
+        rows = store.merge_proposals_payload(conn, status="pending")
+        proposal = next((p for p in rows if p["id"] == mpid), None)
+        if not proposal:
+            raise HTTPException(404, f"no pending proposal {mpid}")
+        survivor_id = proposal["survivor_id"]
+        if not conn.execute("SELECT 1 FROM code WHERE id=?", (survivor_id,)).fetchone():
+            raise HTTPException(400, f"survivor code {survivor_id} no longer exists")
+        revs = store.revisions_map(conn)
+        if revs.get(survivor_id, {}).get("rejected") or revs.get(survivor_id, {}).get("merged_into"):
+            raise HTTPException(400, "survivor is rejected or itself merged")
+        applied = 0
+        for absorbed_id in proposal["absorbed_ids"]:
+            if not conn.execute("SELECT 1 FROM code WHERE id=?", (absorbed_id,)).fetchone():
+                continue
+            st = revs.get(absorbed_id, {})
+            if st.get("rejected") or st.get("merged_into"):
+                continue
+            if absorbed_id == survivor_id or _cycle_check(conn, absorbed_id, survivor_id):
+                continue
+            store.add_revision(conn, absorbed_id, "merge", survivor_id)
+            applied += 1
+        if proposal["merged_label"]:
+            store.add_revision(conn, survivor_id, "rename", proposal["merged_label"])
+        store.set_proposal_status(conn, mpid, "accepted")
+        codes = store.codes_payload(conn)
+        n_active = sum(1 for c in codes if c["status"] == "active")
+    finally:
+        conn.close()
+    return {"ok": True, "applied": applied, "survivor_id": survivor_id, "n_active_codes": n_active}
+
+
+@app.post("/projects/{pid}/merge-proposals/{mpid}/dismiss")
+def dismiss_merge_proposal(pid: str, mpid: str):
+    """Reject a proposal without touching any codes."""
+    _require_project(pid)
+    conn = _conn(pid)
+    try:
+        if not store.set_proposal_status(conn, mpid, "dismissed"):
+            raise HTTPException(404, f"no proposal {mpid}")
+    finally:
+        conn.close()
+    return {"ok": True}
+
+
 # ---- researcher feedback: comments (for the model) + memos (for the researcher) -----------------
 
 @app.post("/projects/{pid}/comments")
@@ -509,17 +628,40 @@ def get_memos(pid: str, target_type: str | None = None):
 
 @app.post("/projects/{pid}/codes/{code_id}/revise")
 def revise_code(pid: str, code_id: str, req: ReviseReq):
-    """Researcher correction: rename / reject / restore a code. Applied at read time and
-    compiled into the guidance the model sees on the next re-run."""
+    """Researcher correction: rename / reject / restore / merge a code. Applied at read time and
+    compiled into the guidance the model sees on the next re-run.
+
+    'merge' folds code_id into the survivor named by new_label (P8a — the column is reused to
+    carry the survivor's code id; see db.py's revision table comment). Validated here: the
+    survivor must exist, differ from code_id, and not itself be rejected or already merged; the
+    merge must not create a cycle (code_id must not appear anywhere in the survivor's own merge
+    chain). 'restore' un-merges (clears both rejected and merged_into — see revisions_map)."""
     _require_project(pid)
-    if req.action not in ("rename", "reject", "restore"):
-        raise HTTPException(400, "action must be rename | reject | restore")
+    if req.action not in ("rename", "reject", "restore", "merge"):
+        raise HTTPException(400, "action must be rename | reject | restore | merge")
     if req.action == "rename" and not (req.new_label or "").strip():
         raise HTTPException(400, "rename needs new_label")
     conn = _conn(pid)
     try:
         if not conn.execute("SELECT 1 FROM code WHERE id=?", (code_id,)).fetchone():
             raise HTTPException(404, f"no code {code_id}")
+        if req.action == "merge":
+            survivor_id = (req.new_label or "").strip()
+            if not survivor_id:
+                raise HTTPException(400, "merge needs new_label (the survivor code id)")
+            if survivor_id == code_id:
+                raise HTTPException(400, "a code cannot be merged into itself")
+            if not conn.execute("SELECT 1 FROM code WHERE id=?", (survivor_id,)).fetchone():
+                raise HTTPException(400, f"no code {survivor_id}")
+            revs = store.revisions_map(conn)
+            survivor_st = revs.get(survivor_id, {})
+            if survivor_st.get("rejected"):
+                raise HTTPException(400, "cannot merge into a rejected code")
+            if survivor_st.get("merged_into"):
+                raise HTTPException(400, "cannot merge into a code that is itself merged")
+            if _cycle_check(conn, code_id, survivor_id):
+                raise HTTPException(400, "that merge would create a cycle")
+            return store.add_revision(conn, code_id, "merge", survivor_id)
         return store.add_revision(conn, code_id, req.action,
                                   (req.new_label or "").strip() or None)
     finally:

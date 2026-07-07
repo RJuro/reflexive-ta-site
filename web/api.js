@@ -53,9 +53,19 @@ window.MASSHINE_API = (() => {
 
     revise: (pid, code_id, action, new_label) =>
       j(`/projects/${pid}/codes/${code_id}/revise`, json('POST', { action, new_label })),
+    setCodeFamily: (pid, code_id, family_id) =>
+      j(`/projects/${pid}/codes/${code_id}/family`, json('PATCH', { family_id })),
 
     consolidate: pid => j(`/projects/${pid}/consolidate`, { method: 'POST' }),
     families: pid => j(`/projects/${pid}/families`),
+
+    compress: pid => j(`/projects/${pid}/compress`, { method: 'POST' }),
+    mergeProposals: (pid, status) =>
+      j(`/projects/${pid}/merge-proposals` + (status ? `?status=${status}` : '')),
+    acceptProposal: (pid, mpid) =>
+      j(`/projects/${pid}/merge-proposals/${mpid}/accept`, { method: 'POST' }),
+    dismissProposal: (pid, mpid) =>
+      j(`/projects/${pid}/merge-proposals/${mpid}/dismiss`, { method: 'POST' }),
 
     login: pin => j('/auth/pin', json('POST', { pin })),
     logout: () => j('/auth/logout', { method: 'POST' }),

@@ -98,6 +98,61 @@ def test_revision_folding_and_codes_payload(conn):
     assert store.codes_payload(conn)[0]["status"] == "active"
 
 
+# ---- P8a: merge revision action -----------------------------------------------------------
+
+def _seed_two_codes(c: sqlite3.Connection, doc_id: str = "doc-a"):
+    _seed_doc(c, doc_id)
+    c.execute("INSERT INTO code (id, origin_doc_id, label, definition, code_type, evidence_ids, "
+              "model_rationale, coder) VALUES ('C0001', ?, 'Alpha', 'def a', 'semantic', "
+              "'[\"doc-a#S1.001\"]', '', 'standard')", (doc_id,))
+    c.execute("INSERT INTO code (id, origin_doc_id, label, definition, code_type, evidence_ids, "
+              "model_rationale, coder) VALUES ('C0002', ?, 'Beta', 'def b', 'semantic', "
+              "'[\"doc-a#S1.002\"]', '', 'standard')", (doc_id,))
+    c.commit()
+
+
+def test_merge_folds_to_merged_status_and_survivor_evidence_union(conn):
+    _seed_two_codes(conn)
+    store.add_revision(conn, "C0002", "merge", "C0001")
+    payload = {c["id"]: c for c in store.codes_payload(conn)}
+    assert payload["C0002"]["status"] == "merged"
+    assert payload["C0002"]["merged_into"] == "C0001"
+    assert payload["C0001"]["status"] == "active"
+    # survivor's evidence is the de-duplicated, order-preserving union
+    assert payload["C0001"]["evidence"] == ["doc-a#S1.001", "doc-a#S1.002"]
+
+
+def test_merge_chain_resolves_to_final_survivor(conn):
+    """A -> B, B -> C: reading A's state should resolve merged_into to C (the final survivor),
+    and C's evidence should include A's (transitively)."""
+    _seed_two_codes(conn)
+    conn.execute("INSERT INTO code (id, origin_doc_id, label, definition, code_type, "
+                 "evidence_ids, model_rationale, coder) VALUES ('C0003', 'doc-a', 'Gamma', "
+                 "'def c', 'semantic', '[\"doc-a#S1.002\"]', '', 'standard')")
+    conn.commit()
+    store.add_revision(conn, "C0002", "merge", "C0001")   # B -> A (survivor so far: A)
+    store.add_revision(conn, "C0001", "merge", "C0003")   # A -> C (A, and transitively B, -> C)
+    revs = store.revisions_map(conn)
+    assert revs["C0001"]["merged_into"] == "C0003"
+    assert revs["C0002"]["merged_into"] == "C0003"        # chain followed to the FINAL survivor
+    payload = {c["id"]: c for c in store.codes_payload(conn)}
+    assert payload["C0001"]["status"] == "merged" and payload["C0001"]["merged_into"] == "C0003"
+    assert payload["C0002"]["status"] == "merged" and payload["C0002"]["merged_into"] == "C0003"
+    assert payload["C0003"]["status"] == "active"
+    assert set(payload["C0003"]["evidence"]) == {"doc-a#S1.001", "doc-a#S1.002"}
+
+
+def test_restore_un_merges_clearing_rejected_and_merged_into(conn):
+    _seed_two_codes(conn)
+    store.add_revision(conn, "C0002", "merge", "C0001")
+    store.add_revision(conn, "C0002", "restore")
+    payload = {c["id"]: c for c in store.codes_payload(conn)}
+    assert payload["C0002"]["status"] == "active"
+    assert payload["C0002"]["merged_into"] is None
+    # survivor's evidence no longer carries the un-merged code's contribution
+    assert payload["C0001"]["evidence"] == ["doc-a#S1.001"]
+
+
 # ---- P4.11: feedback diff after re-code ------------------------------------------------------
 
 def test_doc_code_labels_scopes_by_origin_doc(conn):
@@ -152,6 +207,16 @@ def test_compile_guidance_scoping(conn):
     assert "split this theme" in g_theme and "Household absorbs" in g_theme
     assert "gendered labor here" not in g_theme     # doc feedback stays with the doc
     assert "Renamed elsewhere" in g_theme           # all revisions summarized for the walk
+
+
+def test_compile_guidance_includes_merged_line(conn):
+    _seed_two_codes(conn)
+    store.add_revision(conn, "C0002", "merge", "C0001")
+    g_doc = store.compile_guidance(conn, "doc-a")
+    assert 'MERGED "Beta" into "Alpha"' in g_doc
+    assert "treat them as one concept" in g_doc
+    g_theme = store.compile_guidance(conn)
+    assert 'MERGED "Beta" into "Alpha"' in g_theme
 
 
 def test_mark_feedback_addressed_scopes(conn):

@@ -133,8 +133,12 @@ def resolve_ev(conn: sqlite3.Connection, qualified: str) -> str:
 # consolidation run placed).
 # v8 adds hierarchy discipline (P7): `code_family.rationale` (nullable — the one-sentence
 # "why these codes belong together" the consolidation pass now returns per family).
+# v9 adds researcher-driven code collapse (P8a): revision.action gains 'merge' (folded in
+# store.revisions_map — no schema change needed for that, `new_label` already holds arbitrary
+# text and is reused to hold the survivor code id for a merge action) and a new `merge_proposal`
+# table holding the compress pass's pending review queue (one row per proposed merge group).
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 
 def init_project_db(conn: sqlite3.Connection) -> None:
@@ -167,8 +171,8 @@ def init_project_db(conn: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS revision (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             code_id TEXT,
-            action TEXT,                        -- 'rename' | 'reject' | 'restore'
-            new_label TEXT,
+            action TEXT,                        -- 'rename' | 'reject' | 'restore' | 'merge'
+            new_label TEXT,                     -- 'merge': reused to hold the SURVIVOR code id
             context TEXT,                       -- JSON snapshot of the code at revision time
             created_at TEXT
         );
@@ -184,6 +188,16 @@ def init_project_db(conn: sqlite3.Connection) -> None:
             id TEXT, label TEXT, definition TEXT, hue INTEGER, position INTEGER, created_at TEXT,
             rationale TEXT,
             PRIMARY KEY (id)
+        );
+        CREATE TABLE IF NOT EXISTS merge_proposal (
+            id TEXT PRIMARY KEY,
+            family_id TEXT,                      -- NULL for the no-family batch
+            survivor_id TEXT,
+            absorbed_ids TEXT,                   -- JSON list of code ids
+            merged_label TEXT,                   -- optional better label for the survivor
+            rationale TEXT,
+            status TEXT DEFAULT 'pending',       -- 'pending' | 'accepted' | 'dismissed'
+            created_at TEXT
         );
         """
     )

@@ -433,6 +433,17 @@
     color: var(--fg); text-decoration: none; font-size: 12.5px;
   }
   .export-item:hover { border-color: var(--accent); }
+  button.export-item { cursor: pointer; width: 100%; text-align: left; font: inherit; }
+  button.export-item .hint { margin-left: auto; }
+  button.export-item { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+  /* P8a: code collapse — merge proposal review queue */
+  .proposals-queue { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .proposal-card { border: 1px solid var(--hairline); border-radius: 10px; background: var(--surface); padding: 11px 13px; }
+  .proposal-card__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .proposal-card__survivor { font-weight: 600; font-size: 13px; }
+  .proposal-card__absorbed { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .proposal-card__why { font-size: 11.5px; color: var(--faint); line-height: 1.5; margin: 6px 0 0; }
+  .proposal-card__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
   /* code families (P6) */
   .fam { border: 1px solid var(--hairline); border-radius: 10px; background: var(--surface); margin-bottom: 8px; overflow: hidden; }
   .fam__head { display: flex; align-items: baseline; gap: 8px; padding: 10px 13px; cursor: pointer; user-select: none; }
@@ -468,7 +479,7 @@
   <div class="toasts" id="toasts"></div>
   <div id="sheet-root"></div>
   <input type="file" id="file-input" accept=".txt,.md" hidden>
-  <script src="/api.js?v=13"></script>
-  <script src="/app.js?v=13"></script>
+  <script src="/api.js?v=15"></script>
+  <script src="/app.js?v=15"></script>
 </body>
 </html>

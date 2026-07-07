@@ -495,3 +495,53 @@ that each level is not repeating or rescuing the others."*
 Sequencing: implement immediately after the hierarchical per-source consolidation lands
 (same files). Items 1–2 ride on the new prompts; 3 touches theorist + themes UI; 4–5 are
 pure Python/UI.
+
+---
+
+# P8 — Operationalize the researcher: real collapse, real authority (reviewer round 3, 2026-07-07)
+
+*Round-3 review of a live 11-theme run: "substantively good but over-authored… shortened,
+de-theorized, consolidated." User direction: align the system to a researcher actively
+working — fewer codes, REALLY collapsed (not just grouped into families), and direct
+control. Principle: the machine proposes, the researcher disposes — with one-click actions
+and a full audit trail, never silent deletion.*
+
+## P8a — Code collapse + merge authority
+1. **`merge` revision action** (the long-planned P6 item 2): code A merges into B —
+   evidence unions at read time, A gets status `merged` (hidden by default, reversible via
+   restore), guidance tells the model on re-runs. API + inspector "Merge into…" picker.
+   ✅ SHIPPED (2026-07-07): schema v9 reuses `revision.new_label` to carry the survivor id;
+   `revisions_map` folds merge/restore and follows chains (depth-capped) to the final survivor;
+   `codes_payload` returns `status:"merged"` + de-duplicated order-preserving survivor evidence
+   union; `compile_guidance` emits a MERGED line; API `revise_code` whitelists `merge` with
+   self-merge/into-rejected/into-merged/cycle validation; inspector has a "Merge into…" search
+   sheet and a "merged into X" + Restore display.
+2. **Compress pass** (the actual collapse): job `compress` — one LLM call per family (whole
+   codebook when no families) proposing merge groups `{survivor, absorbed[], merged_label,
+   rationale}`; Python-validated; stored as PENDING proposals (`merge_proposal` table).
+   Codebook shows "N merge proposals" → review queue: each proposal = survivor + absorbed +
+   why, [Merge] / [Dismiss]. Accepting applies merge revisions. The codebook count drops
+   only by researcher hand. ✅ SHIPPED (2026-07-07): `compress.py` (propose_merges, one call per
+   family with ≥4 active codes + one no-family batch), `compress.prompt`; `POST /compress` job,
+   `GET /merge-proposals`, accept/dismiss endpoints (accept applies merge + optional survivor
+   rename, dismiss leaves codes untouched); codebook filterbar "Compress…" → confirm sheet →
+   job → banner + inline review-queue section with Merge/Dismiss per proposal.
+3. **Family reassign**: move a code to another family directly (small PATCH; the trivial
+   authority everyone expects once families exist). ✅ SHIPPED (2026-07-07): `PATCH
+   /codes/{id}/family`; inspector family chip gains a picker sheet (families + "No family").
+
+## P8b — Theme discipline (round 3) + theme authority
+4. **theorist.prompt round-3 rules**: theme budget (fewer, stronger; ~5–8 for a small
+   corpus); NO single-code themes — fold as subtheme or leave as memo material; cross-case
+   only for genuinely equivalent phenomena (analogous-but-different stays single-case, with
+   the difference named); plain register — write for a colleague, not a journal reviewer
+   (no theory-inflated wording); one relation per theme — split bundles; sensitive material
+   framed as the narrator's position/unpreparedness, never as characterization of a group.
+5. **Theme authority**: edit label + claim directly (override stored, original kept — same
+   pattern as researcher_label); merge theme A into B (support/anchors union, audited);
+   demote theme to memo (content preserved as a memo, theme archived from the catalogue).
+   Overrides are keyed by theme id: they survive extend-themes (stable ids) but a full
+   rebuild replaces the catalogue — the UI must say so before a rebuild with edits present.
+
+Deferred to P9: manual researcher-authored codes on passages; exemplar-quote curation;
+cross-case retrieval matrix (code × source); methods-section export.

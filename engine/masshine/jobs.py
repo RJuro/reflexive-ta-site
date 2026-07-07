@@ -11,6 +11,7 @@ from pathlib import Path
 
 from . import packs, projects, runner, store
 from .coding import code_document, code_sections_panel
+from .compress import compress_batches, propose_merges
 from .consolidate import consolidate_codebook
 from .db import new_run, project_db
 from .ingest import ingest
@@ -273,4 +274,25 @@ def consolidate_work(pid: str):
             conn.close()
         return {"families": len(families), "unfiled": len(unfiled["member_code_ids"]) if unfiled else 0,
                 "comments_addressed": n_addr, "feedback_used": bool(guidance)}
+    return work
+
+
+def compress_work(pid: str):
+    """P8a: the actual codebook COLLAPSE. One LLM call per family (>= COMPRESS_MIN_FAMILY_CODES
+    active codes) proposes within-family merge groups; Python validates; the whole batch of
+    proposals REPLACES any still-pending proposals from an earlier compress run (accepted/
+    dismissed history is untouched — persist_merge_proposals only clears 'pending' rows). Nothing
+    is merged here — this only fills the review queue the researcher acts on."""
+    def work(progress):
+        conn = project_db(projects.project_db_path(pid))
+        try:
+            codes = store.codes_payload(conn)
+            families = store.families_payload(conn)
+            progress(stage="compress", message="scanning families for redundant codes")
+            families_scanned = len(compress_batches(codes, families))
+            proposals = propose_merges(codes, families, progress=progress)
+            store.persist_merge_proposals(conn, proposals)
+        finally:
+            conn.close()
+        return {"proposals": len(proposals), "families_scanned": families_scanned}
     return work

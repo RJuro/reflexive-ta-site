@@ -37,11 +37,13 @@ def _with_guidance(listing: str, guidance: str | None) -> str:
 
 
 def codebook_listing(codes: list[dict]) -> str:
-    """One line per ACTIVE code (skip rejected), researcher_label winning over the
-    machine label — the exact listing shape the consolidation prompt expects."""
+    """One line per ACTIVE code (skip rejected AND merged — P8a: a merged code's evidence now
+    lives on its survivor, so listing it separately would double-count the same ground),
+    researcher_label winning over the machine label — the exact listing shape the consolidation
+    prompt expects."""
     lines = []
     for c in codes:
-        if c.get("status") == "rejected":
+        if c.get("status") in ("rejected", "merged"):
             continue
         lbl = c.get("researcher_label") or c["label"]
         lines.append(f'[{c["id"]}] ({c["coder"]}/{c["code_type"]}) "{lbl}" — {c["definition"]}')
@@ -120,7 +122,7 @@ def _consolidate_one_source(doc_id: str, codes: list[dict], sf_counter: list[int
 
     Each returned family: {"sf_id", "label", "definition", "member_code_ids", "origin_doc_id"}.
     """
-    active_ids = {c["id"] for c in codes if c.get("status") != "rejected"}
+    active_ids = {c["id"] for c in codes if c.get("status") not in ("rejected", "merged")}
     if progress:
         progress(stage="consolidating", done=done, total=total,
                  message=f"grouping source {doc_id}")
@@ -198,7 +200,7 @@ def consolidate_codebook(codes: list[dict], guidance: str | None = None,
     source/aggregate step; it is never required (tolerate None).
     """
     doc_titles = doc_titles or {}
-    active_ids = {c["id"] for c in codes if c.get("status") != "rejected"}
+    active_ids = {c["id"] for c in codes if c.get("status") not in ("rejected", "merged")}
     if not active_ids:
         return []
 

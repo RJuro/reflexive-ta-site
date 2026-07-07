@@ -90,6 +90,26 @@ def test_validator_uses_researcher_label_and_skips_rejected_in_listing(monkeypat
     assert "C0002" not in seen["user"]                       # rejected codes never shown
 
 
+def test_merged_codes_excluded_from_consolidate_listing_and_active_ids(monkeypatch):
+    """P8a: a merged code is skipped by codebook_listing (like rejected) and doesn't count
+    toward consolidate's active_ids — its evidence now lives on its survivor, so listing it
+    separately would double-count the same ground."""
+    codes = _codes(3)
+    codes[1]["status"] = "merged"   # C0002
+    listing = consolidate.codebook_listing(codes)
+    assert "C0001" in listing and "C0003" in listing
+    assert "C0002" not in listing
+
+    def fake(system, user, **kw):
+        assert "C0002" not in user
+        return {"families": [{"label": "F", "definition": "d",
+                              "member_code_ids": ["C0001", "C0003"]}]}
+
+    monkeypatch.setattr(llm, "chat_json", fake)
+    fams = consolidate.consolidate_codebook(codes)
+    assert set(fams[0]["member_code_ids"]) == {"C0001", "C0003"}
+
+
 def test_small_project_fast_path_uses_one_call(monkeypatch):
     """<=40 active codes across 2 docs still takes the single-call path (only n_sources<=1 or
     <=SMALL_PROJECT_CODE_LIMIT codes trigger it — 2 docs alone shouldn't force map-reduce)."""

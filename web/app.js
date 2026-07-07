@@ -16,8 +16,10 @@
     codes: [], themes: null, friction: null, comments: [], memos: {},
     sel: null,                 // {type:'sentence'|'code'|'theme', id}
     jobs: {},                  // jobId → job row (being watched)
-    cb: { q: '', lens: '', type: '', rejected: false },
+    cb: { q: '', lens: '', type: '', hidden: false },
     families: { families: [], stale: false }, cbGroup: null, famOpen: new Set(),
+    mergeProposals: [],         // pending merge proposals (P8a compress review queue)
+    proposalsOpen: false,       // codebook: is the review-queue section expanded
     notesFilter: 'open',        // notes view (P3.9): 'all' | 'open' | 'addressed' | 'dismissed'
     renaming: false,
     showArchived: false,        // home view: include archived projects
@@ -139,7 +141,7 @@
     const counts = new Map();
     for (const cid of t.supporting_code_ids || []) {
       const c = codeById(cid);
-      if (!c || c.status === 'rejected' || !c.family_id) continue;
+      if (!c || c.status !== 'active' || !c.family_id) continue;
       const f = famById(c.family_id);
       if (!f) continue;
       counts.set(f.id, (counts.get(f.id) || 0) + 1);
@@ -217,14 +219,16 @@
     const detail = await API.project(pid);
     S.detail = detail;
     S.mode = detail.mode || (detail.project.pack_id ? 'panel' : 'standard');
-    const [codes, themes, comments, memos, families] = await Promise.all([
+    const [codes, themes, comments, memos, families, mergeProposals] = await Promise.all([
       API.codes(pid).catch(() => []),
       API.themes(pid, S.mode).catch(() => ({ themes: [], snapshots: [], stale: false })),
       API.comments(pid).catch(() => []),
       API.memos(pid).catch(() => []),
       API.families(pid).catch(() => ({ families: [], stale: false })),
+      API.mergeProposals(pid, 'pending').catch(() => []),
     ]);
     S.codes = codes; S.themes = themes; S.comments = comments; S.families = families;
+    S.mergeProposals = mergeProposals;
     S.memos = {};
     for (const m of memos) S.memos[`${m.target_type}:${m.target_id}`] = m;
     if (!S.docId || !detail.documents.find(d => d.doc_id === S.docId))
@@ -286,9 +290,12 @@
 
   async function refreshComments() { S.comments = await API.comments(S.pid).catch(() => S.comments); }
   async function refreshCodes() { S.codes = await API.codes(S.pid).catch(() => S.codes); }
+  async function refreshMergeProposals() {
+    S.mergeProposals = await API.mergeProposals(S.pid, 'pending').catch(() => S.mergeProposals);
+  }
 
   // ---- jobs ------------------------------------------------------------------------------------
-  const JOB_LABEL = { ingest: 'Reading source', code_standard: 'Coding', code_panel: 'Coding · panel', recode: 'Re-coding with feedback', theme: 'Building themes', consolidate: 'Consolidating codebook' };
+  const JOB_LABEL = { ingest: 'Reading source', code_standard: 'Coding', code_panel: 'Coding · panel', recode: 'Re-coding with feedback', theme: 'Building themes', consolidate: 'Consolidating codebook', compress: 'Scanning for redundant codes' };
   function watchJob(jobId, kind, reattach) {
     if (S.jobs[jobId]) return;
     S.jobs[jobId] = { id: jobId, kind, status: 'running', progress: {} };
@@ -301,6 +308,10 @@
           const n = diff.new.length + diff.new_more_n, d = diff.dropped.length + diff.dropped_more_n;
           toast(`Re-code done — ${n} new code${n === 1 ? '' : 's'}, ${d} dropped`);
           openRecodeDiffSheet(j.result);
+        } else if (kind === 'compress') {
+          const n = j.result?.proposals || 0;
+          toast(n ? `${n} merge proposal${n === 1 ? '' : 's'} ready for review` : 'No redundant codes found');
+          if (n) S.proposalsOpen = true;
         } else {
           toast(`${JOB_LABEL[kind] || kind} — done`);
         }
@@ -380,6 +391,31 @@
       await API.revise(S.pid, cid, action, newLabel);
       await refreshCodes();
       S.renaming = false;
+      render();
+    } catch (e) { toast(String(e.message || e), true); }
+  }
+  async function reassignFamily(cid, familyId) {
+    try {
+      await API.setCodeFamily(S.pid, cid, familyId);
+      await Promise.all([refreshCodes(), (async () => { S.families = await API.families(S.pid); })()]);
+      toast(familyId ? 'Family changed' : 'Unfiled');
+      render();
+    } catch (e) { toast(String(e.message || e), true); }
+  }
+  async function acceptProposal(mpid) {
+    try {
+      const r = await API.acceptProposal(S.pid, mpid);
+      toast(`${r.applied + 1} codes → 1`);
+      await Promise.all([refreshCodes(), refreshMergeProposals(),
+        (async () => { S.families = await API.families(S.pid); })()]);
+      render();
+    } catch (e) { toast(String(e.message || e), true); }
+  }
+  async function dismissProposalAction(mpid) {
+    try {
+      await API.dismissProposal(S.pid, mpid);
+      await refreshMergeProposals();
+      toast('Proposal dismissed');
       render();
     } catch (e) { toast(String(e.message || e), true); }
   }
@@ -904,7 +940,7 @@
     const codedSet = new Set();
     const codeCountBySid = {};
     for (const code of S.codes) {
-      if (code.status === 'rejected') continue;
+      if (code.status !== 'active') continue;
       for (const ev of code.evidence) {
         const [dd, sid] = ev.split('#');
         if (dd === S.docId) { codedSet.add(sid); codeCountBySid[sid] = (codeCountBySid[sid] || 0) + 1; }
@@ -1129,10 +1165,10 @@
   });
 
   function renderCodebook(c) {
-    const { q, lens, type, rejected } = S.cb;
+    const { q, lens, type, hidden } = S.cb;
     const lenses = lensList();
     let list = S.codes;
-    if (!rejected) list = list.filter(x => x.status !== 'rejected');
+    if (!hidden) list = list.filter(x => x.status === 'active');
     if (lens) list = list.filter(x => x.coder === lens);
     if (type) list = list.filter(x => x.code_type === type);
     if (q) {
@@ -1143,12 +1179,13 @@
     const grouping = fams.length && (S.cbGroup || 'family') === 'family' ? 'family' : 'lens';
     const rowFor = (x, hue) => {
       const notes = commentsFor('code', x.id).filter(n => n.status === 'open').length;
-      return `<button class="code-row ${x.status === 'rejected' ? 'is-rejected' : ''} ${S.sel?.type === 'code' && S.sel.id === x.id ? 'is-active' : ''}" data-cid="${x.id}"
+      const hiddenCls = x.status !== 'active' ? 'is-rejected' : '';
+      return `<button class="code-row ${hiddenCls} ${S.sel?.type === 'code' && S.sel.id === x.id ? 'is-active' : ''}" data-cid="${x.id}"
           ${hue != null ? `style="border-left:2px solid ${famColor(hue, 0.55)}"` : ''}>
         ${notes ? '<span class="note-dot"></span>' : ''}
         <span class="lens-dot" style="background:${lensColor(x.coder)};flex:none;align-self:center"></span>
         <span class="code-row__label">${esc(label(x))}</span>
-        <span class="code-row__meta"><span class="tag">${x.code_type}</span> · ${x.evidence.length}</span>
+        <span class="code-row__meta">${x.status === 'merged' ? '<span class="tag">merged</span> · ' : ''}<span class="tag">${x.code_type}</span> · ${x.evidence.length}</span>
       </button>`;
     };
     let listing;
@@ -1190,19 +1227,24 @@
         <div class="lens-head"><span class="lens-dot" style="background:${lensColor(l)}"></span>${esc(l)} · ${groups[l].length}</div>
         ${groups[l].map(x => {
           const notes = commentsFor('code', x.id).filter(n => n.status === 'open').length;
-          return `<button class="code-row ${x.status === 'rejected' ? 'is-rejected' : ''} ${S.sel?.type === 'code' && S.sel.id === x.id ? 'is-active' : ''}" data-cid="${x.id}">
+          return `<button class="code-row ${x.status !== 'active' ? 'is-rejected' : ''} ${S.sel?.type === 'code' && S.sel.id === x.id ? 'is-active' : ''}" data-cid="${x.id}">
             ${notes ? '<span class="note-dot"></span>' : ''}
             <span class="code-row__label">${esc(label(x))}</span>
-            <span class="code-row__meta"><span class="tag">${x.code_type}</span> · ${x.evidence.length}</span>
+            <span class="code-row__meta">${x.status === 'merged' ? '<span class="tag">merged</span> · ' : ''}<span class="tag">${x.code_type}</span> · ${x.evidence.length}</span>
           </button>`;
         }).join('')}`).join('');
     }
+    const nProposals = S.mergeProposals.length;
     c.innerHTML = `<div class="panel">
       <h1>Codebook</h1>
-      <p class="sub">${S.codes.length} codes${S.mode === 'panel' ? ` from ${lenses.length} blind lenses` : ''}${fams.length ? `, ${fams.length} families` : ''}. Rename or reject a code and the model hears about it on the next re-code.</p>
+      <p class="sub">${S.codes.filter(x => x.status === 'active').length} active codes${S.codes.length !== S.codes.filter(x => x.status === 'active').length ? ` (${S.codes.length - S.codes.filter(x => x.status === 'active').length} hidden)` : ''}${S.mode === 'panel' ? ` from ${lenses.length} blind lenses` : ''}${fams.length ? `, ${fams.length} families` : ''}. Rename, reject, or merge a code and the model hears about it on the next re-code.</p>
       ${S.families?.stale && fams.length ? `<div class="banner">⟳ The codebook changed since these families were built.
         <div class="tb-spacer"></div>
         ${isViewer() ? '' : '<button class="btn-quiet" id="cb-reconsolidate">Re-consolidate</button>'}</div>` : ''}
+      ${nProposals ? `<div class="banner">◆ ${nProposals} merge proposal${nProposals === 1 ? '' : 's'} await review.
+        <div class="tb-spacer"></div>
+        <button class="btn-quiet" id="cb-review-proposals">${S.proposalsOpen ? 'Hide' : 'Review'}</button></div>` : ''}
+      ${S.proposalsOpen && nProposals ? renderProposalsQueue() : ''}
       <div class="filterbar">
         <input type="search" id="cb-q" placeholder="Search codes…" value="${esc(q)}">
         ${fams.length ? `<span class="seg" id="cb-group">
@@ -1218,8 +1260,9 @@
           <button data-v="semantic" class="${type === 'semantic' ? 'is-active' : ''}">Semantic</button>
           <button data-v="latent" class="${type === 'latent' ? 'is-active' : ''}">Latent</button>
         </span>
-        <label class="check"><input type="checkbox" id="cb-rej" ${rejected ? 'checked' : ''}> rejected</label>
+        <label class="check"><input type="checkbox" id="cb-rej" ${hidden ? 'checked' : ''}> hidden</label>
         ${!isViewer() && S.codes.length ? `<button class="btn-quiet" id="cb-consolidate">${fams.length ? 'Re-consolidate' : 'Consolidate codebook'}</button>` : ''}
+        ${!isViewer() && S.codes.length ? `<button class="btn-quiet" id="cb-compress">Compress…</button>` : ''}
       </div>
       ${listing}
     </div>`;
@@ -1229,7 +1272,7 @@
       b.addEventListener('click', () => { S.cb.lens = b.dataset.v; renderContent(); }));
     $('cb-type').querySelectorAll('button').forEach(b =>
       b.addEventListener('click', () => { S.cb.type = b.dataset.v; renderContent(); }));
-    $('cb-rej').addEventListener('change', e => { S.cb.rejected = e.target.checked; renderContent(); });
+    $('cb-rej').addEventListener('change', e => { S.cb.hidden = e.target.checked; renderContent(); });
     c.querySelectorAll('[data-cid]').forEach(b =>
       b.addEventListener('click', () => select('code', b.dataset.cid)));
     $('cb-group')?.querySelectorAll('button').forEach(b =>
@@ -1250,15 +1293,50 @@
         switchView('themes');
         select('theme', tid);
       }));
-    const kick = () => { const n = S.codes.filter(x => x.status !== 'rejected').length; openConsolidateSheet(n); };
+    const kick = () => { const n = S.codes.filter(x => x.status === 'active').length; openConsolidateSheet(n); };
     $('cb-consolidate')?.addEventListener('click', kick);
     $('cb-reconsolidate')?.addEventListener('click', kick);
+    $('cb-compress')?.addEventListener('click', openCompressSheet);
+    $('cb-review-proposals')?.addEventListener('click', () => { S.proposalsOpen = !S.proposalsOpen; renderContent(); });
+    wireProposalsQueue(c);
+  }
+
+  // ---- P8a: merge-proposal review queue — inline section at the top of the codebook -------------
+  function renderProposalsQueue() {
+    return `<div class="proposals-queue">
+      ${S.mergeProposals.map(p => {
+        const survivor = codeById(p.survivor_id);
+        const absorbed = p.absorbed_ids.map(codeById).filter(Boolean);
+        const nEvidence = (survivor ? survivor.evidence.length : 0) +
+          absorbed.reduce((n, a) => n + a.evidence.length, 0);
+        return `<div class="proposal-card" data-mpid="${p.id}">
+          <div class="proposal-card__head">
+            <span class="proposal-card__survivor">${survivor ? esc(label(survivor)) : esc(p.survivor_id)}</span>
+            ${p.merged_label ? `<span class="hint">→ renamed "${esc(p.merged_label)}"</span>` : ''}
+            <span class="hint">· ${nEvidence} evidence combined</span>
+          </div>
+          <div class="proposal-card__absorbed">absorbs: ${absorbed.map(a => esc(label(a))).join(', ') || esc(p.absorbed_ids.join(', '))}</div>
+          ${p.rationale ? `<p class="proposal-card__why">${esc(p.rationale)}</p>` : ''}
+          ${isViewer() ? '' : `<div class="proposal-card__actions">
+            <button class="btn-quiet" data-dismiss="${p.id}">Dismiss</button>
+            <button class="primary" data-accept="${p.id}">Merge</button>
+          </div>`}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  function wireProposalsQueue(c) {
+    c.querySelectorAll('[data-accept]').forEach(b =>
+      b.addEventListener('click', () => acceptProposal(b.dataset.accept)));
+    c.querySelectorAll('[data-dismiss]').forEach(b =>
+      b.addEventListener('click', () => dismissProposalAction(b.dataset.dismiss)));
   }
 
   function openConsolidateSheet(nCodes) {
     const root = $('sheet-root');
     const has = (S.families?.families || []).length > 0;
-    const nSrc = new Set(S.codes.filter(c => c.status !== 'rejected').map(c => c.origin_doc_id)).size;
+    const nSrc = new Set(S.codes.filter(c => c.status === 'active').map(c => c.origin_doc_id)).size;
     const callsCopy = nSrc > 1
       ? `${nSrc + 1} model calls — each source's codes are grouped first, then aggregated into 8–15 project families.`
       : `One model call groups ${nCodes} active codes into 8–15 families — the compact view of the codebook, with every code and its evidence kept underneath.`;
@@ -1281,6 +1359,107 @@
     $('cs-go').addEventListener('click', async () => {
       close();
       try { const { job_id } = await API.consolidate(S.pid); watchJob(job_id, 'consolidate'); }
+      catch (e) { toast(String(e.message || e), true); }
+    });
+  }
+
+  // ---- P8a: "Merge into…" picker — search-filtered list of candidate survivor codes -------------
+  function openMergeIntoSheet(cid) {
+    const src = codeById(cid);
+    if (!src) return;
+    const root = $('sheet-root');
+    const candidates = () => S.codes.filter(c =>
+      c.id !== cid && c.status === 'active' &&
+      label(c).toLowerCase().includes(($('mi-q')?.value || '').toLowerCase()));
+    const renderList = () => {
+      const list = candidates();
+      const el = $('mi-list');
+      if (!el) return;
+      el.innerHTML = list.length ? list.map(c => `
+        <button class="export-item" data-pick="${c.id}">
+          <span><strong>${esc(label(c))}</strong></span>
+          <span class="hint">${esc(c.coder)} · ${c.evidence.length} evidence</span>
+        </button>`).join('') : '<p class="empty">No matching codes.</p>';
+      el.querySelectorAll('[data-pick]').forEach(b =>
+        b.addEventListener('click', async () => {
+          close();
+          await reviseCode(cid, 'merge', b.dataset.pick);
+          toast(`Merged into "${label(codeById(b.dataset.pick) || {})}"`);
+        }));
+    };
+    root.innerHTML = `
+      <div class="sheet-wrap" id="sheet-bg">
+        <div class="sheet" style="width:420px">
+          <h2>Merge "${esc(label(src))}" into…</h2>
+          <p class="hint" style="margin-bottom:10px">Its evidence folds into the code you pick; this code becomes hidden and reversible via Restore.</p>
+          <input id="mi-q" type="text" placeholder="Search codes…" autocomplete="off">
+          <div id="mi-list" style="margin-top:10px;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+          <div class="sheet__foot"><button class="btn-quiet" id="mi-cancel">Cancel</button></div>
+        </div>
+      </div>`;
+    const close = () => { root.innerHTML = ''; };
+    $('mi-cancel').addEventListener('click', close);
+    $('sheet-bg').addEventListener('click', e => { if (e.target.id === 'sheet-bg') close(); });
+    $('mi-q').addEventListener('input', renderList);
+    $('mi-q').focus();
+    renderList();
+  }
+
+  // ---- P8a: family picker sheet (inspector "Change family…") -------------------------------------
+  function openFamilyPickerSheet(cid) {
+    const root = $('sheet-root');
+    const fams = S.families?.families || [];
+    root.innerHTML = `
+      <div class="sheet-wrap" id="sheet-bg">
+        <div class="sheet" style="width:380px">
+          <h2>Move to family</h2>
+          <div style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto">
+            <button class="export-item" data-pick-fam="__none__"><span>No family</span></button>
+            ${fams.map(f => `
+              <button class="export-item" data-pick-fam="${f.id}">
+                <span><span class="lens-dot" style="background:${famColor(f.hue)}"></span> ${esc(f.label)}</span>
+                <span class="hint">${f.n_codes} codes</span>
+              </button>`).join('')}
+          </div>
+          <div class="sheet__foot"><button class="btn-quiet" id="fp-cancel">Cancel</button></div>
+        </div>
+      </div>`;
+    const close = () => { root.innerHTML = ''; };
+    $('fp-cancel').addEventListener('click', close);
+    $('sheet-bg').addEventListener('click', e => { if (e.target.id === 'sheet-bg') close(); });
+    root.querySelectorAll('[data-pick-fam]').forEach(b =>
+      b.addEventListener('click', async () => {
+        close();
+        await reassignFamily(cid, b.dataset.pickFam === '__none__' ? null : b.dataset.pickFam);
+      }));
+  }
+
+  // ---- P8a: compress confirm sheet ---------------------------------------------------------------
+  function openCompressSheet() {
+    const root = $('sheet-root');
+    const fams = S.families?.families || [];
+    const nBatches = fams.filter(f => f.n_codes >= 4).length + 1;
+    root.innerHTML = `
+      <div class="sheet-wrap" id="sheet-bg">
+        <div class="sheet">
+          <h2>Compress the codebook</h2>
+          <p class="hint" style="font-size:12px;line-height:1.5;margin:0 0 6px">
+            ~${nBatches} model call${nBatches === 1 ? '' : 's'} — one per family — propose merges of
+            same-claim codes into one. Nothing is merged without your approval: results land in a
+            review queue with Merge/Dismiss on each proposal.
+          </p>
+          <div class="sheet__foot">
+            <button class="btn-quiet" id="cx-cancel">Cancel</button>
+            <button class="primary" id="cx-go">Scan for redundancy</button>
+          </div>
+        </div>
+      </div>`;
+    const close = () => { root.innerHTML = ''; };
+    $('cx-cancel').addEventListener('click', close);
+    $('sheet-bg').addEventListener('click', e => { if (e.target.id === 'sheet-bg') close(); });
+    $('cx-go').addEventListener('click', async () => {
+      close();
+      try { const { job_id } = await API.compress(S.pid); watchJob(job_id, 'compress'); }
       catch (e) { toast(String(e.message || e), true); }
     });
   }
@@ -1511,10 +1690,10 @@
     const docs = S.detail.documents;
     const lenses = lensList();
     const byLens = {};
-    for (const l of lenses) byLens[l] = S.codes.filter(x => x.coder === l && x.status !== 'rejected').length;
+    for (const l of lenses) byLens[l] = S.codes.filter(x => x.coder === l && x.status === 'active').length;
     const codedSentPerDoc = {};
     for (const code of S.codes) {
-      if (code.status === 'rejected') continue;
+      if (code.status !== 'active') continue;
       for (const ev of code.evidence) {
         const [dd, sid] = ev.split('#');
         (codedSentPerDoc[dd] ||= new Set()).add(sid);
@@ -1697,7 +1876,7 @@
             <div class="lens-name"><span class="lens-dot" style="background:${lensColor(l)}"></span>${esc(l)}</div>
             ${byLens[l].map(c => `
               <button class="code-item" data-cid="${c.id}">
-                <div class="code-item__label ${c.status === 'rejected' ? 'is-rejected' : ''}">${esc(label(c))}</div>
+                <div class="code-item__label ${c.status !== 'active' ? 'is-rejected' : ''}">${esc(label(c))}</div>
                 <div class="code-item__type">${c.code_type} · ${c.evidence.length} sentence${c.evidence.length > 1 ? 's' : ''}</div>
               </button>`).join('')}`).join('')
           : '<p class="empty">No codes on this sentence.</p>'}
@@ -1715,6 +1894,8 @@
       const c = codeById(id);
       if (!c) { closeInspector(); return; }
       const rejected = c.status === 'rejected';
+      const merged = c.status === 'merged';
+      const survivor = merged ? codeById(c.merged_into) : null;
       const evDocs = c.evidence.map(e => e.split('#')[0]);
       box.innerHTML = `
         <div class="insp-head"><span class="sid">${esc(c.id)}</span><h2>Code</h2>
@@ -1726,17 +1907,26 @@
               <button class="btn-quiet" id="rn-save">Save</button>
             </div>` : `
             <div class="insp-title-row">
-              <h1 class="insp-title ${rejected ? 'is-rejected' : ''}">${esc(label(c))}</h1>
+              <h1 class="insp-title ${rejected || merged ? 'is-rejected' : ''}">${esc(label(c))}</h1>
             </div>`}
           ${c.researcher_label ? `<p class="orig-label">machine label: ${esc(c.label)}</p>` : ''}
           <p class="code-item__type" style="margin-bottom:8px">${c.code_type} · ${esc(c.coder)} · ${c.evidence.length} sentence${c.evidence.length > 1 ? 's' : ''}${rejected ? ' · <b style="color:var(--red)">rejected</b>' : ''}</p>
-          ${c.family_id && famById(c.family_id) ? `<p style="margin:0 0 8px"><button class="chip" data-fam-chip="${c.family_id}" style="cursor:pointer"><span class="lens-dot" style="background:${famColor(famById(c.family_id).hue)}"></span>${esc(famById(c.family_id).label)}</button></p>` : ''}
+          ${merged ? `<p class="code-item__type" style="margin-bottom:8px">merged into
+              <button class="chip" data-merged-into="${c.merged_into}" style="cursor:pointer">${survivor ? esc(label(survivor)) : esc(c.merged_into)}</button></p>` : ''}
+          ${!merged && c.family_id && famById(c.family_id) ? `<p style="margin:0 0 8px">
+              <button class="chip" data-fam-chip="${c.family_id}" style="cursor:pointer">
+                <span class="lens-dot" style="background:${famColor(famById(c.family_id).hue)}"></span>${esc(famById(c.family_id).label)}
+              </button>
+              ${isViewer() ? '' : '<button class="btn-bare" id="act-refile" title="Change family">⋯</button>'}</p>`
+            : (!merged && !isViewer() ? `<p style="margin:0 0 8px"><button class="btn-bare" id="act-refile">Assign a family…</button></p>` : '')}
           <p class="insp-def">${esc(c.definition)}</p>
         </div>
         ${isViewer() ? '' : `
         <div class="insp-sec insp-actions">
+          ${merged ? `<button class="btn-quiet" id="act-reject">Restore</button>` : `
           ${S.renaming ? '' : `<button class="btn-quiet" id="act-rename">Rename</button>`}
-          <button class="btn-quiet" id="act-reject">${rejected ? 'Restore' : 'Reject'}</button>
+          <button class="btn-quiet" id="act-merge">Merge into…</button>
+          <button class="btn-quiet" id="act-reject">${rejected ? 'Restore' : 'Reject'}</button>`}
         </div>`}
         <div class="insp-sec">
           <h3>Evidence</h3>
@@ -1745,16 +1935,19 @@
         ${c.model_rationale ? `<div class="insp-sec"><h3>Model rationale</h3><p class="rationale">${esc(c.model_rationale)}</p></div>` : ''}
         ${memoBlock('code', c.id, { label: label(c) })}
         ${notesBlock('code', c.id, c.origin_doc_id, { label: label(c) },
-          'Notes ride along when this source is re-coded. Rename/reject are also passed on.')}`;
+          'Notes ride along when this source is re-coded. Rename/reject/merge are also passed on.')}`;
       $('insp-x').addEventListener('click', closeInspector);
       box.querySelector('[data-fam-chip]')?.addEventListener('click', () => select('family', c.family_id));
+      box.querySelector('[data-merged-into]')?.addEventListener('click', () => openCodeView(c.merged_into));
+      $('act-refile')?.addEventListener('click', () => openFamilyPickerSheet(c.id));
       $('act-rename')?.addEventListener('click', () => { S.renaming = true; renderInspector(); });
       $('rn-save')?.addEventListener('click', () => {
         const v = $('rn-input').value.trim();
         if (v && v !== c.label) reviseCode(c.id, 'rename', v); else { S.renaming = false; renderInspector(); }
       });
       $('rn-input')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('rn-save').click(); });
-      $('act-reject')?.addEventListener('click', () => reviseCode(c.id, rejected ? 'restore' : 'reject'));
+      $('act-merge')?.addEventListener('click', () => openMergeIntoSheet(c.id));
+      $('act-reject')?.addEventListener('click', () => reviseCode(c.id, (rejected || merged) ? 'restore' : 'reject'));
       wireMemo(box, 'code', c.id, { label: label(c) });
       wireNotes(box, 'code', c.id, c.origin_doc_id, { label: label(c) });
       await ensureDocsLoaded(evDocs);

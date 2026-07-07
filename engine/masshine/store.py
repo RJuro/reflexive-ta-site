@@ -144,6 +144,12 @@ def persist_panel_codes(conn: sqlite3.Connection, run_id: str, order: list[str],
 
 def codes_payload(conn: sqlite3.Connection, coder: str | None = None,
                   doc_id: str | None = None) -> list[dict]:
+    """P8a: a merged code gets status 'merged' + merged_into (its researcher_label/rename is
+    still whatever it was — a merge does not imply a rename). The SURVIVOR's evidence becomes
+    the order-preserving de-duplicated union of its own evidence plus every code merged into it
+    (following chains — see revisions_map). This reshapes the researcher-facing codebook only;
+    friction/theming read the raw `code` table directly and are untouched (documented at the top
+    of the merge sections below)."""
     q = ("SELECT id, coder, label, definition, code_type, evidence_ids, model_rationale, "
          "origin_doc_id, family_id FROM code")
     where, args = [], []
@@ -155,13 +161,51 @@ def codes_payload(conn: sqlite3.Connection, coder: str | None = None,
         q += " WHERE " + " AND ".join(where)
     q += " ORDER BY id"
     revs = revisions_map(conn)
+    rows = {r[0]: r for r in conn.execute(q, args)}
     out = []
-    for r in conn.execute(q, args):
+    for cid, r in rows.items():
         c = _code_row(r)
         rev = revs.get(c["id"], {})
-        c["status"] = "rejected" if rev.get("rejected") else "active"
+        merged_into = rev.get("merged_into")
+        if merged_into:
+            c["status"] = "merged"
+        else:
+            c["status"] = "rejected" if rev.get("rejected") else "active"
+        c["merged_into"] = merged_into
+        # a merge does not itself rename the absorbed code — new_label still reflects any actual
+        # rename revision, independent of whether this code also got merged into a survivor.
         c["researcher_label"] = rev.get("new_label")
         out.append(c)
+    # survivor evidence union: gather every code whose merge chain resolves to this survivor,
+    # in ascending code-id order (deterministic and stable), then append their evidence in that
+    # order, de-duplicating while preserving first-seen order.
+    absorbed_by_survivor: dict[str, list[str]] = {}
+    for cid, rev in revs.items():
+        if rev.get("merged_into"):
+            absorbed_by_survivor.setdefault(rev["merged_into"], []).append(cid)
+    if absorbed_by_survivor:
+        # need the evidence of absorbed codes even if they were filtered out of `rows` by
+        # coder/doc_id — evidence union should be complete regardless of the query's own filter.
+        all_evidence: dict[str, list[str]] = {}
+        for cid, r in rows.items():
+            all_evidence[cid] = json.loads(r[5])
+        missing = [cid for absorbed in absorbed_by_survivor.values() for cid in absorbed
+                   if cid not in all_evidence]
+        if missing:
+            for r in conn.execute(
+                    f"SELECT id, evidence_ids FROM code WHERE id IN "
+                    f"({','.join('?' * len(missing))})", missing):
+                all_evidence[r[0]] = json.loads(r[1])
+        for c in out:
+            if c["id"] in absorbed_by_survivor:
+                seen = list(c["evidence"])
+                seen_set = set(seen)
+                for absorbed_id in sorted(absorbed_by_survivor[c["id"]]):
+                    for ev in all_evidence.get(absorbed_id, []):
+                        if ev not in seen_set:
+                            seen.append(ev)
+                            seen_set.add(ev)
+                c["evidence"] = seen
     return out
 
 
@@ -228,10 +272,12 @@ def persist_families(conn: sqlite3.Connection, families: list[dict]) -> None:
 
 
 def families_payload(conn: sqlite3.Connection) -> list[dict]:
-    """Families ordered by ring position, each with n_codes = count of non-rejected members
-    and n_sources = count of distinct origin docs among those active members (derived, no
-    schema change — >1 signals a family that was aggregated across sources). `rationale`
-    falls back to "" for families persisted before schema v8."""
+    """Families ordered by ring position, each with n_codes = count of non-rejected,
+    non-merged members and n_sources = count of distinct origin docs among those active members
+    (derived, no schema change — >1 signals a family that was aggregated across sources).
+    `rationale` falls back to "" for families persisted before schema v8. P8a: a merged code is
+    no longer part of the family's visible count (like rejected) — it lives on only as evidence
+    folded into its survivor."""
     revs = revisions_map(conn)
     out = []
     for r in conn.execute(
@@ -240,7 +286,8 @@ def families_payload(conn: sqlite3.Connection) -> list[dict]:
         fid = r[0]
         rows = conn.execute(
             "SELECT id, origin_doc_id FROM code WHERE family_id=?", (fid,)).fetchall()
-        active = [(cid, doc_id) for cid, doc_id in rows if not revs.get(cid, {}).get("rejected")]
+        active = [(cid, doc_id) for cid, doc_id in rows
+                  if not revs.get(cid, {}).get("rejected") and not revs.get(cid, {}).get("merged_into")]
         n_codes = len(active)
         n_sources = len({doc_id for _, doc_id in active})
         out.append({"id": fid, "label": r[1], "definition": r[2], "hue": r[3], "position": r[4],
@@ -257,6 +304,46 @@ def set_families_stale(conn: sqlite3.Connection, flag: bool) -> None:
 def families_stale(conn: sqlite3.Connection) -> bool:
     row = conn.execute("SELECT value FROM meta WHERE key='families_stale'").fetchone()
     return bool(row and row[0])
+
+
+# ---- merge proposals (P8a: the compress pass's review queue) -------------------------------------
+# The compress job proposes within-family merge groups; nothing is applied automatically — each
+# proposal sits PENDING until a researcher accepts or dismisses it (api.py's accept/dismiss
+# endpoints). A new compress run replaces the pending set wholesale (accepted/dismissed history
+# is kept for audit, never deleted here).
+
+def persist_merge_proposals(conn: sqlite3.Connection, proposals: list[dict]) -> None:
+    """Replace all PENDING proposals with a fresh batch from a compress run. Accepted/dismissed
+    rows from earlier runs are left alone — they're the audit trail, not scratch space."""
+    conn.execute("DELETE FROM merge_proposal WHERE status='pending'")
+    now = _now()
+    for p in proposals:
+        pid = "MP" + uuid.uuid4().hex[:8]
+        conn.execute(
+            "INSERT INTO merge_proposal (id, family_id, survivor_id, absorbed_ids, merged_label, "
+            "rationale, status, created_at) VALUES (?,?,?,?,?,?, 'pending', ?)",
+            (pid, p.get("family_id"), p["survivor_id"], json.dumps(p["absorbed_ids"]),
+             p.get("merged_label") or None, p.get("rationale", ""), now))
+    conn.commit()
+
+
+def merge_proposals_payload(conn: sqlite3.Connection, status: str | None = None) -> list[dict]:
+    q = ("SELECT id, family_id, survivor_id, absorbed_ids, merged_label, rationale, status, "
+         "created_at FROM merge_proposal")
+    args: list = []
+    if status:
+        q += " WHERE status=?"; args.append(status)
+    q += " ORDER BY created_at, id"
+    return [{"id": r[0], "family_id": r[1], "survivor_id": r[2],
+             "absorbed_ids": json.loads(r[3] or "[]"), "merged_label": r[4],
+             "rationale": r[5] or "", "status": r[6], "created_at": r[7]}
+            for r in conn.execute(q, args)]
+
+
+def set_proposal_status(conn: sqlite3.Connection, pid_: str, status: str) -> bool:
+    cur = conn.execute("UPDATE merge_proposal SET status=? WHERE id=?", (status, pid_))
+    conn.commit()
+    return cur.rowcount > 0
 
 
 # ---- themes -------------------------------------------------------------------------------------
@@ -442,19 +529,43 @@ def add_revision(conn: sqlite3.Connection, code_id: str, action: str,
     return {"code_id": code_id, "action": action, "new_label": new_label, "context": ctx}
 
 
-def revisions_map(conn: sqlite3.Connection) -> dict:
+def revisions_map(conn: sqlite3.Connection, resolve_chains: bool = True) -> dict:
     """Fold the revision log into the current per-code state: latest rename wins; rejected is
-    true unless a later 'restore' lifts it."""
+    true unless a later 'restore' lifts it. P8a: 'merge' sets merged_into to the SURVIVOR code id
+    (stored in the `new_label` column — reused, documented in db.py's revision table comment); a
+    later 'restore' un-merges by clearing BOTH rejected and merged_into.
+
+    A merge chain (A merged into B, B later merged into C) is followed at read time — capped at
+    depth 10 against pathological cycles — so evidence/guidance always lands on the FINAL
+    survivor rather than an intermediate one. `resolve_chains=False` returns the raw one-hop
+    state (used internally by cycle validation, which must see the unresolved graph)."""
     out: dict[str, dict] = {}
     for code_id, action, new_label in conn.execute(
             "SELECT code_id, action, new_label FROM revision ORDER BY id"):
-        st = out.setdefault(code_id, {"rejected": False, "new_label": None})
+        st = out.setdefault(code_id, {"rejected": False, "new_label": None, "merged_into": None})
         if action == "rename":
             st["new_label"] = new_label
         elif action == "reject":
             st["rejected"] = True
         elif action == "restore":
             st["rejected"] = False
+            st["merged_into"] = None
+        elif action == "merge":
+            st["merged_into"] = new_label
+    if resolve_chains:
+        for code_id, st in out.items():
+            target = st.get("merged_into")
+            if not target:
+                continue
+            seen = {code_id}
+            depth = 0
+            while target in out and out[target].get("merged_into") and depth < 10:
+                if target in seen:  # defensive: a cycle slipped through API validation
+                    break
+                seen.add(target)
+                target = out[target]["merged_into"]
+                depth += 1
+            st["merged_into"] = target
     return out
 
 
@@ -502,7 +613,13 @@ def compile_guidance(conn: sqlite3.Connection, doc_id: str | None = None) -> str
             label, origin = labels.get(code_id, (ctxs.get(code_id, {}).get("label", code_id), None))
             if doc_id and origin is not None and origin != doc_id:
                 continue
-            if st["rejected"]:
+            if st.get("merged_into"):
+                survivor_label, _ = labels.get(
+                    st["merged_into"],
+                    (ctxs.get(st["merged_into"], {}).get("label", st["merged_into"]), None))
+                lines.append(f'- The researcher MERGED "{label}" into "{survivor_label}" — '
+                             f"treat them as one concept.")
+            elif st["rejected"]:
                 lines.append(f'- The researcher REJECTED the code "{label}" — do not '
                              f"re-propose this interpretation.")
             elif st["new_label"]:
@@ -696,8 +813,9 @@ def report_md(conn: sqlite3.Connection, proj: dict, mode: str) -> str:
 
     out.append("## Codebook appendix")
     out.append("")
-    active = [c for c in codes if c["status"] != "rejected"]
+    active = [c for c in codes if c["status"] == "active"]
     rejected = [c for c in codes if c["status"] == "rejected"]
+    merged = [c for c in codes if c["status"] == "merged"]
     by_lens: dict[str, list] = {}
     for c in active:
         by_lens.setdefault(c["coder"], []).append(c)
@@ -721,6 +839,16 @@ def report_md(conn: sqlite3.Connection, proj: dict, mode: str) -> str:
         for c in rejected:
             lbl = c.get("researcher_label") or c["label"]
             out.append(f"- ~~{lbl}~~ ({c['coder']} · {c['code_type']})")
+        out.append("")
+    if merged:
+        out.append("### Merged codes")
+        out.append("")
+        for c in merged:
+            lbl = c.get("researcher_label") or c["label"]
+            survivor = by_id.get(c["merged_into"])
+            survivor_lbl = (survivor.get("researcher_label") or survivor["label"]) if survivor \
+                else c["merged_into"]
+            out.append(f"- {lbl} → merged into **{survivor_lbl}**")
         out.append("")
 
     notes = list_comments(conn, status="open")
