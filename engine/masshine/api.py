@@ -155,6 +155,13 @@ class MemoReq(BaseModel):
     author: str | None = None       # display name (identity-lite, P3.7) — no accounts
 
 
+class ReviseThemeReq(BaseModel):
+    action: str                     # 'relabel' | 'reclaim' | 'merge' | 'demote' | 'restore'
+    mode: str = "standard"          # 'standard' | 'panel' — themes are scoped per mode
+    value: str | None = None        # 'relabel': new label; 'reclaim': new claim;
+                                     # 'merge': the TARGET theme id
+
+
 def _require_project(pid: str) -> dict:
     p = projects.get_project(pid)
     if not p:
@@ -203,13 +210,15 @@ def get_project(pid: str):
         families_stale = store.families_stale(conn)
         n_pending_proposals = conn.execute(
             "SELECT COUNT(*) FROM merge_proposal WHERE status='pending'").fetchone()[0]
+        n_theme_revisions = store.n_theme_revisions(conn, mode)
     finally:
         conn.close()
     return {"project": proj, "documents": docs, "code_counts": counts, "mode": mode,
             "open_comments": open_comments, "n_themes": n_themes, "themes_stale": stale,
             "n_themed_docs": n_themed_docs, "active_jobs": projects.active_jobs(pid),
             "n_families": n_families, "families_stale": families_stale,
-            "n_pending_proposals": n_pending_proposals}
+            "n_pending_proposals": n_pending_proposals,
+            "n_theme_revisions": n_theme_revisions}
 
 
 @app.patch("/projects/{pid}")
@@ -664,6 +673,81 @@ def revise_code(pid: str, code_id: str, req: ReviseReq):
             return store.add_revision(conn, code_id, "merge", survivor_id)
         return store.add_revision(conn, code_id, req.action,
                                   (req.new_label or "").strip() or None)
+    finally:
+        conn.close()
+
+
+# ---- theme authority (P8b) ------------------------------------------------------------------
+
+def _theme_cycle_check(conn, mode: str, theme_id: str, target_id: str) -> bool:
+    """True if merging theme_id -> target_id would create a cycle: target_id's own merge chain
+    (unresolved, one hop at a time) eventually leads back to theme_id. Mirrors _cycle_check for
+    codes."""
+    raw = store.theme_revisions_map(conn, mode, resolve_chains=False)
+    seen = set()
+    cur = target_id
+    depth = 0
+    while cur and depth < 10:
+        if cur == theme_id:
+            return True
+        if cur in seen:
+            break
+        seen.add(cur)
+        cur = raw.get(cur, {}).get("merged_into")
+        depth += 1
+    return False
+
+
+THEME_REVISE_ACTIONS = {"relabel", "reclaim", "merge", "demote", "restore"}
+
+
+@app.post("/projects/{pid}/themes/{theme_id}/revise")
+def revise_theme(pid: str, theme_id: str, req: ReviseThemeReq):
+    """Researcher correction: relabel / reclaim / merge / demote / restore a theme. Applied at
+    read time (themes_payload) and — for merge/demote/relabel — compiled into the theme guidance
+    a rebuild-with-feedback sees (store.compile_guidance's theme branch), so the researcher's
+    judgment survives a re-run.
+
+    'merge' folds theme_id into the theme named by `value` (the union is computed by
+    themes_payload, not stored). 'demote' also writes a memo preserving the theme's content
+    (store.demote_theme) — a demoted theme's substance is not silently lost. 'restore' clears
+    both merged_into and demoted for this theme."""
+    if req.action not in THEME_REVISE_ACTIONS:
+        raise HTTPException(400, f"action must be one of {sorted(THEME_REVISE_ACTIONS)}")
+    if req.mode not in ("standard", "panel"):
+        raise HTTPException(400, "mode must be 'standard' or 'panel'")
+    if req.action == "relabel" and not (req.value or "").strip():
+        raise HTTPException(400, "relabel needs a value (the new label)")
+    if req.action == "reclaim" and not (req.value or "").strip():
+        raise HTTPException(400, "reclaim needs a value (the new claim)")
+    _require_project(pid)
+    conn = _conn(pid)
+    try:
+        if not conn.execute(
+                "SELECT 1 FROM theme_v2 WHERE mode=? AND id=?", (req.mode, theme_id)).fetchone():
+            raise HTTPException(404, f"no theme {theme_id}")
+        if req.action == "merge":
+            target_id = (req.value or "").strip()
+            if not target_id:
+                raise HTTPException(400, "merge needs value (the target theme id)")
+            if target_id == theme_id:
+                raise HTTPException(400, "a theme cannot be merged into itself")
+            if not conn.execute("SELECT 1 FROM theme_v2 WHERE mode=? AND id=?",
+                                (req.mode, target_id)).fetchone():
+                raise HTTPException(400, f"no theme {target_id}")
+            revs = store.theme_revisions_map(conn, req.mode)
+            target_st = revs.get(target_id, {})
+            if target_st.get("merged_into"):
+                raise HTTPException(400, "cannot merge into a theme that is itself merged")
+            if target_st.get("demoted"):
+                raise HTTPException(400, "cannot merge into a demoted theme")
+            if _theme_cycle_check(conn, req.mode, theme_id, target_id):
+                raise HTTPException(400, "that merge would create a cycle")
+            return store.add_theme_revision(conn, req.mode, theme_id, "merge", target_id)
+        if req.action == "demote":
+            return store.demote_theme(conn, req.mode, theme_id)
+        return store.add_theme_revision(conn, req.mode, theme_id, req.action,
+                                        (req.value or "").strip() or None)
     finally:
         conn.close()
 

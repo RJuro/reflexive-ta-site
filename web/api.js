@@ -56,6 +56,9 @@ window.MASSHINE_API = (() => {
     setCodeFamily: (pid, code_id, family_id) =>
       j(`/projects/${pid}/codes/${code_id}/family`, json('PATCH', { family_id })),
 
+    reviseTheme: (pid, theme_id, action, mode, value) =>
+      j(`/projects/${pid}/themes/${theme_id}/revise`, json('POST', { action, mode, value })),
+
     consolidate: pid => j(`/projects/${pid}/consolidate`, { method: 'POST' }),
     families: pid => j(`/projects/${pid}/families`),
 

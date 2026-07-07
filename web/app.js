@@ -22,6 +22,9 @@
     proposalsOpen: false,       // codebook: is the review-queue section expanded
     notesFilter: 'open',        // notes view (P3.9): 'all' | 'open' | 'addressed' | 'dismissed'
     renaming: false,
+    renamingTheme: false,       // P8b: inline rename input open in the theme inspector
+    reclaimingTheme: false,     // P8b: inline claim-edit textarea open in the theme inspector
+    themesHidden: false,        // P8b: themes view "hidden" toggle — show merged/demoted themes
     showArchived: false,        // home view: include archived projects
     renamingDoc: null,          // doc_id currently showing an inline rename input (sidebar)
     role: 'editor',             // 'editor' | 'viewer' (P3.8) — resolved from GET /me at init
@@ -59,6 +62,9 @@
     return seen.length ? order.filter(l => seen.includes(l)) : [];
   }
   const label = c => c.researcher_label || c.label;
+  // P8b: researcher_label/researcher_claim win on a theme, same philosophy as codes' label().
+  const themeLabel = t => t.researcher_label || t.label;
+  const themeClaim = t => t.researcher_claim || t.central_concept;
   const famColor = (hue, a) => a != null ? `oklch(60% 0.08 ${hue} / ${a})` : `oklch(60% 0.08 ${hue})`;
   const famById = fid => (S.families?.families || []).find(f => f.id === fid);
   const KINDS = { transcript: 'Interview transcript', fieldnotes: 'Field notes', focusgroup: 'Focus group', document: 'Document', other: 'Other source' };
@@ -293,6 +299,13 @@
   async function refreshMergeProposals() {
     S.mergeProposals = await API.mergeProposals(S.pid, 'pending').catch(() => S.mergeProposals);
   }
+  async function refreshThemes() { S.themes = await API.themes(S.pid, S.mode).catch(() => S.themes); }
+  // n_theme_revisions rides on GET /projects/{pid} (get_project) — refetch just that count so a
+  // theme edit updates the rebuild-warning trigger without a full loadProject() round-trip.
+  async function refreshThemeRevisionCount() {
+    try { S.detail.n_theme_revisions = (await API.project(S.pid)).n_theme_revisions; }
+    catch (e) { /* keep stale count rather than fail the action */ }
+  }
 
   // ---- jobs ------------------------------------------------------------------------------------
   const JOB_LABEL = { ingest: 'Reading source', code_standard: 'Coding', code_panel: 'Coding · panel', recode: 'Re-coding with feedback', theme: 'Building themes', consolidate: 'Consolidating codebook', compress: 'Scanning for redundant codes' };
@@ -362,7 +375,34 @@
     catch (e) { toast(String(e.message || e), true); }
   }
   const runCoding = () => act(() => API.runCoding(S.pid, S.mode), `code_${S.mode}`);
-  const runThemes = fb => act(() => API.runThemes(S.pid, S.mode, fb), 'theme');
+  const _runThemesNow = fb => act(() => API.runThemes(S.pid, S.mode, fb), 'theme');
+  // P8b (5d): a FULL rebuild replaces the theme catalogue wholesale and orphans any direct theme
+  // edits (relabel/reclaim/merge/demote — extend-themes is exempt, since it reuses stable ids and
+  // never wipes theme_v2). Warn before a rebuild only, and only when edits exist.
+  function runThemes(fb, isRebuild) {
+    const n = S.detail?.n_theme_revisions || 0;
+    if (isRebuild && n > 0) { openRebuildThemesWarningSheet(fb); return; }
+    _runThemesNow(fb);
+  }
+  function openRebuildThemesWarningSheet(fb) {
+    const root = $('sheet-root');
+    const n = S.detail?.n_theme_revisions || 0;
+    root.innerHTML = `
+      <div class="sheet-wrap" id="sheet-bg">
+        <div class="sheet">
+          <h2>Rebuild the theme catalogue?</h2>
+          <p class="hint" style="margin-bottom:10px">You have ${n} direct theme edit${n === 1 ? '' : 's'}; a full rebuild replaces the catalogue and they will no longer apply. Your notes and memos are kept.</p>
+          <div class="sheet__foot">
+            <button class="btn-quiet" id="rw-cancel">Cancel</button>
+            <button class="btn-quiet btn-danger" id="rw-go">Rebuild anyway</button>
+          </div>
+        </div>
+      </div>`;
+    const close = () => { root.innerHTML = ''; };
+    $('rw-cancel').addEventListener('click', close);
+    $('sheet-bg').addEventListener('click', e => { if (e.target.id === 'sheet-bg') close(); });
+    $('rw-go').addEventListener('click', () => { close(); _runThemesNow(fb); });
+  }
   const runRecode = docId => act(() => API.recode(S.pid, docId, S.mode), 'recode');
 
   async function addNote(target_type, target_id, docId, body, context) {
@@ -393,6 +433,17 @@
       S.renaming = false;
       render();
     } catch (e) { toast(String(e.message || e), true); }
+  }
+  // P8b: theme authority — relabel/reclaim/merge/demote/restore, mirroring reviseCode's shape.
+  async function reviseTheme(tid, action, value) {
+    try {
+      await API.reviseTheme(S.pid, tid, action, S.mode, value);
+      await Promise.all([refreshThemes(), refreshThemeRevisionCount()]);
+      S.renamingTheme = false;
+      S.reclaimingTheme = false;
+      render();
+      return true;
+    } catch (e) { toast(String(e.message || e), true); return false; }
   }
   async function reassignFamily(cid, familyId) {
     try {
@@ -727,12 +778,12 @@
       const n = nNewThemeSources();
       const fb = openThemeNotes() > 0;
       if (n > 0 && !fb) {
-        return { label: `Extend themes · ${n} new source${n > 1 ? 's' : ''}`, fn: () => runThemes(false),
+        return { label: `Extend themes · ${n} new source${n > 1 ? 's' : ''}`, fn: () => runThemes(false, false),
                  hint: 'already-themed sources replay free — only new sources call the model' };
       }
-      return { label: fb ? 'Rebuild themes with feedback' : 'Rebuild themes', fn: () => runThemes(fb) };
+      return { label: fb ? 'Rebuild themes with feedback' : 'Rebuild themes', fn: () => runThemes(fb, true) };
     }
-    if (openThemeNotes() > 0) return { label: `Rebuild themes with feedback · ${openThemeNotes()}`, fn: () => runThemes(true) };
+    if (openThemeNotes() > 0) return { label: `Rebuild themes with feedback · ${openThemeNotes()}`, fn: () => runThemes(true, true) };
     return null;
   }
 
@@ -1405,6 +1456,76 @@
     renderList();
   }
 
+  // ---- P8b: "Merge into…" picker for themes — same shape as the code version, but lists other
+  // ACTIVE themes by label/claim (not codes). ------------------------------------------------------
+  function openMergeThemeIntoSheet(tid) {
+    const src = (S.themes?.themes || []).find(t => t.id === tid);
+    if (!src) return;
+    const root = $('sheet-root');
+    const candidates = () => (S.themes?.themes || []).filter(t =>
+      t.id !== tid && t.status === 'active' &&
+      (themeLabel(t) + ' ' + themeClaim(t)).toLowerCase().includes(($('mti-q')?.value || '').toLowerCase()));
+    const renderList = () => {
+      const list = candidates();
+      const el = $('mti-list');
+      if (!el) return;
+      el.innerHTML = list.length ? list.map(t => `
+        <button class="export-item" data-pick="${t.id}">
+          <span><strong>${esc(themeLabel(t) || t.id)}</strong></span>
+          <span class="hint">${esc(themeClaim(t)).slice(0, 80)}</span>
+        </button>`).join('') : '<p class="empty">No matching themes.</p>';
+      el.querySelectorAll('[data-pick]').forEach(b =>
+        b.addEventListener('click', async () => {
+          close();
+          const target = (S.themes?.themes || []).find(t => t.id === b.dataset.pick);
+          const ok = await reviseTheme(tid, 'merge', b.dataset.pick);
+          if (ok) toast(`Merged into "${target ? (themeLabel(target) || target.id) : b.dataset.pick}"`);
+        }));
+    };
+    root.innerHTML = `
+      <div class="sheet-wrap" id="sheet-bg">
+        <div class="sheet" style="width:420px">
+          <h2>Merge "${esc(themeLabel(src) || src.id)}" into…</h2>
+          <p class="hint" style="margin-bottom:10px">Its supporting codes, anchors, and tensions fold into the theme you pick; this theme becomes hidden and reversible via Restore.</p>
+          <input id="mti-q" type="text" placeholder="Search themes…" autocomplete="off">
+          <div id="mti-list" style="margin-top:10px;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+          <div class="sheet__foot"><button class="btn-quiet" id="mti-cancel">Cancel</button></div>
+        </div>
+      </div>`;
+    const close = () => { root.innerHTML = ''; };
+    $('mti-cancel').addEventListener('click', close);
+    $('sheet-bg').addEventListener('click', e => { if (e.target.id === 'sheet-bg') close(); });
+    $('mti-q').addEventListener('input', renderList);
+    $('mti-q').focus();
+    renderList();
+  }
+
+  // ---- P8b: "Demote to memo" confirm sheet — explains where the content goes before archiving ----
+  function openDemoteThemeSheet(tid) {
+    const t = (S.themes?.themes || []).find(x => x.id === tid);
+    if (!t) return;
+    const root = $('sheet-root');
+    root.innerHTML = `
+      <div class="sheet-wrap" id="sheet-bg">
+        <div class="sheet">
+          <h2>Demote "${esc(themeLabel(t) || t.id)}" to memo</h2>
+          <p class="hint" style="margin-bottom:10px">This theme leaves the catalogue (hidden, reversible via Restore). Its label, claim, and supporting code ids are written into this theme's memo now, so nothing is lost.</p>
+          <div class="sheet__foot">
+            <button class="btn-quiet" id="dt-cancel">Cancel</button>
+            <button class="btn-quiet btn-danger" id="dt-go">Demote to memo</button>
+          </div>
+        </div>
+      </div>`;
+    const close = () => { root.innerHTML = ''; };
+    $('dt-cancel').addEventListener('click', close);
+    $('sheet-bg').addEventListener('click', e => { if (e.target.id === 'sheet-bg') close(); });
+    $('dt-go').addEventListener('click', async () => {
+      close();
+      const ok = await reviseTheme(tid, 'demote');
+      if (ok) toast('Demoted to memo');
+    });
+  }
+
   // ---- P8a: family picker sheet (inspector "Change family…") -------------------------------------
   function openFamilyPickerSheet(cid) {
     const root = $('sheet-root');
@@ -1465,7 +1586,9 @@
   }
 
   function renderThemes(c) {
-    const th = S.themes?.themes || [];
+    const all = S.themes?.themes || [];
+    const th = S.themesHidden ? all : all.filter(t => t.status === 'active');
+    const nHidden = all.length - all.filter(t => t.status === 'active').length;
     const lenses = lensList();
     const staleN = S.themes?.stale ? nNewThemeSources() : 0;
     const fb = openThemeNotes() > 0;
@@ -1481,6 +1604,9 @@
       ${S.themes?.stale ? `<div class="banner">⟳ ${bannerText}
         <div class="tb-spacer"></div>
         <button class="btn-quiet" id="th-rebuild" ${staleN > 0 && !fb ? `title="already-themed sources replay free — only new sources call the model"` : ''}>${bannerBtnLabel}</button></div>` : ''}
+      ${all.length ? `<div class="filterbar">
+        <label class="check"><input type="checkbox" id="th-hidden" ${S.themesHidden ? 'checked' : ''}> hidden${nHidden ? ` (${nHidden})` : ''}</label>
+      </div>` : ''}
       ${th.length ? th.map(t => {
         const prov = t.paradigm_provenance || {};
         const provChips = lenses.filter(l => prov[l]).map(l =>
@@ -1490,18 +1616,23 @@
         const notes = commentsFor('theme', t.id).filter(n => n.status === 'open').length;
         const famChips = themeFamilies(t);
         const narrow = themeEvidenceIsNarrow(t);
-        return `<article class="theme-card ${S.sel?.type === 'theme' && S.sel.id === t.id ? 'is-active' : ''}" data-tid="${t.id}">
+        const tLabel = themeLabel(t);
+        const tClaim = themeClaim(t);
+        const hiddenCls = t.status !== 'active' ? 'is-rejected' : '';
+        return `<article class="theme-card ${hiddenCls} ${S.sel?.type === 'theme' && S.sel.id === t.id ? 'is-active' : ''}" data-tid="${t.id}">
           <div class="theme-card__meta">
             <span class="chip chip--id">${esc(t.id)}</span>
             <span class="chip">${esc(t.coverage || '')} sources</span>
             <span class="chip">${esc(t.claim_scope || '')}</span>
             ${provChips}
+            ${t.status === 'merged' ? `<span class="chip">merged</span>` : ''}
+            ${t.status === 'demoted' ? `<span class="chip">demoted</span>` : ''}
             ${tensions.length ? `<span class="chip chip--warn">${tensions.length} tension${tensions.length > 1 ? 's' : ''}</span>` : ''}
             ${notes ? `<span class="chip chip--warn">● ${notes} note${notes > 1 ? 's' : ''}</span>` : ''}
             ${narrow ? `<span class="chip chip--warn" title="all evidence sits in a single passage — consider a code or memo instead">narrow evidence</span>` : ''}
           </div>
-          ${t.label ? `<p class="theme-card__label">${esc(t.label)}</p>` : ''}
-          <p class="theme-card__claim ${t.label ? 'theme-card__claim--sub' : ''}">${esc(t.central_concept)}</p>
+          ${tLabel ? `<p class="theme-card__label">${esc(tLabel)}</p>` : ''}
+          <p class="theme-card__claim ${tLabel ? 'theme-card__claim--sub' : ''}">${esc(tClaim)}</p>
           ${(t.subthemes || []).map(st => `<p class="theme-card__sub">${esc(st.claim)}</p>`).join('')}
           ${famChips.length ? `<div class="theme-card__sect">
             ${famChips.map(({ family, n }) => `<button class="chip fam-chip" data-fam-chip="${family.id}"><span class="lens-dot" style="background:${famColor(family.hue)}"></span>${esc(family.label)} ${n}</button>`).join('')}</div>` : ''}
@@ -1511,9 +1642,10 @@
             ${tensions.map(x => `<button class="anchor" data-code="${x.id}">${esc(label(x))}</button>`).join('')}</div>` : ''}
           ${t.falsified_if ? `<div class="theme-card__sect"><h4>Falsified if</h4><p class="falsif">${esc(t.falsified_if)}</p></div>` : ''}
         </article>`;
-      }).join('') : `<p class="empty">No themes yet — ${anyCoded() ? 'build them from the codebook.' : 'run coding first.'}</p>`}
+      }).join('') : `<p class="empty">${all.length ? 'Nothing to show — try the hidden toggle.' : `No themes yet — ${anyCoded() ? 'build them from the codebook.' : 'run coding first.'}`}</p>`}
     </div>`;
-    $('th-rebuild')?.addEventListener('click', () => runThemes(fb));
+    $('th-rebuild')?.addEventListener('click', () => runThemes(fb, !(staleN > 0 && !fb)));
+    $('th-hidden')?.addEventListener('change', e => { S.themesHidden = e.target.checked; renderContent(); });
     c.querySelectorAll('[data-fam-chip]').forEach(b =>
       b.addEventListener('click', e => {
         e.stopPropagation();
@@ -1968,17 +2100,42 @@
     if (type === 'theme') {
       const t = (S.themes?.themes || []).find(x => x.id === id);
       if (!t) { closeInspector(); return; }
+      const merged = t.status === 'merged';
+      const demoted = t.status === 'demoted';
+      const survivor = merged ? (S.themes?.themes || []).find(x => x.id === t.merged_into) : null;
+      const tLabel = themeLabel(t);
+      const tClaim = themeClaim(t);
       box.innerHTML = `
         <div class="insp-head"><span class="sid">${esc(t.id)}</span><h2>Theme</h2>
           <button class="insp-close" id="insp-x">✕</button></div>
-        ${t.label ? `<h1 class="insp-title" style="margin:0 0 6px">${esc(t.label)}</h1>` : ''}
-        <blockquote class="insp-quote">${esc(t.central_concept)}</blockquote>
+        ${S.renamingTheme ? `
+          <div class="rename-box">
+            <input id="tn-input" type="text" value="${esc(tLabel)}">
+            <button class="btn-quiet" id="tn-save">Save</button>
+          </div>` : (tLabel ? `<h1 class="insp-title ${merged || demoted ? 'is-rejected' : ''}" style="margin:0 0 6px">${esc(tLabel)}</h1>` : '')}
+        ${t.researcher_label ? `<p class="orig-label">machine label: ${esc(t.label)}</p>` : ''}
+        ${S.reclaimingTheme ? `
+          <div class="rename-box" style="align-items:flex-start">
+            <textarea id="tc-input" rows="3" style="flex:1">${esc(tClaim)}</textarea>
+            <button class="btn-quiet" id="tc-save">Save</button>
+          </div>` : `<blockquote class="insp-quote">${esc(tClaim)}</blockquote>`}
+        ${t.researcher_claim ? `<p class="orig-label">machine claim: ${esc(t.central_concept)}</p>` : ''}
         <div class="insp-sec">
-          <p class="code-item__type">${esc(t.coverage || '')} sources · ${esc(t.claim_scope || '')} · ${(t.supporting_code_ids || []).length} supporting codes</p>
+          <p class="code-item__type">${esc(t.coverage || '')} sources · ${esc(t.claim_scope || '')} · ${(t.supporting_code_ids || []).length} supporting codes${merged ? ' · <b style="color:var(--red)">merged</b>' : ''}${demoted ? ' · <b style="color:var(--red)">demoted</b>' : ''}</p>
+          ${merged ? `<p class="code-item__type" style="margin-bottom:8px">merged into
+              <button class="chip" data-merged-into="${t.merged_into}" style="cursor:pointer">${survivor ? esc(themeLabel(survivor)) : esc(t.merged_into)}</button></p>` : ''}
           ${themeFamilies(t).length ? `<div class="feeds-line">
             ${themeFamilies(t).map(({ family, n }) => `<button class="chip fam-chip" data-fam-chip="${family.id}"><span class="lens-dot" style="background:${famColor(family.hue)}"></span>${esc(family.label)} ${n}</button>`).join('')}
           </div>` : ''}
         </div>
+        ${isViewer() ? '' : `
+        <div class="insp-sec insp-actions">
+          ${merged || demoted ? `<button class="btn-quiet" id="th-act-restore">Restore</button>` : `
+          ${S.renamingTheme ? '' : `<button class="btn-quiet" id="th-act-rename">Rename</button>`}
+          ${S.reclaimingTheme ? '' : `<button class="btn-quiet" id="th-act-reclaim">Edit claim</button>`}
+          <button class="btn-quiet" id="th-act-merge">Merge into…</button>
+          <button class="btn-quiet" id="th-act-demote">Demote to memo</button>`}
+        </div>`}
         ${memoBlock('theme', t.id, { claim: t.central_concept })}
         ${notesBlock('theme', t.id, null, { claim: t.central_concept },
           'Notes are considered when themes are rebuilt with feedback.')}`;
@@ -1991,6 +2148,23 @@
           switchView('codebook');
           setTimeout(() => document.querySelector(`.fam [data-fam-toggle="${fid}"]`)?.scrollIntoView({ block: 'center' }), 30);
         }));
+      box.querySelector('[data-merged-into]')?.addEventListener('click', () => select('theme', t.merged_into));
+      $('th-act-rename')?.addEventListener('click', () => { S.renamingTheme = true; renderInspector(); });
+      $('tn-save')?.addEventListener('click', () => {
+        const v = $('tn-input').value.trim();
+        if (v && v !== tLabel) reviseTheme(t.id, 'relabel', v);
+        else { S.renamingTheme = false; renderInspector(); }
+      });
+      $('tn-input')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('tn-save').click(); });
+      $('th-act-reclaim')?.addEventListener('click', () => { S.reclaimingTheme = true; renderInspector(); });
+      $('tc-save')?.addEventListener('click', () => {
+        const v = $('tc-input').value.trim();
+        if (v && v !== tClaim) reviseTheme(t.id, 'reclaim', v);
+        else { S.reclaimingTheme = false; renderInspector(); }
+      });
+      $('th-act-merge')?.addEventListener('click', () => openMergeThemeIntoSheet(t.id));
+      $('th-act-demote')?.addEventListener('click', () => openDemoteThemeSheet(t.id));
+      $('th-act-restore')?.addEventListener('click', () => reviseTheme(t.id, 'restore'));
       wireMemo(box, 'theme', t.id, { claim: t.central_concept });
       wireNotes(box, 'theme', t.id, null, { claim: t.central_concept });
       return;

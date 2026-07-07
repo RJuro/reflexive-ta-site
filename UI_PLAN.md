@@ -537,11 +537,28 @@ and a full audit trail, never silent deletion.*
    the difference named); plain register — write for a colleague, not a journal reviewer
    (no theory-inflated wording); one relation per theme — split bundles; sensitive material
    framed as the narrator's position/unpreparedness, never as characterization of a group.
+   ✅ SHIPPED (2026-07-07): six discipline paragraphs (THEME BUDGET, NO SINGLE-CODE THEMES,
+   ONE RELATION PER THEME, GENUINE CROSS-CASE EQUIVALENCE, PLAIN REGISTER, SENSITIVE MATERIAL)
+   integrated into theorist.prompt at their natural points in the existing structure.
 5. **Theme authority**: edit label + claim directly (override stored, original kept — same
    pattern as researcher_label); merge theme A into B (support/anchors union, audited);
    demote theme to memo (content preserved as a memo, theme archived from the catalogue).
    Overrides are keyed by theme id: they survive extend-themes (stable ids) but a full
    rebuild replaces the catalogue — the UI must say so before a rebuild with edits present.
+   ✅ SHIPPED (2026-07-07): schema v10 `theme_revision` table + `theme_revisions_map` (relabel/
+   reclaim latest-wins, merge chain-follows depth-capped, demote flags, restore clears);
+   `themes_payload` applies overrides and unions a merge survivor's support/anchors/tensions/
+   subthemes (de-duplicated, order-preserving) and sums provenance; `demote_theme` writes a
+   memo with the theme's content before hiding it; `compile_guidance`'s theme branch carries
+   relabel/merge/demote lines into a rebuild-with-feedback; API `POST
+   /projects/{pid}/themes/{tid}/revise` (relabel/reclaim/merge/demote/restore, mode-scoped,
+   validated: bad action/mode 400, unknown theme 404, merge self/missing/merged/cycle 400);
+   `get_project` gains `n_theme_revisions`. UI: theme inspector gains Rename (inline input),
+   Edit claim (inline textarea), Merge into… (picker sheet), Demote to memo (confirm sheet),
+   Restore; theme cards/inspector show researcher_label/researcher_claim with the machine
+   original shown small; themes view gains a quiet "hidden" toggle for merged/demoted themes;
+   "Rebuild themes"/"Rebuild themes with feedback" (not Extend) warn first when theme edits
+   exist, naming the count and confirming notes/memos are kept.
 
 Deferred to P9: manual researcher-authored codes on passages; exemplar-quote curation;
 cross-case retrieval matrix (code × source); methods-section export.

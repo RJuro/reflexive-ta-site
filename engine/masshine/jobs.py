@@ -215,13 +215,18 @@ def theme_work(pid: str, mode: str, feedback: bool = False):
         try:
             guidance = None
             if feedback:
-                guidance = store.compile_guidance(conn) or None
+                guidance = store.compile_guidance(conn, mode=mode) or None
                 if guidance:  # every step must hear the feedback → full re-walk, no replay
                     state["theme_steps"] = {}
             transcripts = {d: transcript_block_from_sentences(docs[d]["sentences"],
                                                               docs[d]["sections"]) for d in order}
             valid = {d: {s["id"] for s in docs[d]["sentences"]} for d in order}
             theme_steps = state.setdefault("theme_steps", {})
+            # a walk that replays NOTHING is a full rebuild: every prior theme id is re-minted,
+            # so researcher theme revisions cannot be trusted to point at the same themes —
+            # clear them wholesale after persist (extends keep their prefix and their revisions;
+            # persist_themes additionally prunes orphaned ids on every run)
+            full_rebuild = not theme_steps
             ctr = [0]
 
             def save_raw(doc_id, raw):
@@ -240,6 +245,9 @@ def theme_work(pid: str, mode: str, feedback: bool = False):
                     order, state["project_codebook"], transcripts, valid,
                     raw_cache=theme_steps, save_raw=save_raw, guidance=guidance)
             store.persist_themes(conn, mode, themes, snaps)
+            if full_rebuild:
+                conn.execute("DELETE FROM theme_revision WHERE mode=?", (mode,))
+                conn.commit()
             store.set_themes_stale(conn, mode, False)
             if guidance:
                 store.mark_feedback_addressed(conn, target_type="theme")

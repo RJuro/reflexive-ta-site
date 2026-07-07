@@ -364,22 +364,196 @@ def persist_themes(conn: sqlite3.Connection, mode: str, themes: list[dict],
         conn.execute(
             "INSERT OR REPLACE INTO theme_step (mode, doc_id, position, raw, snapshot) "
             "VALUES (?,?,?,?,?)", (mode, doc_id, pos, "", json.dumps(snap)))
+    # researcher theme revisions are keyed by (mode, theme_id): once the catalogue is replaced,
+    # revisions pointing at ids that no longer exist are orphans — drop them so the rebuild
+    # warning doesn't fire forever and a future run reusing an old id can't inherit a stale edit.
+    ids = [t["id"] for t in themes]
+    if ids:
+        q = ",".join("?" * len(ids))
+        conn.execute(f"DELETE FROM theme_revision WHERE mode=? AND theme_id NOT IN ({q})",
+                     (mode, *ids))
+    else:
+        conn.execute("DELETE FROM theme_revision WHERE mode=?", (mode,))
     conn.commit()
 
 
 def themes_payload(conn: sqlite3.Connection, mode: str) -> dict:
-    themes = []
+    """P8b: each theme gains researcher_label/researcher_claim (override wins when set), status
+    ("active" | "merged" | "demoted"), and merged_into. A merge target's supporting_code_ids /
+    key_evidence_sentence_ids / tensions / subthemes become the de-duplicated, order-preserving
+    union of its own plus every theme merged into it (chain-followed); paradigm_provenance is
+    summed key-wise across the union. Merged/demoted themes stay IN the returned list (so
+    export/audit see them) but carry `status` so callers can filter them out by default — same
+    shape as codes_payload's rejected/merged codes."""
+    revs = theme_revisions_map(conn, mode)
+    rows = {}
     for r in conn.execute(
             "SELECT id, central_concept, coverage, claim_scope, falsified_if, payload "
             "FROM theme_v2 WHERE mode=? ORDER BY id", (mode,)):
         t = {"id": r[0], "central_concept": r[1], "coverage": r[2], "claim_scope": r[3],
              "falsified_if": r[4]}
         t.update(json.loads(r[5]))
-        themes.append(t)
+        rows[t["id"]] = t
+    out = []
+    for tid, t in rows.items():
+        rev = revs.get(tid, {})
+        merged_into = rev.get("merged_into")
+        if merged_into:
+            t["status"] = "merged"
+        elif rev.get("demoted"):
+            t["status"] = "demoted"
+        else:
+            t["status"] = "active"
+        t["merged_into"] = merged_into
+        t["researcher_label"] = rev.get("researcher_label")
+        t["researcher_claim"] = rev.get("researcher_claim")
+        out.append(t)
+    # survivor union: gather every theme whose merge chain resolves to this survivor, in
+    # ascending theme-id order (deterministic), unioning list fields de-duplicated/order-preserving
+    # and summing paradigm_provenance key-wise.
+    absorbed_by_survivor: dict[str, list[str]] = {}
+    for tid, rev in revs.items():
+        if rev.get("merged_into"):
+            absorbed_by_survivor.setdefault(rev["merged_into"], []).append(tid)
+    if absorbed_by_survivor:
+        for t in out:
+            absorbed = absorbed_by_survivor.get(t["id"])
+            if not absorbed:
+                continue
+            for field in ("supporting_code_ids", "key_evidence_sentence_ids", "tensions"):
+                seen = list(t.get(field, []))
+                seen_set = set(seen)
+                for absorbed_id in sorted(absorbed):
+                    for v in rows.get(absorbed_id, {}).get(field, []):
+                        if v not in seen_set:
+                            seen.append(v)
+                            seen_set.add(v)
+                t[field] = seen
+            sub_seen = list(t.get("subthemes", []))
+            existing_claims = {s.get("claim") for s in sub_seen}
+            for absorbed_id in sorted(absorbed):
+                for s in rows.get(absorbed_id, {}).get("subthemes", []):
+                    if s.get("claim") not in existing_claims:
+                        sub_seen.append(s)
+                        existing_claims.add(s.get("claim"))
+            t["subthemes"] = sub_seen
+            prov = dict(t.get("paradigm_provenance") or {})
+            has_prov = "paradigm_provenance" in t
+            for absorbed_id in sorted(absorbed):
+                aprov = rows.get(absorbed_id, {}).get("paradigm_provenance")
+                if aprov:
+                    has_prov = True
+                    for k, v in aprov.items():
+                        prov[k] = prov.get(k, 0) + v
+            if has_prov:
+                t["paradigm_provenance"] = prov
     snaps = [{"doc_id": r[0], "themes": json.loads(r[1])} for r in conn.execute(
         "SELECT doc_id, snapshot FROM theme_step WHERE mode=? ORDER BY position", (mode,))]
-    return {"mode": mode, "themes": themes, "snapshots": snaps,
+    return {"mode": mode, "themes": out, "snapshots": snaps,
             "stale": themes_stale(conn, mode)}
+
+
+# ---- theme authority (P8b) ---------------------------------------------------------------------
+# Same audit-trail philosophy as code revisions (add_revision/revisions_map): the theme_v2 row
+# itself is never mutated by a researcher edit — every relabel/reclaim/merge/demote/restore is an
+# appended row in `theme_revision`, folded into current state at read time by
+# theme_revisions_map/themes_payload. Ids are stable across extend-themes (a walk reuses a prior
+# theme's id), so overrides survive it; only a FULL rebuild replaces theme_v2 wholesale and orphans
+# them (the frontend warns before that — see `n_theme_revisions` on get_project).
+
+def add_theme_revision(conn: sqlite3.Connection, mode: str, theme_id: str, action: str,
+                       value: str | None = None) -> dict:
+    row = conn.execute(
+        "SELECT central_concept, coverage, claim_scope, payload FROM theme_v2 "
+        "WHERE mode=? AND id=?", (mode, theme_id)).fetchone()
+    ctx = {}
+    if row:
+        payload = json.loads(row[3] or "{}")
+        ctx = {"central_concept": row[0], "coverage": row[1], "claim_scope": row[2],
+              "label": payload.get("label", ""),
+              "supporting_code_ids": payload.get("supporting_code_ids", [])}
+    conn.execute(
+        "INSERT INTO theme_revision (mode, theme_id, action, value, context, created_at) "
+        "VALUES (?,?,?,?,?,?)", (mode, theme_id, action, value, json.dumps(ctx), _now()))
+    conn.commit()
+    return {"mode": mode, "theme_id": theme_id, "action": action, "value": value, "context": ctx}
+
+
+def theme_revisions_map(conn: sqlite3.Connection, mode: str, resolve_chains: bool = True) -> dict:
+    """Fold the theme_revision log into current per-theme state for one mode: latest 'relabel' ->
+    researcher_label; latest 'reclaim' -> researcher_claim; 'merge' (value = target theme id) ->
+    merged_into (chain-followed at read time, depth-capped like code merges); 'demote' ->
+    demoted:True; a later 'restore' clears both merged_into and demoted (and does not touch
+    researcher_label/researcher_claim — a relabel survives a merge/demote/restore cycle, mirroring
+    how a code's rename survives its own merge/restore).
+
+    `resolve_chains=False` returns the raw one-hop state (used internally by cycle validation)."""
+    out: dict[str, dict] = {}
+    for theme_id, action, value in conn.execute(
+            "SELECT theme_id, action, value FROM theme_revision WHERE mode=? ORDER BY id",
+            (mode,)):
+        st = out.setdefault(theme_id, {"researcher_label": None, "researcher_claim": None,
+                                       "merged_into": None, "demoted": False})
+        if action == "relabel":
+            st["researcher_label"] = value
+        elif action == "reclaim":
+            st["researcher_claim"] = value
+        elif action == "merge":
+            st["merged_into"] = value
+        elif action == "demote":
+            st["demoted"] = True
+        elif action == "restore":
+            st["merged_into"] = None
+            st["demoted"] = False
+    if resolve_chains:
+        for theme_id, st in out.items():
+            target = st.get("merged_into")
+            if not target:
+                continue
+            seen = {theme_id}
+            depth = 0
+            while target in out and out[target].get("merged_into") and depth < 10:
+                if target in seen:  # defensive: a cycle slipped through API validation
+                    break
+                seen.add(target)
+                target = out[target]["merged_into"]
+                depth += 1
+            st["merged_into"] = target
+    return out
+
+
+def n_theme_revisions(conn: sqlite3.Connection, mode: str) -> int:
+    return conn.execute(
+        "SELECT COUNT(*) FROM theme_revision WHERE mode=?", (mode,)).fetchone()[0]
+
+
+def demote_theme(conn: sqlite3.Connection, mode: str, theme_id: str) -> dict:
+    """Demote a theme to memo material: appends a 'demote' revision AND writes/appends a memo
+    (target_type='theme', target=theme_id) preserving its label + central_concept + supporting
+    ids, so nothing is lost. A plain merge does NOT write a memo — only demote does (the merged
+    theme's content lives on via the survivor's union instead)."""
+    row = conn.execute(
+        "SELECT central_concept, payload FROM theme_v2 WHERE mode=? AND id=?",
+        (mode, theme_id)).fetchone()
+    label, central_concept, supporting = theme_id, "", []
+    if row:
+        central_concept = row[0]
+        payload = json.loads(row[1] or "{}")
+        label = payload.get("label") or theme_id
+        supporting = payload.get("supporting_code_ids", [])
+    date = _now()[:10]
+    body_lines = [f"Demoted from theme on {date}: {label}."]
+    if central_concept:
+        body_lines.append(central_concept)
+    if supporting:
+        body_lines.append("Supporting codes: " + ", ".join(supporting))
+    existing = next((m for m in list_memos(conn, target_type="theme")
+                     if m["target_id"] == theme_id), None)
+    body = "\n\n".join(body_lines)
+    if existing and existing.get("body"):
+        body = existing["body"] + "\n\n" + body
+    set_memo(conn, "theme", theme_id, body, {"label": label, "central_concept": central_concept})
+    return add_theme_revision(conn, mode, theme_id, "demote")
 
 
 def code_counts(conn: sqlite3.Connection) -> dict:
@@ -579,11 +753,14 @@ def open_comment_counts(conn: sqlite3.Connection) -> dict:
     return out
 
 
-def compile_guidance(conn: sqlite3.Connection, doc_id: str | None = None) -> str:
+def compile_guidance(conn: sqlite3.Connection, doc_id: str | None = None,
+                     mode: str | None = None) -> str:
     """Compile the researcher's open feedback into the plain-text block a re-run's prompts carry.
     doc_id given → coding guidance for that document (sentence/code/document comments + revisions
     on that doc's codes). doc_id None → project-level theme guidance (theme comments + a summary
-    of all code revisions, since themes read the whole codebook)."""
+    of all code revisions, since themes read the whole codebook). `mode` ("standard" | "panel"),
+    given alongside doc_id=None, also folds in P8b theme_revision lines — a rebuild-with-feedback
+    must respect an earlier relabel/demote/merge, not silently re-propose over it."""
     lines: list[str] = []
     if doc_id:
         wanted = ("sentence", "code", "document")
@@ -625,6 +802,35 @@ def compile_guidance(conn: sqlite3.Connection, doc_id: str | None = None) -> str
             elif st["new_label"]:
                 lines.append(f'- The researcher renamed "{label}" to "{st["new_label"]}" — '
                              f"use the new name and its implied focus.")
+    if not doc_id and mode:
+        theme_revs = theme_revisions_map(conn, mode)
+        if theme_revs:
+            theme_labels = {r[0]: json.loads(r[1] or "{}").get("label", r[0])
+                            for r in conn.execute(
+                                "SELECT id, payload FROM theme_v2 WHERE mode=?", (mode,))}
+            ctxs = {r[0]: json.loads(r[1] or "{}") for r in conn.execute(
+                "SELECT theme_id, context FROM theme_revision WHERE mode=? ORDER BY id",
+                (mode,))}
+            def _current_label(tid, st):
+                # the researcher's latest relabel if any, else the machine label — a theme that
+                # was renamed and THEN merged/demoted should read by its latest name everywhere
+                # EXCEPT the relabel line itself, which needs the OLD name to say what changed.
+                return (st.get("researcher_label") or theme_labels.get(tid)
+                       or ctxs.get(tid, {}).get("label", tid))
+            for theme_id, st in theme_revs.items():
+                lbl = _current_label(theme_id, st)
+                if st.get("merged_into"):
+                    survivor_st = theme_revs.get(st["merged_into"], {})
+                    survivor_lbl = _current_label(st["merged_into"], survivor_st)
+                    lines.append(f'- The researcher MERGED the theme "{lbl}" into '
+                                 f'"{survivor_lbl}" — treat them as one theme.')
+                elif st.get("demoted"):
+                    lines.append(f'- The researcher DEMOTED the theme "{lbl}" — do not '
+                                 f're-propose it as a top-level theme.')
+                elif st.get("researcher_label"):
+                    old_lbl = theme_labels.get(theme_id) or ctxs.get(theme_id, {}).get("label", theme_id)
+                    lines.append(f'- The researcher renamed the theme "{old_lbl}" to '
+                                 f'"{st["researcher_label"]}" — use the new name.')
     return "\n".join(lines)
 
 

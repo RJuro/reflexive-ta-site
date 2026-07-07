@@ -26,6 +26,22 @@ at a higher level, is not worth emitting — return fewer, stronger themes. A th
 organize SEVERAL codes into a patterned relation; build a theme on a single code only when that
 code is exceptionally central and strongly evidenced in the transcript.
 
+THEME BUDGET. Return fewer, stronger themes, not more, smaller ones — for a small corpus (1–3
+interviews) the whole catalogue is typically 5–8 themes by the final interview, not eleven or
+fifteen. A weak candidate — thin evidence, or a claim that only restates a code — does not become a
+top-level theme: fold it as a subtheme of a stronger, related theme, or leave it out entirely as
+material the researcher can memo directly from the codebook. NO SINGLE-CODE THEMES: if, after this
+interview, a theme's total supporting evidence still rests on exactly one code, it is not a theme —
+either fold it into a related theme as a subtheme or drop it (the single-code exception above is for
+a code so central the theme could not exist without it AND is already argued as a relation, not for
+padding the count).
+
+ONE RELATION PER THEME. A theme argues ONE claim about ONE relation, tension, or mechanism — not a
+bundle of several ideas loosely sharing a topic. If your candidate theme would need "and" to join two
+different claims (e.g. non-assimilation AND illness AND identity AND advocacy), that is several
+themes wearing one coat: split it, and keep only the strongest strand at top level if the others are
+too thin to stand alone (fold them as subthemes instead).
+
 HIERARCHY DISCIPLINE. Themes sit ABOVE families in the hierarchy and make CLAIMS about relations,
 tensions, or mechanisms — never just restate a family's descriptive label at claim level (a family
 groups "community, faith, and extra-role care"; a theme argues something like "care work is treated
@@ -34,6 +50,29 @@ label with a period at the end, it is not a theme yet — sharpen it into an arg
 Single-case themes (seen in only one account so far) MUST use hedged, account-bound language — "in
 this account", "for this narrator", "this interview suggests" — never a universal or population
 claim ("mothers…", "migrants…", "narrators…") until a second interview actually supports it.
+
+GENUINE CROSS-CASE EQUIVALENCE. Before letting a theme span more than one interview, ask whether the
+phenomenon is genuinely THE SAME, not merely similar-sounding. Two accounts can look alike at a
+glance while being analogous-but-different — e.g. a child migrant's memory of the journey coming to
+him in fragments is not the same phenomenon as an elderly narrator's memory fading with age, even
+though both are "memory and migration". When the mechanism differs, keep them as separate
+single-case themes, or — if you do combine them — the theme must explicitly NAME the difference
+between the cases rather than silently averaging them into one generic claim. Never let two merely-
+analogous phenomena become one cross-case theme by default.
+
+PLAIN REGISTER. Write for a colleague reading the codebook, not for a journal reviewer. Prefer the
+plain words the evidence itself supports over theory-inflated abstraction: if the transcript shows
+"harsh, demeaning processing; detention; medical scrutiny; fear," say that, in those or similarly
+plain terms — do not dress it up as "coercive redirection of autonomy" or "prescriptive instruction
+on bodily comportment." If a plain phrase already says it, use the plain phrase; reach for
+theoretical vocabulary only when the plain description genuinely cannot carry the claim.
+
+SENSITIVE MATERIAL. When a theme touches race, ethnicity, religion, or other group characteristics,
+frame it STRICTLY as this narrator's own experience, position, or unpreparedness in that moment —
+e.g. a narrator's first encounter with racialized difference is a claim about the narrator (what
+they were unprepared for, how the encounter unsettled their prior frame), never a claim that
+characterizes or evaluates any racial, ethnic, or religious group. If a draft claim could be read as
+describing a group rather than this narrator's position, rewrite it until it can't.
 
 INCREMENTAL TASK. Return the FULL updated set of themes after considering this interview:
 - To REVISE a prior theme (this interview strengthens it, qualifies its scope, or sharpens the

@@ -243,6 +243,9 @@
   }
   .theme-card:hover { border-color: oklch(80% 0.02 60); }
   .theme-card.is-active { border-color: var(--accent); }
+  .theme-card.is-rejected { opacity: 0.55; }
+  .theme-card.is-rejected .theme-card__label,
+  .theme-card.is-rejected .theme-card__claim { text-decoration: line-through; color: var(--faint); }
   .theme-card__meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 9px; }
   .chip {
     font-size: 10.5px; font-weight: 600; color: var(--muted); padding: 2px 8px;
@@ -479,7 +482,7 @@
   <div class="toasts" id="toasts"></div>
   <div id="sheet-root"></div>
   <input type="file" id="file-input" accept=".txt,.md" hidden>
-  <script src="/api.js?v=15"></script>
-  <script src="/app.js?v=15"></script>
+  <script src="/api.js?v=16"></script>
+  <script src="/app.js?v=16"></script>
 </body>
 </html>

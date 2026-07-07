@@ -137,8 +137,12 @@ def resolve_ev(conn: sqlite3.Connection, qualified: str) -> str:
 # store.revisions_map — no schema change needed for that, `new_label` already holds arbitrary
 # text and is reused to hold the survivor code id for a merge action) and a new `merge_proposal`
 # table holding the compress pass's pending review queue (one row per proposed merge group).
+# v10 adds theme authority (P8b): a `theme_revision` table — the same audit-trail pattern as
+# `revision`/`revisions_map`, but for theme_v2 rows (relabel/reclaim/merge/demote/restore).
+# Themes don't get a rename/reject/merge column added to theme_v2 itself; like codes, the
+# override is folded in at read time (see store.theme_revisions_map / themes_payload).
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 
 def init_project_db(conn: sqlite3.Connection) -> None:
@@ -197,6 +201,16 @@ def init_project_db(conn: sqlite3.Connection) -> None:
             merged_label TEXT,                   -- optional better label for the survivor
             rationale TEXT,
             status TEXT DEFAULT 'pending',       -- 'pending' | 'accepted' | 'dismissed'
+            created_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS theme_revision (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mode TEXT,
+            theme_id TEXT,
+            action TEXT,                         -- 'relabel' | 'reclaim' | 'merge' | 'demote' | 'restore'
+            value TEXT,                          -- 'relabel': new label; 'reclaim': new claim;
+                                                  -- 'merge': target theme id
+            context TEXT,                        -- JSON snapshot of the theme at revision time
             created_at TEXT
         );
         """
