@@ -562,3 +562,12 @@ and a full audit trail, never silent deletion.*
 
 Deferred to P9: manual researcher-authored codes on passages; exemplar-quote curation;
 cross-case retrieval matrix (code × source); methods-section export.
+
+# P9 — The paper shape (2026-07-26)
+
+Full spec: design/paper-spec.md (mockup: design/masshine-paper-mockup.html). The rethink:
+coder restraint (budget + reuse-before-mint via an injected codebook block), one assimilation
+call per document growing a living codebook, the UI collapsed to three places (Document with
+writable marginalia, Codebook as a book index, Themes), researcher add/change as first-class
+margin actions. Absorbs the P9 deferrals for researcher-authored codes and the cross-case
+matrix; exemplar curation, methods export, and the adjudication workspace stay deferred.
