@@ -38,6 +38,14 @@ window.MASSHINE_API = (() => {
     themes: (pid, mode) => j(`/projects/${pid}/themes?mode=${mode}`),
 
     runCoding: (pid, mode) => j(`/projects/${pid}/code`, json('POST', { mode })),
+    runRead: (pid, span) => j(`/projects/${pid}/read`, json('POST', { span: span || null })),
+
+    uploadAudio: (pid, file) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      return j(`/projects/${pid}/audio`, { method: 'POST', body: fd });
+    },
+    audioTranscript: (pid, stem) => j(`/projects/${pid}/audio/${encodeURIComponent(stem)}/transcript`),
     runThemes: (pid, mode, feedback = false) =>
       j(`/projects/${pid}/themes`, json('POST', { mode, feedback })),
     recode: (pid, doc_id, mode) => j(`/projects/${pid}/recode`, json('POST', { doc_id, mode })),
@@ -76,6 +84,8 @@ window.MASSHINE_API = (() => {
     job: id => j(`/jobs/${id}`),
     jobs: pid => j(`/projects/${pid}/jobs`),
   };
+
+  api.models = () => j('/models');
 
   api.pollJob = (id, onTick) => new Promise(resolve => {
     const t = setInterval(async () => {

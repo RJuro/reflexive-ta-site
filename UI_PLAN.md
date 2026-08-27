@@ -632,6 +632,56 @@ reactions (agree/challenge/reframe/park) steer the next document. Journal replac
 as home; findings carry status with an evidence-visit acceptance gate; single coder + critic
 default with on-demand second lenses; codebook demotes to drawer + export.
 
+**P10.3 — ✅ SHIPPED (2026-08-27): the frontend.** Replaced the 5-item sidebar (Overview /
+Codebook / Themes / Friction / Notes) with **Home · Session · Journal · Text**, frontend-only
+(one tiny backend addition — see below). `web/index.html` (CSS: paper palette tokens +
+`.tx-*`/`.drawer`/`.sesh-*`/`.jrnl-*`/`.phome-*` rules, ~230 new lines; mobile media query
+widened to keep the sidebar/toolbar usable at ≤900px, which the pre-P10.3 shell never handled
+at all), `web/app.js` (~500 net new lines), `web/api.js` (+4 methods), `engine/masshine/api.py`
++ `projects.py` (`PATCH /projects/{pid}` now also sets `research_question`/`positionality` —
+the columns already existed from P10.1a; `projects.set_declaration()` + a `test_lifecycle.py`
+case). **Home** (`overview` view, renamed from the old codes/coverage dashboard — that
+dashboard is kept as `renderOverviewDashboard`, unrouted): core documents, one "Add material"
+control offering text (existing `/documents`) and audio (`POST /audio`, job-polled, a result
+sheet showing detected roles + "Review transcript" via `GET /audio/{stem}/transcript`),
+research-question/positionality fields (debounced PATCH), a project memo (existing memos API,
+`target_type:'project'`). **Session**: a client-side walkthrough built from real data (pattern
+steps = strongest-evidence codes, uncertainty steps = codes with a `model_rationale` note,
+delta steps = active themes touching the doc's codes), one step at a time with progress +
+prev/next + "show more" past 7; reactions agree/park (comments), challenge (comment with note),
+reframe (code `revise:rename` / theme `revise:relabel`) — all persisted, verified surviving
+reload in the browser. Honest empty state below and "Read this document" (`POST /read`) with
+"Run coding (older method)" kept as an escape hatch. **Text**: the paper mockup ported —
+serif paper card, small-caps folio head, turns rendered as passages with a margin column of
+lens-colored ticks/notes (hover reveals, click pins — session-local, not persisted), uncoded
+passages stay clean; the codebook survives as a slide-in drawer (book-index styling, families
+as headings with their P7 rationale, dot-leader code rows) reachable from a "Codebook" button,
+with an "Open full codebook" escape hatch to the old chip-wall view (kept, unrouted) and an
+Export shortcut. **Journal**: active themes as findings (explicitly labeled "status lifecycle
+isn't built yet" rather than faking emerging/supported/accepted), a recent-notes preview
+("see all" → the old Notes queue, also kept unrouted), and a chronological memo feed across all
+target types (surfaces READ's `author:"assistant"` decline memos alongside researcher memos).
+Friction dropped from nav entirely (panel-mode-specific, not central to the new IA) but its
+render function is untouched and unrouted. Verified live end-to-end in the browser (uploaded a
+real doc, hand-seeded two codes — one plain, one with a `model_rationale` — since SYNTHESIZE/
+READ-triggering wasn't run to avoid a real paid LLM call, confirmed Session→reframe→Text
+deep-link→Journal→Home→mobile-width all render and persist correctly); `node --check web/app.js`
+clean; engine suite green (347 passed, includes unrelated concurrent P10.1c work landing in the
+same window). **Deviations/left undone**: the open-conversation QBA chat from spec §3 was NOT
+built — no backend endpoint exists for it (P10.2 territory) and the task's build list for
+Session didn't ask for it. The audio path's pre-ingest review/redraft flow (`auto_ingest=false`,
+`.../redraft`, `.../redraft/apply`, the explicit `.../ingest` step) is NOT wired into the
+upload sheet — every audio upload goes straight through with `auto_ingest=true`; the review
+link (`GET .../transcript`) IS wired post-hoc via the completion sheet. Delta (theme) steps in
+Session only populate once themes exist, and `theme_work` still reads only from the OLD
+coding-pipeline's checkpoint (`code_work`/`recode_work`), not from READ's codes directly — a
+document that has only ever been READ (never old-coded) will show pattern/uncertainty steps but
+never contribute a delta step or a Journal finding until it (or another doc) also goes through
+"Run coding"; this is a pre-existing engine gap (SYNTHESIZE would presumably close it), not
+something this pass could fix within its frontend-only mandate. Riskiest spots to click through
+first: the Session reaction buttons (agree/park/challenge/reframe) and the Text margin-note
+pin/hover interaction at narrow widths.
+
 # P9 — The paper shape (2026-07-26)
 
 Full spec: design/paper-spec.md (mockup: design/masshine-paper-mockup.html). The rethink:

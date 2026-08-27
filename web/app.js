@@ -9,8 +9,16 @@
   // ---- state -----------------------------------------------------------------------------------
   const S = {
     pid: null, detail: null, mode: 'standard', packs: [],
-    view: 'home',              // 'home' | 'doc' | 'codebook' | 'themes' | 'friction' | 'notes' | 'overview'
+    // P10.3: nav is Home(overview)/Session/Journal/Text(doc) + the project switcher('home').
+    // codebook/themes/friction/notes stay defined (renderCodebook/renderThemes/renderFriction/
+    // renderNotes) but are unrouted from the sidebar — reachable only from inline links (the
+    // codebook drawer's "Open full codebook", a theme chip, "see all" on Journal's notes).
+    view: 'home',              // 'home' | 'overview' | 'session' | 'journal' | 'doc' | 'codebook' | 'themes' | 'friction' | 'notes'
     docId: null,
+    sessionStep: 0, sessionExpanded: false,     // Session: current step index / "show more"
+    pinnedNotes: new Set(),    // Text: margin-note ids pinned open by click (session-local, not persisted)
+    drawerOpen: false,         // Text: codebook drawer visibility
+    memosList: [],             // flat memo list (Journal's chronological feed) alongside S.memos' map
     doc: null,                 // {title, meta, turns:[{speaker, sentences:[{id,text}]}]}
     sentText: {},              // docId → {sid → text} (for evidence quotes)
     codes: [], themes: null, friction: null, comments: [], memos: {},
@@ -215,6 +223,12 @@
   };
   const doc = () => (S.detail?.documents || []).find(d => d.doc_id === S.docId);
   const docById = id => (S.detail?.documents || []).find(d => d.doc_id === id);
+  // P10.3: a document has codes either via the old sectioned coding path (status "coded:<mode>")
+  // or via READ (status "read") — one predicate for "this doc has been processed", used wherever
+  // that's what's actually being asked (NOT nNewThemeSources/anyCoded below, which are
+  // deliberately scoped to the old pipeline's checkpoint, the only thing theme_work reads from
+  // today — a READ-only doc has codes but isn't yet themeable; see the P10.3 report).
+  const docIsProcessed = d => { const s = (d?.status || ''); return s.startsWith('coded') || s === 'read'; };
   const anyCoded = () => (S.detail?.documents || []).some(d => (d.status || '').startsWith('coded'));
   const anyUncoded = () => (S.detail?.documents || []).some(d => !(d.status || '').startsWith('coded'));
   const running = () => Object.values(S.jobs).find(j => j.status === 'running' || j.status === 'queued');
@@ -236,6 +250,7 @@
     S.codes = codes; S.themes = themes; S.comments = comments; S.families = families;
     S.mergeProposals = mergeProposals;
     S.memos = {};
+    S.memosList = memos;
     for (const m of memos) S.memos[`${m.target_type}:${m.target_id}`] = m;
     if (!S.docId || !detail.documents.find(d => d.doc_id === S.docId))
       S.docId = detail.documents[0]?.doc_id || null;
@@ -308,7 +323,7 @@
   }
 
   // ---- jobs ------------------------------------------------------------------------------------
-  const JOB_LABEL = { ingest: 'Reading source', code_standard: 'Coding', code_panel: 'Coding · panel', recode: 'Re-coding with feedback', theme: 'Building themes', consolidate: 'Consolidating codebook', compress: 'Scanning for redundant codes' };
+  const JOB_LABEL = { ingest: 'Reading source', code_standard: 'Coding', code_panel: 'Coding · panel', recode: 'Re-coding with feedback', theme: 'Building themes', consolidate: 'Consolidating codebook', compress: 'Scanning for redundant codes', read: 'Reading document', transcribe: 'Transcribing audio' };
   function watchJob(jobId, kind, reattach) {
     if (S.jobs[jobId]) return;
     S.jobs[jobId] = { id: jobId, kind, status: 'running', progress: {} };
@@ -325,6 +340,8 @@
           const n = j.result?.proposals || 0;
           toast(n ? `${n} merge proposal${n === 1 ? '' : 's'} ready for review` : 'No redundant codes found');
           if (n) S.proposalsOpen = true;
+        } else if (kind === 'transcribe') {
+          openAudioDoneSheet(j.result || {});
         } else {
           toast(`${JOB_LABEL[kind] || kind} — done`);
         }
@@ -404,6 +421,39 @@
     $('rw-go').addEventListener('click', () => { close(); _runThemesNow(fb); });
   }
   const runRecode = docId => act(() => API.recode(S.pid, docId, S.mode), 'recode');
+  const runRead = () => act(() => API.runRead(S.pid, null), 'read');
+
+  // ---- audio upload done sheet (P10.3) — roles detected + a link to review the transcript ------
+  function openAudioDoneSheet(result) {
+    const root = $('sheet-root');
+    const roles = result.roles || {};
+    const roleRows = Object.entries(roles).map(([spk, r]) =>
+      `<div class="diff-item"><span><b>${esc((r && r.name) || spk)}</b></span><span class="hint">${esc((r && r.role) || 'other')}</span></div>`).join('');
+    root.innerHTML = `
+      <div class="sheet-wrap" id="sheet-bg">
+        <div class="sheet" style="width:460px">
+          <h2>Audio transcribed</h2>
+          <p class="hint" style="margin-bottom:10px">${result.n_speakers || 0} speaker${result.n_speakers === 1 ? '' : 's'} detected across ${result.n_segments || 0} segment${result.n_segments === 1 ? '' : 's'}${result.ingest ? ' — ingested and ready to read.' : '.'}</p>
+          ${roleRows ? `<div class="diff-col" style="margin-bottom:10px">${roleRows}</div>` : ''}
+          <div id="ard-transcript" class="hint" style="max-height:220px;overflow-y:auto;white-space:pre-wrap;display:none;border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;margin-bottom:10px"></div>
+          <div class="sheet__foot">
+            <button class="btn-quiet" id="ard-review">Review transcript</button>
+            <button class="btn-quiet" id="ard-close">Close</button>
+          </div>
+        </div>
+      </div>`;
+    const close = () => { root.innerHTML = ''; };
+    $('ard-close').addEventListener('click', close);
+    $('sheet-bg').addEventListener('click', e => { if (e.target.id === 'sheet-bg') close(); });
+    $('ard-review').addEventListener('click', async () => {
+      try {
+        const t = await API.audioTranscript(S.pid, result.stem);
+        const box = $('ard-transcript');
+        box.style.display = 'block';
+        box.textContent = t.text;
+      } catch (e) { toast(String(e.message || e), true); }
+    });
+  }
 
   async function addNote(target_type, target_id, docId, body, context) {
     if (!body.trim()) return;
@@ -474,7 +524,10 @@
     try {
       const author = await ensureAuthor();
       const saved = await API.putMemo(S.pid, { target_type: type, target_id: id, body, context, author });
-      S.memos[`${type}:${id}`] = { ...saved, target_type: type, target_id: id };
+      const rec = { ...saved, target_type: type, target_id: id };
+      S.memos[`${type}:${id}`] = rec;
+      const i = (S.memosList || []).findIndex(m => m.target_type === type && m.target_id === id);
+      if (i >= 0) S.memosList[i] = rec; else (S.memosList ||= []).push(rec);
       if (statusEl) { statusEl.textContent = 'Saved'; setTimeout(() => { statusEl.textContent = ''; }, 1600); }
     } catch (e) { toast(String(e.message || e), true); }
   }, 700);
@@ -492,7 +545,20 @@
     history.pushState(state, '', `?${qs.toString()}`);
   }
 
-  function switchView(v) { S.view = v; S.sel = null; $('content').scrollTop = 0; _pushNavState(); render(); }
+  function switchView(v) { closeDrawer(); S.view = v; S.sel = null; $('content').scrollTop = 0; _pushNavState(); render(); }
+
+  // ---- Session: open the walkthrough for one document (the Sources list's default click target
+  // — Session is the centerpiece per data-session-spec.md §2/§3, so picking a source debriefs it
+  // rather than dropping straight into its raw text). --------------------------------------------
+  async function openSession(docId, opts) {
+    closeDrawer();
+    S.view = 'session';
+    if (S.docId !== docId || !S.doc || S.doc.id !== docId) { S.docId = docId; await loadDoc(docId); }
+    S.sessionStep = 0;
+    S.sessionExpanded = false;
+    if (!opts?.noPush) _pushNavState();
+    render();
+  }
 
   function select(type, id) {
     S.sel = { type, id };
@@ -516,6 +582,7 @@
   }
 
   async function openDocView(docId, sid, opts) {
+    closeDrawer();
     S.view = 'doc';
     if (S.docId !== docId || !S.doc || S.doc.id !== docId) { S.docId = docId; await loadDoc(docId); }
     S.sel = sid ? { type: 'sentence', id: sid } : null;
@@ -527,6 +594,7 @@
     }
   }
   function openCodeView(cid, opts) {
+    closeDrawer();
     S.view = 'codebook';
     S.sel = { type: 'code', id: cid };
     if (!opts?.noPush) _pushNavState();
@@ -580,18 +648,24 @@
   }
 
   // ---- upload sheet ------------------------------------------------------------------------------
+  // P10.3: "Add material" — text and audio side by side, audio as prominent a headline capability
+  // as text (spec §2/§8). Audio always goes through the same auto-ingest path (POST /audio ->
+  // transcribe job -> ingest); the researcher-facing pre-ingest review/redraft flow the engine
+  // also exposes (GET .../transcript, POST .../redraft(+/apply), POST .../ingest) is NOT wired
+  // here — out of scope for this pass, see the report.
   function openUploadSheet() {
     const root = $('sheet-root');
     root.innerHTML = `
       <div class="sheet-wrap" id="sheet-bg">
-        <div class="sheet">
-          <h2>Add a source</h2>
-          <label>Kind</label>
+        <div class="sheet" style="width:420px">
+          <h2>Add material</h2>
+          <label>Text — .txt or .md</label>
           <select id="up-kind">
             ${Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}
           </select>
-          <label>File</label>
-          <div class="sheet__file" id="up-drop">Choose a .txt or .md file…</div>
+          <div class="sheet__file" id="up-drop" style="margin-top:8px">Choose a .txt or .md file…</div>
+          <label style="margin-top:16px">Audio — .mp3 / .m4a / .wav / .aiff</label>
+          <div class="sheet__file" id="up-drop-audio">Choose an audio file… (transcribed automatically)</div>
           <div class="sheet__foot">
             <button class="btn-quiet" id="up-cancel">Cancel</button>
           </div>
@@ -611,6 +685,20 @@
         try {
           const { job_id } = await API.upload(S.pid, file, kind);
           watchJob(job_id, 'ingest');
+        } catch (e) { toast(String(e.message || e), true); }
+      };
+      input.click();
+    });
+    $('up-drop-audio').addEventListener('click', () => {
+      const input = $('file-input-audio');
+      input.onchange = async () => {
+        const file = input.files[0];
+        input.value = '';
+        if (!file) return;
+        close();
+        try {
+          const { job_id } = await API.uploadAudio(S.pid, file);
+          watchJob(job_id, 'transcribe');
         } catch (e) { toast(String(e.message || e), true); }
       };
       input.click();
@@ -671,41 +759,37 @@
           <div class="row row--rename">
             <input class="row-rename__input" data-rn="${d.doc_id}" type="text" value="${esc(docTitle(d))}">
           </div>` : `
-          <div class="row-wrap ${S.view === 'doc' && d.doc_id === S.docId ? 'is-active' : ''}">
+          <div class="row-wrap ${S.view === 'session' && d.doc_id === S.docId ? 'is-active' : ''}">
             <button class="row" data-nav-doc="${d.doc_id}" title="${esc(KINDS[d.kind] || d.kind)}">
-              <span class="dot ${(d.status || '').startsWith('coded') ? 'dot--done' : 'dot--plain'}"></span>
+              <span class="dot ${docIsProcessed(d) ? 'dot--done' : 'dot--plain'}"></span>
               <span class="row__name">${esc(docTitle(d))}</span>
               <span class="row__count">${d.n_sentences}</span>
             </button>
             ${isViewer() ? '' : `<button class="row-more" data-more="${d.doc_id}" title="More">⋯</button>`}
           </div>`).join('')}
-        ${isViewer() ? '' : `<button class="row row--quiet" id="nav-add">＋ Add source</button>`}
+        ${isViewer() ? '' : `<button class="row row--quiet" id="nav-add">＋ Add material</button>`}
       </div>
       <div>
         <div class="group__label">Project</div>
         <button class="row ${S.view === 'overview' ? 'is-active' : ''}" data-nav="overview">
-          <span class="row__name">Overview</span>
+          <span class="row__name">Home</span>
         </button>
-        <button class="row ${S.view === 'codebook' ? 'is-active' : ''}" data-nav="codebook">
-          <span class="row__name">Codebook</span><span class="row__count">${S.codes.length || ''}</span>
+        <button class="row ${S.view === 'session' ? 'is-active' : ''}" data-nav="session">
+          <span class="row__name">Session</span>
         </button>
-        <button class="row ${S.view === 'themes' ? 'is-active' : ''}" data-nav="themes">
+        <button class="row ${S.view === 'journal' ? 'is-active' : ''}" data-nav="journal">
           ${stale ? '<span class="dot dot--stale"></span>' : ''}
-          <span class="row__name">Themes</span><span class="row__count">${S.themes?.themes.length || ''}</span>
+          <span class="row__name">Journal</span><span class="row__count">${openNotes || ''}</span>
         </button>
-        ${S.mode === 'panel' ? `
-        <button class="row ${S.view === 'friction' ? 'is-active' : ''}" data-nav="friction">
-          <span class="row__name">Friction</span>
-        </button>` : ''}
-        <button class="row ${S.view === 'notes' ? 'is-active' : ''}" data-nav="notes">
-          <span class="row__name">Notes</span><span class="row__count">${openNotes || ''}</span>
+        <button class="row ${S.view === 'doc' ? 'is-active' : ''}" data-nav="doc">
+          <span class="row__name">Text</span>
         </button>
       </div>
       <div class="side-foot">${esc(pack?.title || 'Standard coding')}${S.mode === 'panel' ? `<br>${lensList().length || 3} lenses, blind` : ''}</div>`;
     $('nav-home').addEventListener('click', () => switchView('home'));
     $('nav-add')?.addEventListener('click', openUploadSheet);
     sb.querySelectorAll('[data-nav-doc]').forEach(b =>
-      b.addEventListener('click', () => openDocView(b.dataset.navDoc)));
+      b.addEventListener('click', () => openSession(b.dataset.navDoc)));
     sb.querySelectorAll('[data-nav]').forEach(b =>
       b.addEventListener('click', () => switchView(b.dataset.nav)));
     sb.querySelectorAll('[data-more]').forEach(b =>
@@ -794,7 +878,7 @@
     // Breadcrumb (F2/P2.4): Projects / ‹project name› / ‹view or doc title›. "Projects" always
     // goes home; the project-name segment goes to the doc view of the current document.
     const crumbTitles = { codebook: 'Codebook', themes: 'Themes', friction: 'Standpoint friction',
-      notes: 'Notes', overview: 'Overview' };
+      notes: 'Notes', overview: 'Home', session: 'Session', journal: 'Journal' };
     const lastCrumb = S.view === 'doc' ? (d ? esc(docTitle(d)) : null) : (crumbTitles[S.view] || null);
     const breadcrumb = `
       <div class="crumb">
@@ -805,7 +889,9 @@
       </div>`;
     let left = '';
     if (S.view === 'doc' && d) {
-      const coded = (d.status || '').startsWith('coded');
+      // P10.3: a document READ (not just old-pipeline coded) also has codes — the pipeline
+      // indicator should say so (docIsProcessed mirrors the sidebar dot's status check).
+      const coded = docIsProcessed(d);
       const themed = S.themes?.themes.length > 0;
       const stale = S.themes?.stale;
       left = `
@@ -844,11 +930,13 @@
     const c = $('content');
     if (S.view === 'home' || !S.detail) return renderHome(c);
     if (S.view === 'doc') return renderDoc(c);
+    if (S.view === 'session') return renderSession(c);
+    if (S.view === 'journal') return renderJournal(c);
     if (S.view === 'codebook') return renderCodebook(c);
     if (S.view === 'themes') return renderThemes(c);
     if (S.view === 'friction') return renderFriction(c);
     if (S.view === 'notes') return renderNotes(c);
-    if (S.view === 'overview') return renderOverview(c);
+    if (S.view === 'overview') return renderProjectHome(c);
   }
 
   async function renderHome(c) {
@@ -985,42 +1073,56 @@
       $('journey-add')?.addEventListener('click', openUploadSheet);
       return;
     }
+    // P10.3 — Text: the paper view (ported from design/masshine-paper-mockup.html). Sentences
+    // keep `.s`/`data-sid` (wireDocSearch/wireMinimap/wireSentGutter/flashSentence all depend on
+    // that contract) but each turn renders as a "passage": text column + a margin column of
+    // pencil ticks/notes for the codes touching it, revealed on hover, pinned on click. Uncoded
+    // passages get no margin content at all — the mockup's "stays clean" rule.
     const d = doc();
     const noteSids = openNoteSids(S.docId);
     const kindLabel = KINDS[d?.kind] || 'Source';
     const codedSet = new Set();
     const codeCountBySid = {};
+    const codesBySid = {};
     for (const code of S.codes) {
       if (code.status !== 'active') continue;
       for (const ev of code.evidence) {
         const [dd, sid] = ev.split('#');
-        if (dd === S.docId) { codedSet.add(sid); codeCountBySid[sid] = (codeCountBySid[sid] || 0) + 1; }
+        if (dd === S.docId) {
+          codedSet.add(sid);
+          codeCountBySid[sid] = (codeCountBySid[sid] || 0) + 1;
+          (codesBySid[sid] ||= []).push(code);
+        }
       }
     }
     const sections = S.doc.sections || [];
     const gistById = {};
     for (const sec of sections) gistById[sec.id] = sec.gist;
     let curSection = null;
-    c.innerHTML = `<div class="transcript">
-      <div class="doc-head">
-        <h1>${esc(docTitle(d))}</h1>
-        <p>${esc(kindLabel)} · ${S.doc.nSec} sections · ${S.doc.n} sentences${codedSet.size ? ` · ${codedSet.size} coded` : ' · not yet coded'}</p>
-        ${S.doc.summary ? `<p class="doc-summary">${esc(S.doc.summary)}</p>` : ''}
+    const docs = S.detail.documents;
+    const docIdx = docs.findIndex(x => x.doc_id === S.docId);
+    c.innerHTML = `<div class="tx-outer">
+      <div class="tx-page">
+        <div class="tx-head">
+          <span class="archive">${esc(docTitle(d))}</span>
+          <span>${esc(kindLabel)} · ${S.doc.nSec} sections · ${S.doc.n} sentences${codedSet.size ? ` · ${codedSet.size} coded` : ' · not yet coded'}</span>
+          <div class="tx-head__tools"><button class="btn-quiet tx-drawer-btn" id="tx-drawer-btn">Codebook</button></div>
+          <span class="folio">${docIdx >= 0 ? `source ${docIdx + 1} of ${docs.length}` : ''}</span>
+        </div>
+        ${S.doc.summary ? `<p class="tx-summary">${esc(S.doc.summary)}</p>` : ''}
         ${sections.filter(s => s.gist).length > 1 ? `
-        <details class="doc-toc">
+        <details class="doc-toc" style="margin-bottom:22px">
           <summary>On this page · ${sections.length} sections</summary>
           <div class="doc-toc__list">
             ${sections.filter(s => s.gist).map(s => `<button class="doc-toc__item" data-toc-sid="${s.firstSid}">${esc(s.gist)}</button>`).join('')}
           </div>
         </details>` : ''}
-        <div class="doc-search">
+        <div class="doc-search" style="margin-bottom:24px">
           <input type="search" id="doc-search-q" placeholder="Search this source… (/)">
           <span class="doc-search__count" id="doc-search-count"></span>
           <button class="btn-bare" id="doc-search-prev" title="Previous match">↑</button>
           <button class="btn-bare" id="doc-search-next" title="Next match">↓</button>
         </div>
-      </div>
-      <div class="turns">
         ${S.doc.turns.map(t => {
           let gistHtml = '';
           if (t.sectionId !== curSection) {
@@ -1028,13 +1130,29 @@
             const gist = gistById[t.sectionId];
             if (gist) gistHtml = `<div class="section-head" id="sec-${esc(t.sectionId)}"><span class="section-head__label">${esc(gist)}</span></div>`;
           }
-          return `${gistHtml}
-          <div class="turn">
-            ${t.speaker ? `<div class="turn__speaker">${esc(t.speaker)}</div>` : ''}
-            <div class="turn__body">${t.sentences.map(s => `<span
-                class="s ${codedSet.has(s.id) ? 's--coded' : ''} ${S.sel?.type === 'sentence' && S.sel.id === s.id ? 's--active' : ''}"
-                data-sid="${s.id}">${esc(s.text)}${noteSids.has(s.id) ? '<span class="note-mark"></span>' : ''}</span>`).join(' ')}
+          const turnCodes = [];
+          const seen = new Set();
+          for (const s of t.sentences) for (const cd of (codesBySid[s.id] || []))
+            if (!seen.has(cd.id)) { seen.add(cd.id); turnCodes.push(cd); }
+          const margin = turnCodes.length ? `
+            <div class="tx-tickset">
+              ${turnCodes.map(cd => `<span class="tx-tick ${S.pinnedNotes.has(cd.id) ? 'is-pinned' : ''}" data-tick="${cd.id}" style="background:${lensColor(cd.coder)}"></span>`).join('')}
             </div>
+            ${turnCodes.map(cd => `
+              <div class="tx-note ${S.pinnedNotes.has(cd.id) ? 'is-pinned' : ''}" data-note="${cd.id}">
+                <div class="label"><span class="dot" style="background:${lensColor(cd.coder)}"></span>${esc(label(cd))}</div>
+                <div class="lens">${esc(cd.coder)}</div>
+                ${esc(cd.definition || '')}
+              </div>`).join('')}` : '';
+          return `${gistHtml}
+          <div class="tx-passage">
+            <p class="text">
+              ${t.speaker ? `<span class="tx-spk">${esc(t.speaker)}:</span>` : ''}
+              ${t.sentences.map(s => `<span
+                  class="s ${codedSet.has(s.id) ? 's--coded' : ''} ${S.sel?.type === 'sentence' && S.sel.id === s.id ? 's--active' : ''}"
+                  data-sid="${s.id}">${esc(s.text)}${noteSids.has(s.id) ? '<span class="note-mark"></span>' : ''}</span>`).join(' ')}
+            </p>
+            <div class="tx-margin">${margin}</div>
           </div>`;
         }).join('')}
       </div>
@@ -1047,9 +1165,296 @@
         c.closest('.content')?.querySelector(`[data-sid="${el.dataset.tocSid}"]`)?.scrollIntoView({ block: 'center' });
         c.querySelector('.doc-toc')?.removeAttribute('open');
       }));
+    c.querySelectorAll('[data-tick]').forEach(el =>
+      el.addEventListener('click', e => { e.stopPropagation(); togglePinnedNote(el.dataset.tick, c); }));
+    c.querySelectorAll('[data-note]').forEach(el =>
+      el.addEventListener('click', () => select('code', el.dataset.note)));
+    $('tx-drawer-btn').addEventListener('click', openCodebookDrawer);
     wireDocSearch(c);
     wireSentGutter(c);
     wireMinimap(c, codeCountBySid);
+  }
+
+  // ---- Text: margin-note pinning (click a tick to keep its note open; session-local, not
+  // persisted — a reading aid, not a data mutation). -----------------------------------------------
+  function togglePinnedNote(cid, c) {
+    if (S.pinnedNotes.has(cid)) S.pinnedNotes.delete(cid); else S.pinnedNotes.add(cid);
+    c.querySelectorAll(`[data-tick="${cid}"]`).forEach(el => el.classList.toggle('is-pinned'));
+    c.querySelectorAll(`[data-note="${cid}"]`).forEach(el => el.classList.toggle('is-pinned'));
+  }
+
+  // ---- Text: the codebook drawer (spec §2 — "demotes to a drawer + export"), styled as the
+  // mockup's book index: families as headings (with their P7 rationale as the "why"), codes as
+  // dot-leader rows. Appended to <body> (like the sheet/overflow-menu patterns) so it can float
+  // over the paper page; closeDrawer() is called from every nav transition. ------------------------
+  function closeDrawer() {
+    S.drawerOpen = false;
+    document.querySelector('.drawer-scrim')?.remove();
+    document.querySelector('.drawer')?.remove();
+  }
+  function openCodebookDrawer() {
+    S.drawerOpen = true;
+    document.querySelector('.drawer-scrim')?.remove();
+    document.querySelector('.drawer')?.remove();
+    const fams = S.families?.families || [];
+    const active = S.codes.filter(x => x.status === 'active');
+    const byFam = {};
+    for (const x of active) (byFam[x.family_id || '_none'] ||= []).push(x);
+    const nDocsFor = x => new Set(x.evidence.map(e => e.split('#')[0])).size;
+    const rowFor = x => `<div class="ix-row" data-cid="${x.id}">
+      <span class="code">${esc(label(x))}</span><span class="leader"></span>
+      <span class="n">${nDocsFor(x)} doc${nDocsFor(x) === 1 ? '' : 's'} · ${x.evidence.length}</span>
+    </div>`;
+    const famsHtml = fams.map(f => {
+      const members = byFam[f.id] || [];
+      if (!members.length) return '';
+      return `<div class="ix-fam">
+        <h2><span class="dot" style="background:${famColor(f.hue)}"></span>${esc(f.label)}</h2>
+        ${f.rationale ? `<p class="why">${esc(f.rationale)}</p>` : ''}
+        ${members.map(rowFor).join('')}
+      </div>`;
+    }).join('') + ((byFam._none || []).length ? `
+      <div class="ix-fam"><h2><span class="dot" style="background:var(--faint)"></span>Unfiled</h2>
+        ${byFam._none.map(rowFor).join('')}</div>` : '');
+    const scrim = document.createElement('div');
+    scrim.className = 'drawer-scrim';
+    const drawer = document.createElement('div');
+    drawer.className = 'drawer';
+    drawer.innerHTML = `
+      <button class="drawer-close" id="drawer-x">✕</button>
+      <h1>Codebook</h1>
+      <p class="subtitle">${active.length} active code${active.length === 1 ? '' : 's'}${fams.length ? ` in ${fams.length} families` : ''} — grown from what's been read so far.</p>
+      ${famsHtml || '<p class="empty">No codes yet.</p>'}
+      <div class="drawer-foot">
+        <button class="btn-quiet" id="drawer-export">Export…</button>
+        <button class="btn-quiet" id="drawer-full">Open full codebook</button>
+      </div>`;
+    document.body.appendChild(scrim);
+    document.body.appendChild(drawer);
+    scrim.addEventListener('click', closeDrawer);
+    drawer.querySelector('#drawer-x').addEventListener('click', closeDrawer);
+    drawer.querySelectorAll('[data-cid]').forEach(el =>
+      el.addEventListener('click', () => { closeDrawer(); select('code', el.dataset.cid); }));
+    drawer.querySelector('#drawer-export').addEventListener('click', () => { closeDrawer(); openExportSheet(); });
+    drawer.querySelector('#drawer-full').addEventListener('click', () => { closeDrawer(); switchView('codebook'); });
+  }
+
+  // ==== P10.3 — Session: the walkthrough (spec §3) ==================================================
+  // The SYNTHESIZE call that will generate real walkthrough steps doesn't exist yet — this builds
+  // one client-side from what already exists: `pattern` steps from the strongest (most-evidence)
+  // codes on the document, `uncertainty` steps from codes carrying an uncertainty note (READ
+  // stores it in `model_rationale` — see read.persist_read), `delta` steps from active themes
+  // whose supporting codes include this document. Ordered patterns → uncertainties → deltas, no
+  // cross-category re-sorting (matches the spec's stated order).
+  function buildWalkthrough(docId) {
+    const codes = S.codes.filter(c => c.origin_doc_id === docId && c.status === 'active');
+    const withUnc = codes.filter(c => (c.model_rationale || '').trim());
+    const withoutUnc = codes.filter(c => !(c.model_rationale || '').trim())
+      .sort((a, b) => b.evidence.length - a.evidence.length);
+    const evOf = c => c.evidence.map(e => { const [dc, sid] = e.split('#'); return { doc: dc, sid }; });
+    const steps = [];
+    for (const cd of withoutUnc) steps.push({
+      key: `pattern:${cd.id}`, kind: 'pattern', targetType: 'code', targetId: cd.id,
+      statement: label(cd), def: cd.definition, evidence: evOf(cd),
+    });
+    for (const cd of withUnc) steps.push({
+      key: `uncertainty:${cd.id}`, kind: 'uncertainty', targetType: 'code', targetId: cd.id,
+      statement: label(cd), def: cd.model_rationale || cd.definition, evidence: evOf(cd),
+    });
+    const codeIdsOnDoc = new Set(codes.map(cd => cd.id));
+    const themes = (S.themes?.themes || []).filter(t => t.status === 'active' &&
+      (t.supporting_code_ids || []).some(cid => codeIdsOnDoc.has(cid)));
+    for (const t of themes) {
+      const anchors = (t.key_evidence_sentence_ids || []).filter(a => a.startsWith(`${docId}#`));
+      const fallback = anchors.length ? anchors : (t.supporting_code_ids || [])
+        .filter(cid => codeIdsOnDoc.has(cid)).flatMap(cid => codeById(cid)?.evidence || []);
+      steps.push({
+        key: `delta:${t.id}`, kind: 'delta', targetType: 'theme', targetId: t.id,
+        statement: themeLabel(t) || t.id, def: themeClaim(t),
+        evidence: fallback.map(e => { const [dc, sid] = e.split('#'); return { doc: dc, sid }; }),
+      });
+    }
+    return steps;
+  }
+
+  const SESH_CAP = 7;
+  const SESH_KIND_LABEL = { pattern: 'A pattern here', uncertainty: 'Worth flagging', delta: 'What this changes' };
+  const SESH_KIND_COLOR = { pattern: 'var(--accent)', uncertainty: 'var(--amber)', delta: 'var(--lens-critical)' };
+
+  function renderSession(c) {
+    if (!S.detail.documents.length) {
+      c.innerHTML = `<div class="sesh">
+        <div class="sesh__head"><h1>Session</h1>
+          <p class="sub">Add a source first — the session debriefs you on what the machine found in it.</p></div>
+        ${isViewer() ? '' : '<button class="primary" id="sesh-add">Add a source</button>'}
+      </div>`;
+      $('sesh-add')?.addEventListener('click', openUploadSheet);
+      return;
+    }
+    if (!S.docId || !docById(S.docId)) S.docId = S.detail.documents[0].doc_id;
+    const d = docById(S.docId);
+    const docCodes = S.codes.filter(x => x.origin_doc_id === S.docId && x.status === 'active');
+    if (!docCodes.length) {
+      c.innerHTML = `<div class="sesh">
+        <div class="sesh__head"><h1>Session — ${esc(docTitle(d))}</h1>
+          <p class="sub">This document hasn't been read yet — there's nothing to debrief.</p></div>
+        ${isViewer() ? '' : `
+        <button class="primary" id="sesh-read" style="margin-right:8px">Read this document</button>
+        <button class="btn-quiet" id="sesh-code">Run coding (older method)</button>
+        <p class="hint" style="margin-top:14px;max-width:52ch">Read is one restrained pass over the whole
+        document — a few minutes, one model call. Coding is the older section-by-section method
+        (or the blind lens panel, if this project has one) — still here as an advanced option.</p>`}
+      </div>`;
+      $('sesh-read')?.addEventListener('click', runRead);
+      $('sesh-code')?.addEventListener('click', runCoding);
+      return;
+    }
+    const steps = buildWalkthrough(S.docId);
+    if (!steps.length) {
+      c.innerHTML = `<div class="sesh"><div class="sesh__head"><h1>Session — ${esc(docTitle(d))}</h1>
+        <p class="sub">Coded, but nothing groups into a walkthrough yet — see the Text view or the codebook drawer.</p></div></div>`;
+      return;
+    }
+    const visible = S.sessionExpanded ? steps : steps.slice(0, SESH_CAP);
+    const idx = Math.max(0, Math.min(S.sessionStep, visible.length - 1));
+    const step = visible[idx];
+    const reactions = commentsFor(step.targetType, step.targetId);
+    c.innerHTML = `<div class="sesh">
+      <div class="sesh__head">
+        <h1>Session — ${esc(docTitle(d))}</h1>
+        <p class="sub">A colleague's debrief of what this document carries. Agree, challenge, reframe, or park each point — your reactions steer what happens next.</p>
+      </div>
+      <div class="sesh__progress">
+        <div class="sesh__progress-bar"><div class="sesh__progress-fill" style="width:${((idx + 1) / visible.length) * 100}%"></div></div>
+        <div class="sesh__progress-n">${idx + 1} of ${visible.length}${steps.length > visible.length ? ` (${steps.length} total)` : ''}</div>
+      </div>
+      <div class="sesh-step">
+        <div class="sesh-step__kind" style="color:${SESH_KIND_COLOR[step.kind]}"><span class="dot" style="background:${SESH_KIND_COLOR[step.kind]}"></span>${SESH_KIND_LABEL[step.kind]}</div>
+        <p class="sesh-step__statement">${esc(step.statement)}</p>
+        ${step.def ? `<p class="sesh-step__def">${esc(step.def)}</p>` : ''}
+        <div class="sesh-step__evidence">
+          ${step.evidence.slice(0, 8).map(e => `<button class="anchor" data-doc="${e.doc}" data-sid="${e.sid}" data-tip-doc="${e.doc}" data-tip-sid="${e.sid}">${esc(sidChipLabel(e.doc, e.sid))}</button>`).join('') || '<span class="hint">no evidence resolved</span>'}
+        </div>
+        ${!isViewer() ? `
+        <div class="sesh-reactions">
+          <button class="sesh-react" data-react="agree">Agree</button>
+          <button class="sesh-react" data-react="challenge">Challenge…</button>
+          <button class="sesh-react" data-react="reframe">Reframe…</button>
+          <button class="sesh-react" data-react="park">Park</button>
+        </div>
+        <div id="sesh-inline"></div>` : ''}
+        ${reactions.length ? `<div class="sesh-feed">${reactions.map(n => `<div class="sesh-feed__item"><b>${esc(n.author || 'you')}</b> · ${timeAgo(n.created_at)} — ${esc(n.body)}</div>`).join('')}</div>` : ''}
+      </div>
+      <div class="sesh-nav">
+        <button class="btn-quiet" id="sesh-prev" ${idx === 0 ? 'disabled' : ''}>← Previous</button>
+        <button class="btn-quiet" id="sesh-next" ${idx >= visible.length - 1 ? 'disabled' : ''}>Next →</button>
+        <div class="tb-spacer"></div>
+        ${!S.sessionExpanded && steps.length > SESH_CAP ? `<button class="btn-bare" id="sesh-more">Show ${steps.length - SESH_CAP} more</button>` : ''}
+      </div>
+    </div>`;
+    c.querySelectorAll('[data-doc]').forEach(b =>
+      b.addEventListener('click', () => openDocView(b.dataset.doc, b.dataset.sid)));
+    $('sesh-prev')?.addEventListener('click', () => { S.sessionStep = Math.max(0, idx - 1); renderContent(); });
+    $('sesh-next')?.addEventListener('click', () => { S.sessionStep = Math.min(visible.length - 1, idx + 1); renderContent(); });
+    $('sesh-more')?.addEventListener('click', () => { S.sessionExpanded = true; renderContent(); });
+    wireSessionReactions(c, step);
+  }
+
+  function sessionAdvance() { S.sessionStep += 1; renderContent(); }
+
+  // Reactions ride the EXISTING endpoints (no new backend): agree/park/challenge are comments
+  // (persist, timestamped, survive reload — shown in the feed above); reframe is the code/theme
+  // revision endpoint (rename/relabel) — the researcher's wording wins, the machine original is
+  // kept and shown small wherever that code/theme appears (inspector, Journal).
+  function wireSessionReactions(c, step) {
+    if (isViewer()) return;
+    const ctx = step.targetType === 'code' ? { label: step.statement } : { claim: step.statement };
+    c.querySelectorAll('[data-react]').forEach(b => b.addEventListener('click', () => {
+      const kind = b.dataset.react;
+      if (kind === 'agree') { addNote(step.targetType, step.targetId, S.docId, 'Agreed.', ctx).then(sessionAdvance); return; }
+      if (kind === 'park') { addNote(step.targetType, step.targetId, S.docId, 'Parked for later.', ctx).then(sessionAdvance); return; }
+      const box = $('sesh-inline');
+      if (kind === 'challenge') {
+        box.innerHTML = `<div class="sesh-inline"><textarea id="sesh-note" rows="2" placeholder="What's off about this?"></textarea>
+          <button class="btn-quiet" id="sesh-note-go">Send</button></div>`;
+        $('sesh-note').focus();
+        $('sesh-note-go').addEventListener('click', () => {
+          const v = $('sesh-note').value.trim();
+          if (!v) return;
+          addNote(step.targetType, step.targetId, S.docId, v, ctx).then(sessionAdvance);
+        });
+      } else if (kind === 'reframe') {
+        box.innerHTML = `<div class="sesh-inline"><input id="sesh-reframe" type="text" value="${esc(step.statement)}">
+          <button class="btn-quiet" id="sesh-reframe-go">Save</button></div>`;
+        $('sesh-reframe').focus(); $('sesh-reframe').select();
+        $('sesh-reframe-go').addEventListener('click', async () => {
+          const v = $('sesh-reframe').value.trim();
+          if (!v || v === step.statement) return;
+          if (step.targetType === 'code') await reviseCode(step.targetId, 'rename', v);
+          else await reviseTheme(step.targetId, 'relabel', v);
+          toast('Reframed');
+          sessionAdvance();
+        });
+      }
+    }));
+  }
+
+  // ==== P10.3 — Journal (spec §4, kept modest this pass) ============================================
+  // Findings (current theme data — the finding-status lifecycle isn't built in the backend yet, so
+  // this renders what exists honestly rather than faking emerging/supported/accepted), researcher
+  // notes + assistant/researcher memos in chronological order. The old Notes queue view still
+  // exists (unrouted from nav) — "see all" reaches it.
+  function renderJournal(c) {
+    const findings = (S.themes?.themes || []).filter(t => t.status === 'active')
+      .sort((a, b) => (b.supporting_code_ids || []).length - (a.supporting_code_ids || []).length);
+    const memos = (S.memosList || []).filter(m => (m.body || '').trim())
+      .slice().sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+    const recentNotes = S.comments.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 6);
+    const lenses = lensList();
+    c.innerHTML = `<div class="jrnl">
+      <h1>Journal</h1>
+      <p class="sub">Findings, memos, and the researcher's notes as they accumulate — the project's analytic record.</p>
+
+      <div class="jrnl-section">
+        <h2>Findings · ${findings.length}</h2>
+        <p class="jrnl-seam">Status lifecycle (emerging → supported / challenged / accepted) isn't built yet — these are the current themes, shown as-is.</p>
+        ${findings.length ? findings.map(t => {
+          const tLabel = themeLabel(t), tClaim = themeClaim(t);
+          const prov = t.paradigm_provenance || {};
+          const provChips = lenses.filter(l => prov[l]).map(l =>
+            `<span class="chip"><span class="lens-dot" style="background:${lensColor(l)}"></span>${esc(l)} ${prov[l]}</span>`).join('');
+          return `<div class="finding-card" data-tid="${t.id}">
+            <div class="finding-card__meta">
+              <span class="chip chip--id">${esc(t.id)}</span>
+              <span class="chip">${esc(t.coverage || '')}</span>
+              ${provChips}
+            </div>
+            ${tLabel ? `<p class="finding-card__claim">${esc(tLabel)}</p><p class="hint">${esc(tClaim)}</p>`
+              : `<p class="finding-card__claim">${esc(tClaim)}</p>`}
+          </div>`;
+        }).join('') : `<p class="empty">${S.codes.length ? 'No findings yet — build themes from the codebook.' : 'Nothing coded yet.'}</p>`}
+      </div>
+
+      <div class="jrnl-section">
+        <h2>Notes · ${S.comments.length} <a class="jrnl-more" href="#" id="jrnl-all-notes">see all →</a></h2>
+        ${recentNotes.length ? recentNotes.map(n => `
+          <div class="memo-row">
+            <div class="memo-row__meta">${n.author ? `<b>${esc(n.author)}</b> · ` : ''}${timeAgo(n.created_at)} · <span class="note__status note__status--${n.status === 'open' ? 'open' : 'addressed'}">${n.status}</span></div>
+            <p class="memo-row__body">${esc(n.body)}</p>
+          </div>`).join('') : '<p class="empty">No notes yet.</p>'}
+      </div>
+
+      <div class="jrnl-section">
+        <h2>Memos</h2>
+        ${memos.length ? memos.map(m => `
+          <div class="memo-row">
+            <div class="memo-row__meta">${m.author === 'assistant' ? '<b>assistant</b>' : (m.author ? `<b>${esc(m.author)}</b>` : '<b>researcher</b>')} · on ${esc(m.target_type)}${m.updated_at ? ` · ${timeAgo(m.updated_at)}` : ''}</div>
+            <p class="memo-row__body">${esc(m.body)}</p>
+          </div>`).join('') : '<p class="empty">No memos yet.</p>'}
+      </div>
+    </div>`;
+    c.querySelectorAll('[data-tid]').forEach(el => el.addEventListener('click', () => select('theme', el.dataset.tid)));
+    $('jrnl-all-notes')?.addEventListener('click', e => { e.preventDefault(); switchView('notes'); });
   }
 
   let _mmReposition = null;  // set by wireMinimap; called when the inspector reflows the grid
@@ -1642,7 +2047,7 @@
             ${tensions.map(x => `<button class="anchor" data-code="${x.id}">${esc(label(x))}</button>`).join('')}</div>` : ''}
           ${t.falsified_if ? `<div class="theme-card__sect"><h4>Falsified if</h4><p class="falsif">${esc(t.falsified_if)}</p></div>` : ''}
         </article>`;
-      }).join('') : `<p class="empty">${all.length ? 'Nothing to show — try the hidden toggle.' : `No themes yet — ${anyCoded() ? 'build them from the codebook.' : 'run coding first.'}`}</p>`}
+      }).join('') : `<p class="empty">${all.length ? 'Nothing to show — try the hidden toggle.' : `No themes yet — ${S.codes.length ? 'build them from the codebook.' : 'run coding first.'}`}</p>`}
     </div>`;
     $('th-rebuild')?.addEventListener('click', () => runThemes(fb, !(staleN > 0 && !fb)));
     $('th-hidden')?.addEventListener('change', e => { S.themesHidden = e.target.checked; renderContent(); });
@@ -1817,8 +2222,113 @@
       b.addEventListener('click', () => deleteNote(b.dataset.del).then(() => renderContent())));
   }
 
-  // ---- render: analysis overview / dashboard (P4.12) ----------------------------------------------
-  async function renderOverview(c) {
+  // ---- render: Home (P10.3 — the project front door, spec §8) -------------------------------------
+  // Core documents + add material (text/audio) + the project declaration + a project-notes memo.
+  // Replaces the old codes/coverage dashboard as the "overview" view's content (kept below,
+  // unrouted, as renderOverviewDashboard — nothing lost, just no longer the primary landing page).
+  function renderProjectHome(c) {
+    const proj = S.detail.project;
+    const docs = S.detail.documents;
+    const nFindings = (S.themes?.themes || []).filter(t => t.status === 'active').length;
+    c.innerHTML = `<div class="phome">
+      <h1>${esc(proj.name)}</h1>
+      <p class="sub">${docs.length} document${docs.length === 1 ? '' : 's'} · ${nFindings} finding${nFindings === 1 ? '' : 's'}${S.mode === 'panel' ? ` · ${lensList().length || 3} lenses` : ''}</p>
+
+      <div class="phome-section">
+        <h2>Add material</h2>
+        ${isViewer() ? '<p class="empty">Read-only — sign in as editor to add material.</p>' : `
+        <div class="add-material">
+          <button class="primary" id="ph-add-text">Upload text (.txt / .md)</button>
+          <button class="primary" id="ph-add-audio">Upload audio (.mp3 / .m4a / .wav / .aiff)</button>
+        </div>`}
+      </div>
+
+      <div class="phome-section">
+        <h2>Core documents</h2>
+        ${docs.length ? docs.map(d => `
+          <div class="doc-row" data-doc="${d.doc_id}">
+            <span class="doc-row__name">${esc(docTitle(d))}</span>
+            <span class="doc-row__meta">${esc(KINDS[d.kind] || d.kind)} · ${d.n_sentences} sentences · ${esc((d.status || 'ingested').replace(/^coded:/, 'coded · '))}</span>
+          </div>`).join('') : '<p class="empty">No documents yet — add material above.</p>'}
+      </div>
+
+      <div class="phome-section">
+        <h2>Project declaration</h2>
+        <div class="decl-grid">
+          <div class="decl-field">
+            <label>Research question</label>
+            <textarea id="ph-rq" ${isViewer() ? 'readonly' : ''} placeholder="What is this project trying to find out?">${esc(proj.research_question || '')}</textarea>
+          </div>
+          <div class="decl-field">
+            <label>Positionality</label>
+            <textarea id="ph-pos" ${isViewer() ? 'readonly' : ''} placeholder="Your standpoint relative to the material…">${esc(proj.positionality || '')}</textarea>
+          </div>
+        </div>
+        <div class="decl-field decl-field--model">
+          <label for="ph-model">Reading model</label>
+          <select id="ph-model" ${isViewer() ? 'disabled' : ''}></select>
+          <p class="decl-note" id="ph-model-note">Which model reads this project. Recorded with every run — the export says what produced each finding.</p>
+        </div>
+      </div>
+
+      <div class="phome-section">
+        <h2>Project notes</h2>
+        ${memoBlock('project', S.pid, {})}
+      </div>
+    </div>`;
+    $('ph-add-text')?.addEventListener('click', openUploadSheet);
+    $('ph-add-audio')?.addEventListener('click', openUploadSheet);
+    c.querySelectorAll('[data-doc]').forEach(el =>
+      el.addEventListener('click', () => openSession(el.dataset.doc)));
+    if (!isViewer()) {
+      const saveDecl = debounce(async () => {
+        try {
+          const research_question = $('ph-rq').value, positionality = $('ph-pos').value;
+          await API.patchProject(S.pid, { research_question, positionality });
+          S.detail.project.research_question = research_question;
+          S.detail.project.positionality = positionality;
+        } catch (e) { toast(String(e.message || e), true); }
+      }, 700);
+      $('ph-rq').addEventListener('input', saveDecl);
+      $('ph-pos').addEventListener('input', saveDecl);
+      wireMemo(c, 'project', S.pid, {});
+    }
+    wireModelPicker(proj);
+  }
+
+  // ---- model picker (P10.1c): the project's reading model. Unavailable entries (no credentials
+  // configured server-side) are shown but disabled rather than hidden — "not configured" is more
+  // useful to a researcher than a silently short list. ----------------------------------------
+  async function wireModelPicker(proj) {
+    const sel = $('ph-model'), note = $('ph-model-note');
+    if (!sel) return;
+    let reg;
+    try { reg = await API.models(); }
+    catch { sel.innerHTML = '<option>— unavailable —</option>'; sel.disabled = true; return; }
+    const models = reg.models || [];
+    const dflt = models.find(m => m.id === reg.default_model_id);
+    sel.innerHTML = `<option value="">Server default${dflt ? ` — ${esc(dflt.label)}` : ''}</option>` +
+      models.map(m => `<option value="${esc(m.id)}" ${m.id === proj.model_id ? 'selected' : ''} ${m.available ? '' : 'disabled'}>${esc(m.label)}${m.available ? '' : ' — not configured'}</option>`).join('');
+    const showNote = () => {
+      const m = models.find(x => x.id === sel.value);
+      note.textContent = m && m.note ? m.note
+        : 'Which model reads this project. Recorded with every run — the export says what produced each finding.';
+    };
+    showNote();
+    if (isViewer()) return;
+    sel.addEventListener('change', async () => {
+      try {
+        await API.patchProject(S.pid, { model_id: sel.value || null });
+        S.detail.project.model_id = sel.value || null;
+        showNote();
+        toast(sel.value ? `Reading model: ${models.find(m => m.id === sel.value)?.label}` : 'Using the server default model');
+      } catch (e) { toast(String(e.message || e), true); }
+    });
+  }
+
+  // ---- render: analysis overview / dashboard (P4.12) — SUPERSEDED as the "overview" view's
+  // content by renderProjectHome above; kept, unrouted, per the P10.3 brief ("nothing lost"). -------
+  async function renderOverviewDashboard(c) {
     const docs = S.detail.documents;
     const lenses = lensList();
     const byLens = {};
