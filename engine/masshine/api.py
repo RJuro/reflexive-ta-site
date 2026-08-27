@@ -17,7 +17,7 @@ from fastapi import FastAPI, Form, HTTPException, Request, Response, UploadFile
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import jobs, packs, projects, runner, store, transcribe
+from . import jobs, llm, models, packs, projects, runner, store, transcribe
 from .auth import PinAuthMiddleware, resolve_role, role_for_pin, set_auth_cookie, COOKIE_NAME
 from .config import ROOT
 from .db import project_db
@@ -104,6 +104,12 @@ class NewProject(BaseModel):
 class ProjectPatch(BaseModel):
     name: str | None = None
     archived: bool | None = None
+    research_question: str | None = None   # P10.3: the project declaration (spec §9)
+    positionality: str | None = None
+    model_id: str | None = None            # P10.1c: this project's model default — see /models.
+                                            # explicit null CLEARS it (back to the server default);
+                                            # omitting the field leaves it untouched (checked via
+                                            # model_fields_set, since both look like None here)
 
 
 class DocumentPatch(BaseModel):
@@ -118,20 +124,24 @@ class RedraftApplyReq(BaseModel):
 class CodeReq(BaseModel):
     mode: str = "standard"          # "standard" | "panel"
     recode: bool = False
+    model_id: str | None = None     # P10.1c: this run only — overrides the project default
 
 
 class ReadReq(BaseModel):
     span: str | None = None         # "doc" | "halves" | "groups" | "sections" — see jobs.py
+    model_id: str | None = None     # P10.1c: this run only — overrides the project default
 
 
 class ThemeReq(BaseModel):
     mode: str = "standard"
     feedback: bool = False          # True → open theme comments/revisions ride into the walk
+    model_id: str | None = None     # P10.1c: this run only — overrides the project default
 
 
 class RecodeReq(BaseModel):
     doc_id: str
     mode: str = "standard"
+    model_id: str | None = None     # P10.1c: this run only — overrides the project default
 
 
 class CommentReq(BaseModel):
@@ -179,6 +189,12 @@ def _require_project(pid: str) -> dict:
     return p
 
 
+def _validate_model_id(model_id: str | None) -> None:
+    """400 on an unknown registry id. None (no override requested) always passes."""
+    if model_id is not None and models.resolve(model_id) is None:
+        raise HTTPException(400, f"unknown model_id {model_id!r} — see GET /models")
+
+
 def _conn(pid: str):
     return project_db(projects.project_db_path(pid))
 
@@ -188,6 +204,15 @@ def _conn(pid: str):
 @app.get("/packs")
 def get_packs():
     return packs.list_packs()
+
+
+@app.get("/models")
+def get_models():
+    """The researcher-selectable model registry (P10.1c) — see masshine.models. Read-only, so
+    reachable under the viewer role like every other GET. `available` flags whether that
+    provider's credentials are actually configured on this deployment; `default_model_id` is
+    which entry (if any) matches what a job runs today with no project/job override at all."""
+    return {"models": models.list_models(), "default_model_id": models.server_default_id()}
 
 
 @app.post("/projects")
@@ -242,6 +267,11 @@ def patch_project(pid: str, req: ProjectPatch):
         projects.rename_project(pid, name)
     if req.archived is not None:
         projects.set_archived(pid, req.archived)
+    if req.research_question is not None or req.positionality is not None:
+        projects.set_declaration(pid, req.research_question, req.positionality)
+    if "model_id" in req.model_fields_set:   # distinguishes explicit null (clear) from omitted
+        _validate_model_id(req.model_id)
+        projects.set_model(pid, req.model_id)
     return projects.get_project(pid)
 
 
@@ -281,8 +311,10 @@ async def upload_document(pid: str, file: UploadFile, kind: str = Form("transcri
         dest = projects.uploads_dir(pid) / f"{Path(file.filename).stem}-{n}.txt"
         n += 1
     dest.write_bytes(await file.read())
-    job = projects.create_job(pid, "ingest", {"filename": dest.name, "kind": kind})
-    jobs.submit(job["id"], jobs.ingest_work(pid, dest, kind))
+    work = jobs.ingest_work(pid, dest, kind)
+    job = projects.create_job(pid, "ingest",
+                              {"filename": dest.name, "kind": kind, "model_id": work.model_id})
+    jobs.submit(job["id"], work)
     return {"job_id": job["id"], "filename": dest.name}
 
 
@@ -400,8 +432,11 @@ async def upload_audio(pid: str, file: UploadFile, auto_ingest: bool = True):
     # is what actually protects an ingested transcript, not filename uniqueness here).
     dest = projects.uploads_dir(pid) / file.filename
     dest.write_bytes(data)
-    job = projects.create_job(pid, "transcribe", {"filename": dest.name, "auto_ingest": auto_ingest})
-    jobs.submit(job["id"], jobs.transcribe_work(pid, dest.name, auto_ingest=auto_ingest))
+    work = jobs.transcribe_work(pid, dest.name, auto_ingest=auto_ingest)
+    job = projects.create_job(pid, "transcribe",
+                              {"filename": dest.name, "auto_ingest": auto_ingest,
+                               "model_id": work.model_id})
+    jobs.submit(job["id"], work)
     return {"job_id": job["id"], "filename": dest.name}
 
 
@@ -437,7 +472,8 @@ def propose_audio_redraft(pid: str, stem: str):
         raise HTTPException(404, f"no transcript for {stem!r} — POST /projects/{pid}/audio first")
     sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
     segments = sidecar.get("segments", [])
-    accepted, stats = transcribe.propose_redraft(segments)
+    with llm.use_model(jobs.resolve_job_model(pid, None)):  # P10.1c: project default (no job here)
+        accepted, stats = transcribe.propose_redraft(segments)
     diff = [{"index": i, "orig": segments[i].get("text", ""), "fixed": acc["text"]}
             for i, acc in enumerate(accepted) if acc.get("redrafted")]
     proposal = {"diff": diff, "stats": stats}
@@ -496,8 +532,11 @@ def ingest_audio_transcript(pid: str, stem: str):
         _refuse_if_ingested(conn, stem)
     finally:
         conn.close()
-    job = projects.create_job(pid, "ingest", {"filename": txt_path.name, "kind": "transcript"})
-    jobs.submit(job["id"], jobs.ingest_work(pid, txt_path))
+    work = jobs.ingest_work(pid, txt_path)
+    job = projects.create_job(pid, "ingest",
+                              {"filename": txt_path.name, "kind": "transcript",
+                               "model_id": work.model_id})
+    jobs.submit(job["id"], work)
     return {"job_id": job["id"], "filename": txt_path.name}
 
 
@@ -508,8 +547,11 @@ def run_coding(pid: str, req: CodeReq):
     _require_project(pid)
     if req.mode not in ("standard", "panel"):
         raise HTTPException(400, "mode must be 'standard' or 'panel'")
-    job = projects.create_job(pid, f"code_{req.mode}", {"mode": req.mode, "recode": req.recode})
-    jobs.submit(job["id"], jobs.code_work(pid, req.mode, req.recode))
+    _validate_model_id(req.model_id)
+    work = jobs.code_work(pid, req.mode, req.recode, model_id=req.model_id)
+    job = projects.create_job(pid, f"code_{req.mode}",
+                              {"mode": req.mode, "recode": req.recode, "model_id": work.model_id})
+    jobs.submit(job["id"], work)
     return {"job_id": job["id"]}
 
 
@@ -530,8 +572,10 @@ def run_read(pid: str, req: ReadReq):
     _require_project(pid)
     if req.span is not None and req.span not in jobs.READ_SPANS:
         raise HTTPException(400, f"span must be one of {jobs.READ_SPANS}")
-    job = projects.create_job(pid, "read", {"span": req.span})
-    jobs.submit(job["id"], jobs.read_work(pid, req.span))
+    _validate_model_id(req.model_id)
+    work = jobs.read_work(pid, req.span, model_id=req.model_id)
+    job = projects.create_job(pid, "read", {"span": req.span, "model_id": work.model_id})
+    jobs.submit(job["id"], work)
     return {"job_id": job["id"]}
 
 
@@ -559,8 +603,11 @@ def run_recode(pid: str, req: RecodeReq):
             raise HTTPException(404, f"no document {req.doc_id}")
     finally:
         conn.close()
-    job = projects.create_job(pid, "recode", {"doc_id": req.doc_id, "mode": req.mode})
-    jobs.submit(job["id"], jobs.recode_work(pid, req.doc_id, req.mode))
+    _validate_model_id(req.model_id)
+    work = jobs.recode_work(pid, req.doc_id, req.mode, model_id=req.model_id)
+    job = projects.create_job(pid, "recode",
+                              {"doc_id": req.doc_id, "mode": req.mode, "model_id": work.model_id})
+    jobs.submit(job["id"], work)
     return {"job_id": job["id"]}
 
 
@@ -571,8 +618,12 @@ def run_themes(pid: str, req: ThemeReq):
     _require_project(pid)
     if req.mode not in ("standard", "panel"):
         raise HTTPException(400, "mode must be 'standard' or 'panel'")
-    job = projects.create_job(pid, "theme", {"mode": req.mode, "feedback": req.feedback})
-    jobs.submit(job["id"], jobs.theme_work(pid, req.mode, feedback=req.feedback))
+    _validate_model_id(req.model_id)
+    work = jobs.theme_work(pid, req.mode, feedback=req.feedback, model_id=req.model_id)
+    job = projects.create_job(pid, "theme",
+                              {"mode": req.mode, "feedback": req.feedback,
+                               "model_id": work.model_id})
+    jobs.submit(job["id"], work)
     return {"job_id": job["id"]}
 
 
@@ -592,8 +643,9 @@ def get_themes(pid: str, mode: str = "standard"):
 def run_consolidate(pid: str):
     """Group the codebook into 8–15 code families — ONE model call, follows run_recode's shape."""
     _require_project(pid)
-    job = projects.create_job(pid, "consolidate", {})
-    jobs.submit(job["id"], jobs.consolidate_work(pid))
+    work = jobs.consolidate_work(pid)
+    job = projects.create_job(pid, "consolidate", {"model_id": work.model_id})
+    jobs.submit(job["id"], work)
     return {"job_id": job["id"]}
 
 
@@ -634,8 +686,9 @@ def run_compress(pid: str):
     """Propose within-family merge groups — one model call per family (>=4 active codes), plus
     the no-family batch if it qualifies. Nothing merges until a proposal is accepted."""
     _require_project(pid)
-    job = projects.create_job(pid, "compress", {})
-    jobs.submit(job["id"], jobs.compress_work(pid))
+    work = jobs.compress_work(pid)
+    job = projects.create_job(pid, "compress", {"model_id": work.model_id})
+    jobs.submit(job["id"], work)
     return {"job_id": job["id"]}
 
 
@@ -933,7 +986,7 @@ def export_json(pid: str):
     proj = _require_project(pid)
     conn = _conn(pid)
     try:
-        payload = store.export_payload(conn, _mode_of(proj))
+        payload = store.export_payload(conn, _mode_of(proj), model_id=proj.get("model_id"))
     finally:
         conn.close()
     payload["project"] = proj

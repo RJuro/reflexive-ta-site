@@ -5,13 +5,14 @@ JSON checkpoint the CLI uses: re-POSTing a code/theme job resumes from where it 
 """
 from __future__ import annotations
 
+import functools
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import packs, projects, read, runner, store, transcribe
+from . import llm, models, packs, projects, read, runner, store, transcribe
 from .coding import code_document, code_sections_panel
 from .compress import compress_batches, propose_merges
 from .consolidate import consolidate_codebook
@@ -25,6 +26,38 @@ READ_SPANS = ("doc", "halves", "groups", "sections")
 COVERAGE_GATE_SHARE = 0.45  # first-3-deciles share above this re-runs the doc at span='sections'
 
 _EXECUTOR = ThreadPoolExecutor(max_workers=1)  # serialize LLM-heavy jobs
+
+
+# ---- researcher-selectable model resolution (P10.1c) ----------------------------------------
+# Precedence: explicit job param > the project's own model_id default > the server env default
+# (no override at all — llm.use_model(None) is a no-op, today's behavior unchanged).
+
+def resolve_job_model(pid: str, model_id: str | None) -> dict | None:
+    if not model_id:
+        model_id = (projects.get_project(pid) or {}).get("model_id")
+    return models.resolve(model_id) if model_id else None
+
+
+def with_model(build):
+    """Decorator for a `*_work(pid, ..., model_id=None)` builder: resolves the model ONCE here
+    (job-build time, before the job ever runs) and wraps the returned work(progress) so the whole
+    job body runs inside llm.use_model(entry) — entered FROM CODE THAT ALREADY RUNS ON THE
+    EXECUTOR'S WORKER THREAD (work() only executes once _run() invokes it there), which is why no
+    contextvars.copy_context() dance is needed: two sequential jobs on the single worker thread
+    each set/reset their own ContextVar value and never see each other's (see llm.use_model).
+    The wrapped callable carries `.model_id` (the resolved registry id, or None) so an endpoint
+    can stash what actually ran into the job row's params."""
+    @functools.wraps(build)
+    def outer(pid, *args, model_id=None, **kwargs):
+        entry = resolve_job_model(pid, model_id)
+        inner = build(pid, *args, **kwargs)
+
+        def work(progress):
+            with llm.use_model(entry):
+                return inner(progress)
+        work.model_id = entry["id"] if entry else None
+        return work
+    return outer
 
 
 def _now() -> str:
@@ -53,6 +86,7 @@ def _run(job_id: str, work) -> None:
 
 # ---- work builders (each returns work(progress) -> result dict) ----------------------------------
 
+@with_model
 def ingest_work(pid: str, upload_path: Path, kind: str = "transcript"):
     def work(progress):
         progress(stage="structure", message=f"structuring {upload_path.name}")
@@ -69,6 +103,7 @@ def ingest_work(pid: str, upload_path: Path, kind: str = "transcript"):
     return work
 
 
+@with_model
 def transcribe_work(pid: str, filename: str, auto_ingest: bool = True):
     """P10.1b — the audio path (data-session-spec.md §12): ASR -> role mapping -> canonical
     render -> (default) the SAME ingest path ingest_work uses, so an audio upload ends as a
@@ -112,6 +147,7 @@ def transcribe_work(pid: str, filename: str, auto_ingest: bool = True):
     return work
 
 
+@with_model
 def code_work(pid: str, mode: str, recode: bool = False):
     def work(progress):
         cp = projects.checkpoint_path(pid, mode)
@@ -178,6 +214,7 @@ def code_work(pid: str, mode: str, recode: bool = False):
     return work
 
 
+@with_model
 def recode_work(pid: str, doc_id: str, mode: str):
     """Re-code ONE document with the researcher's open feedback compiled into the prompts.
     Theme steps that embedded the old codes go stale: in panel mode every step from this doc's
@@ -286,6 +323,7 @@ def _read_one_doc(conn, run_id: str, doc_id: str, span: str, research_question: 
     return digest
 
 
+@with_model
 def read_work(pid: str, span: str | None = None):
     """READ each not-yet-read document (own checkpoint kind "read" — same skip-what's-done
     discipline as code_work, a separate file so it never collides with code_work's checkpoints)
@@ -336,6 +374,7 @@ def read_work(pid: str, span: str | None = None):
     return work
 
 
+@with_model
 def theme_work(pid: str, mode: str, feedback: bool = False):
     def work(progress):
         cp = projects.checkpoint_path(pid, mode)
@@ -391,6 +430,7 @@ def theme_work(pid: str, mode: str, feedback: bool = False):
     return work
 
 
+@with_model
 def consolidate_work(pid: str):
     """P6: group the whole codebook into 8–15 code families. Small/single-source projects get
     one LLM call; larger multi-source projects use a hierarchical map-reduce (per-source
@@ -418,6 +458,7 @@ def consolidate_work(pid: str):
     return work
 
 
+@with_model
 def compress_work(pid: str):
     """P8a: the actual codebook COLLAPSE. One LLM call per family (>= COMPRESS_MIN_FAMILY_CODES
     active codes) proposes within-family merge groups; Python validates; the whole batch of

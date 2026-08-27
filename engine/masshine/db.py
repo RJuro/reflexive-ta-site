@@ -5,13 +5,16 @@ import json
 import sqlite3
 from datetime import datetime, timezone
 
+from . import llm
 from .config import EXPORT_DIR
 
 
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(
         """
-        CREATE TABLE IF NOT EXISTS run (id TEXT PRIMARY KEY, created_at TEXT, note TEXT);
+        CREATE TABLE IF NOT EXISTS run (
+            id TEXT PRIMARY KEY, created_at TEXT, note TEXT, model TEXT
+        );
         CREATE TABLE IF NOT EXISTS document (
             id TEXT PRIMARY KEY, run_id TEXT, path TEXT, text TEXT, text_hash TEXT, char_len INTEGER,
             title TEXT, summary TEXT
@@ -41,9 +44,13 @@ def init_db(conn: sqlite3.Connection) -> None:
 
 
 def new_run(conn: sqlite3.Connection, note: str = "") -> str:
+    """P10.1c: every run row auto-captures llm.model() — the ACTIVE resolved model (an active
+    jobs.py `use_model()` override if one is set, else today's env default) — so a project coded
+    partly under one model and partly under another stays honest run-by-run (see
+    store.export_payload's manifest)."""
     run_id = "R" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f")
-    conn.execute("INSERT INTO run (id, created_at, note) VALUES (?,?,?)",
-                 (run_id, datetime.now(timezone.utc).isoformat(), note))
+    conn.execute("INSERT INTO run (id, created_at, note, model) VALUES (?,?,?,?)",
+                 (run_id, datetime.now(timezone.utc).isoformat(), note, llm.model()))
     conn.commit()
     return run_id
 
@@ -141,8 +148,11 @@ def resolve_ev(conn: sqlite3.Connection, qualified: str) -> str:
 # `revision`/`revisions_map`, but for theme_v2 rows (relabel/reclaim/merge/demote/restore).
 # Themes don't get a rename/reject/merge column added to theme_v2 itself; like codes, the
 # override is folded in at read time (see store.theme_revisions_map / themes_payload).
+# v11 adds per-run model provenance (P10.1c): `run.model` (nullable — the resolved model string
+# new_run() auto-captured from llm.model() when the run started), so a project coded partly under
+# one researcher-selected model and partly under another stays honest in the export manifest.
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 
 def init_project_db(conn: sqlite3.Connection) -> None:
@@ -249,6 +259,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
     family_cols = {r[1] for r in conn.execute("PRAGMA table_info(code_family)")}
     if "rationale" not in family_cols:
         conn.execute("ALTER TABLE code_family ADD COLUMN rationale TEXT")
+    run_cols = {r[1] for r in conn.execute("PRAGMA table_info(run)")}
+    if "model" not in run_cols:
+        conn.execute("ALTER TABLE run ADD COLUMN model TEXT")
 
 
 def project_db(path) -> sqlite3.Connection:

@@ -56,6 +56,10 @@ def _registry() -> sqlite3.Connection:
         conn.execute("ALTER TABLE project ADD COLUMN research_question TEXT")
     if "positionality" not in cols:
         conn.execute("ALTER TABLE project ADD COLUMN positionality TEXT")
+    # P10.1c: the researcher's per-project model default (registry id from masshine.models, or
+    # NULL — NULL means "use the server env default", exactly today's behavior).
+    if "model_id" not in cols:
+        conn.execute("ALTER TABLE project ADD COLUMN model_id TEXT")
     conn.commit()
     return conn
 
@@ -102,15 +106,20 @@ def create_project(name: str, pack_id: str | None = None) -> dict:
 def _project_row(r) -> dict:
     d = {"id": r[0], "name": r[1], "pack_id": r[2], "created_at": r[3],
          "archived": bool(r[4]) if len(r) > 4 else False}
-    if len(r) > 5:  # get_project's wider SELECT (P10.1a: the project declaration)
+    if len(r) > 5:  # the wider SELECT (P10.1a declaration + P10.1c model default)
         d["research_question"] = r[5]
         d["positionality"] = r[6]
+        d["model_id"] = r[7]
     return d
+
+
+_WIDE_SELECT = ("SELECT id, name, pack_id, created_at, archived, research_question, "
+               "positionality, model_id FROM project")
 
 
 def list_projects(include_archived: bool = False) -> list[dict]:
     conn = _registry()
-    q = "SELECT id, name, pack_id, created_at, archived FROM project"
+    q = _WIDE_SELECT
     if not include_archived:
         q += " WHERE archived = 0"
     q += " ORDER BY created_at DESC"
@@ -121,9 +130,7 @@ def list_projects(include_archived: bool = False) -> list[dict]:
 
 def get_project(pid: str) -> dict | None:
     conn = _registry()
-    r = conn.execute(
-        "SELECT id, name, pack_id, created_at, archived, research_question, positionality "
-        "FROM project WHERE id = ?", (pid,)).fetchone()
+    r = conn.execute(_WIDE_SELECT + " WHERE id = ?", (pid,)).fetchone()
     conn.close()
     return _project_row(r) if r else None
 
@@ -141,6 +148,42 @@ def rename_project(pid: str, name: str) -> dict | None:
 def set_archived(pid: str, flag: bool) -> dict | None:
     conn = _registry()
     cur = conn.execute("UPDATE project SET archived = ? WHERE id = ?", (1 if flag else 0, pid))
+    conn.commit()
+    conn.close()
+    if not cur.rowcount:
+        return None
+    return get_project(pid)
+
+
+def set_declaration(pid: str, research_question: str | None = None,
+                    positionality: str | None = None) -> dict | None:
+    """P10.3: the project declaration (data-session-spec.md §9) — researcher-editable research
+    question + positionality statement, shown on the project home. Either field may be omitted
+    (None means "leave unchanged"; pass "" to clear one deliberately)."""
+    conn = _registry()
+    sets, vals = [], []
+    if research_question is not None:
+        sets.append("research_question = ?"); vals.append(research_question)
+    if positionality is not None:
+        sets.append("positionality = ?"); vals.append(positionality)
+    if not sets:
+        conn.close()
+        return get_project(pid)
+    vals.append(pid)
+    cur = conn.execute(f"UPDATE project SET {', '.join(sets)} WHERE id = ?", vals)
+    conn.commit()
+    conn.close()
+    if not cur.rowcount:
+        return None
+    return get_project(pid)
+
+
+def set_model(pid: str, model_id: str | None) -> dict | None:
+    """P10.1c: set (or, with model_id=None, clear back to the server default) this project's
+    model override. Validation (unknown id -> 400) is api.py's job, same division as
+    set_declaration; this just persists whatever it's given, including None."""
+    conn = _registry()
+    cur = conn.execute("UPDATE project SET model_id = ? WHERE id = ?", (model_id, pid))
     conn.commit()
     conn.close()
     if not cur.rowcount:

@@ -876,7 +876,22 @@ def _safe_quote(conn: sqlite3.Connection, qualified: str) -> str:
         return ""
 
 
-def export_payload(conn: sqlite3.Connection, mode: str) -> dict:
+def _model_manifest(conn: sqlite3.Connection, model_id: str | None) -> dict:
+    """P10.1c provenance: which model this project is CONFIGURED to run under right now
+    (model_id — the project's own default, or None for the server env default) and what that
+    actually resolves to, plus every distinct model any run row in this project's history
+    actually used — so a project coded partly under one model and partly under another stays
+    honest even though `model`/`model_id` above only describe the CURRENT setting."""
+    from . import llm, models
+    entry = models.resolve(model_id) if model_id else None
+    with llm.use_model(entry):
+        resolved_model = llm.model()
+    rows = conn.execute("SELECT DISTINCT model FROM run WHERE model IS NOT NULL").fetchall()
+    return {"model_id": model_id, "model": resolved_model,
+           "models_used": sorted(r[0] for r in rows)}
+
+
+def export_payload(conn: sqlite3.Connection, mode: str, model_id: str | None = None) -> dict:
     codes = codes_payload(conn)
     for c in codes:
         c["evidence"] = [{"id": e, "quote": _safe_quote(conn, e)} for e in c["evidence"]]
@@ -884,6 +899,7 @@ def export_payload(conn: sqlite3.Connection, mode: str) -> dict:
     return {
         "exported_at": _now(),
         "mode": mode,
+        "manifest": _model_manifest(conn, model_id),
         "documents": document_list(conn),
         "codes": codes,
         "themes": th["themes"],

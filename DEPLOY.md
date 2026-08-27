@@ -41,6 +41,38 @@ behavior changes (same streaming, same usage/cache-token ledger).
 | `MASSHINE_MISTRAL_BASE_URL` | no | defaults to `https://api.mistral.ai/v1` |
 | `MASSHINE_MISTRAL_MODEL` | no | defaults to `glm-5-2` |
 
+## Selecting a model (P10.1c)
+
+A researcher can pick which model runs a project's coding/theming/reading jobs, on top of the
+provider config above:
+
+- **Server default** — with nothing configured per-project, every job runs under whichever
+  provider profile is set above (MiniMax, or Mistral via `MASSHINE_PROVIDER=mistral`). Nothing
+  in this section is required for that — it's the existing behavior, untouched.
+- **Per-project default** — `PATCH /projects/{pid}` with `{"model_id": "glm-5-2"}` sets that
+  project's default model (any id from `GET /models`); `{"model_id": null}` clears it back to
+  the server default. `GET /projects/{pid}` echoes the project's current `model_id`.
+- **Per-run override** — `/code`, `/read`, `/themes`, and `/recode` all accept an optional
+  `model_id` in their POST body; it wins for that one run only, without touching the project's
+  default.
+- **The registry** — `GET /models` lists the selectable models (`id`, `label`, `provider`,
+  `model`, `note`, `available` — whether that provider's credentials are actually configured
+  here) plus `default_model_id`. To replace the built-in list entirely, set `MASSHINE_MODELS` to
+  a JSON array, e.g.:
+
+  ```json
+  [{"id": "glm-5-2", "label": "GLM-5.2 (Mistral, EU)", "provider": "mistral", "model": "glm-5-2",
+    "note": "GDPR — university contract"}]
+  ```
+
+  Each entry needs at least `id`, `provider` (`minimax` | `mistral`), and `model`; a malformed
+  entry is dropped, and invalid/absent JSON falls back to the built-in list — this can never
+  crash the app.
+
+Every provider credential above (`MASSHINE_API_KEY`, `MISTRAL_API_KEY`/`MASSHINE_MISTRAL_API_KEY`)
+still has to be set for a model on that provider to actually run — `available: false` in
+`GET /models` means the id is listed but currently unusable.
+
 ## Persistent storage — do this before the first real coding run
 
 Add a **Storage / Volume** in Coolify mounted at `/data` inside the container. Without it,

@@ -37,12 +37,14 @@ MASSHINE_MISTRAL_API_KEY), model defaults to "glm-5-2" (override MASSHINE_MISTRA
 """
 from __future__ import annotations
 
+import contextvars
 import json
 import os
 import re
 import subprocess
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 from openai import OpenAI
@@ -78,9 +80,40 @@ def reset_usage() -> None:
         _BY_LABEL.clear()
 
 
+# ---- researcher-selectable model override (P10.1c) ---------------------------------------------
+# A ContextVar, not a global: jobs.py enters `use_model(entry)` FROM CODE THAT ALREADY RUNS ON THE
+# WORKER THREAD (inside the job body, not at submit() time) — contextvars don't cross threads on
+# their own, so this only works because we never need them to; each job sets/resets its own value
+# on the single worker thread, so two sequential jobs never see each other's override. `entry` is
+# one masshine.models registry dict ({"id", "provider", "model", ...}) or None (no override — every
+# resolver below falls through to today's env-only behavior, unchanged for any caller that never
+# opts in). codex-cli is never a valid entry here — see models.py's module comment.
+_ACTIVE_MODEL: "contextvars.ContextVar[dict | None]" = contextvars.ContextVar(
+    "masshine_active_model", default=None)
+
+
+@contextmanager
+def use_model(entry: dict | None):
+    token = _ACTIVE_MODEL.set(entry)
+    try:
+        yield
+    finally:
+        _ACTIVE_MODEL.reset(token)
+
+
+def active_model() -> dict | None:
+    """The registry entry currently overriding provider+model on this thread, or None."""
+    return _ACTIVE_MODEL.get()
+
+
 def _provider() -> str:
     """"" (default) or "mistral" — an OpenAI-COMPATIBLE provider profile switch, not a new
-    backend: both go through the same streamed client below. See the module docstring."""
+    backend: both go through the same streamed client below. See the module docstring. An active
+    use_model() override wins first ("minimax" reads the same as "" below — only "mistral" is
+    ever branched on)."""
+    entry = _ACTIVE_MODEL.get()
+    if entry:
+        return entry["provider"]
     return os.environ.get("MASSHINE_PROVIDER", "").strip().lower()
 
 
@@ -95,6 +128,12 @@ def _resolved_base_and_key() -> tuple[str | None, str | None]:
 
 
 def model() -> str:
+    """The ACTIVE resolved model — an active use_model() override wins outright (this feeds the
+    usage ledger, db.new_run's per-run provenance, and the export manifest), else today's env
+    resolution."""
+    entry = _ACTIVE_MODEL.get()
+    if entry:
+        return entry["model"]
     if _provider() == "mistral":
         return os.environ.get("MASSHINE_MISTRAL_MODEL", "glm-5-2")
     return os.environ.get("MASSHINE_MODEL", "MiniMax-M3")

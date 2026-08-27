@@ -57,6 +57,25 @@ def test_project_lifecycle_roundtrip(data_dir):
     assert client.delete(f"/projects/{pid}").status_code == 404
 
 
+def test_project_patch_sets_declaration(data_dir):
+    """P10.3: PATCH /projects/{pid} can set research_question/positionality (data-session-spec
+    §9) — the columns already existed (P10.1a); this is the write path the UI's project-home
+    declaration fields use."""
+    client = TestClient(app)
+    pid = client.post("/projects", json={"name": "Scratch"}).json()["id"]
+    r = client.patch(f"/projects/{pid}", json={"research_question": "Does X cause Y?",
+                                               "positionality": "I am an insider researcher."})
+    assert r.status_code == 200
+    assert r.json()["research_question"] == "Does X cause Y?"
+    proj = client.get(f"/projects/{pid}").json()["project"]
+    assert proj["research_question"] == "Does X cause Y?"
+    assert proj["positionality"] == "I am an insider researcher."
+    # a later PATCH that omits a field leaves it unchanged (None means "leave alone")
+    client.patch(f"/projects/{pid}", json={"name": "Renamed"})
+    proj = client.get(f"/projects/{pid}").json()["project"]
+    assert proj["research_question"] == "Does X cause Y?"
+
+
 def test_project_patch_rejects_empty_name(data_dir):
     client = TestClient(app)
     pid = client.post("/projects", json={"name": "Scratch"}).json()["id"]
