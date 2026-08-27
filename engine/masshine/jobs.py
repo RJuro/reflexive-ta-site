@@ -5,12 +5,13 @@ JSON checkpoint the CLI uses: re-POSTing a code/theme job resumes from where it 
 """
 from __future__ import annotations
 
+import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import packs, projects, read, runner, store
+from . import packs, projects, read, runner, store, transcribe
 from .coding import code_document, code_sections_panel
 from .compress import compress_batches, propose_merges
 from .consolidate import consolidate_codebook
@@ -65,6 +66,49 @@ def ingest_work(pid: str, upload_path: Path, kind: str = "transcript"):
         finally:
             conn.close()
         return {"doc_id": doc_id, "sections": len(secs), "sentences": len(sents)}
+    return work
+
+
+def transcribe_work(pid: str, filename: str, auto_ingest: bool = True):
+    """P10.1b — the audio path (data-session-spec.md §12): ASR -> role mapping -> canonical
+    render -> (default) the SAME ingest path ingest_work uses, so an audio upload ends as a
+    normal ingested document with zero ingest changes. `filename` names the audio file already
+    sitting in this project's uploads dir (the /audio upload endpoint wrote it there) — this job
+    saves nothing of the audio itself, only what it derives: `<stem>.txt` (the canonical
+    transcript) and `<stem>.asr.json` (the segments+roles sidecar, timestamps preserved).
+
+    auto_ingest=False stops after the sidecar write so the researcher can review
+    (GET .../transcript) and optionally redraft (POST .../redraft + .../redraft/apply) BEFORE
+    ingest freezes sentence offsets — see api.py's two-step flow and its 409 guard. Once ingested,
+    `redraft_available` flips to False for real (not just as a documentation note) — a redraft
+    after ingest would invalidate offsets the rest of the pipeline treats as load-bearing."""
+    def work(progress):
+        stem = Path(filename).stem
+        audio_path = projects.uploads_dir(pid) / filename
+        progress(stage="transcribe", message=f"transcribing {filename}")
+        resp = transcribe.transcribe_audio(audio_path)
+        segments = resp.get("segments", []) or []
+        progress(stage="roles", message="mapping speaker roles")
+        roles = transcribe.map_roles(segments)
+        txt, sidecar = transcribe.render_transcript(segments, roles)
+        txt_path = projects.uploads_dir(pid) / f"{stem}.txt"
+        txt_path.write_text(txt, encoding="utf-8")
+        (projects.uploads_dir(pid) / f"{stem}.asr.json").write_text(
+            json.dumps(sidecar, ensure_ascii=False, indent=2), encoding="utf-8")
+        usage = resp.get("usage") or {}
+        result = {
+            "stem": stem,
+            "duration_seconds": usage.get("prompt_audio_seconds", 0),
+            "n_segments": len(segments),
+            "n_speakers": len({s.get("speaker_id") for s in segments}),
+            "roles": roles,
+            "usage": usage,                 # audio cost telemetry (ledger already has "asr")
+            "redraft_available": not auto_ingest,
+        }
+        if auto_ingest:
+            progress(stage="ingest", message=f"ingesting {txt_path.name}")
+            result["ingest"] = ingest_work(pid, txt_path)(progress)  # kind defaults to "transcript"
+        return result
     return work
 
 

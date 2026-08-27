@@ -7,6 +7,7 @@ Serve:  .venv/bin/uvicorn app:app   (engine/app.py re-exports this app)
 """
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -16,7 +17,7 @@ from fastapi import FastAPI, Form, HTTPException, Request, Response, UploadFile
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import jobs, packs, projects, runner, store
+from . import jobs, packs, projects, runner, store, transcribe
 from .auth import PinAuthMiddleware, resolve_role, role_for_pin, set_auth_cookie, COOKIE_NAME
 from .config import ROOT
 from .db import project_db
@@ -107,6 +108,11 @@ class ProjectPatch(BaseModel):
 
 class DocumentPatch(BaseModel):
     title: str
+
+
+class RedraftApplyReq(BaseModel):
+    indices: list[int] | str = "all"   # segment indices to accept from the pending proposal,
+                                        # or the literal string "all"
 
 
 class CodeReq(BaseModel):
@@ -354,6 +360,145 @@ def delete_document(pid: str, doc_id: str):
     finally:
         conn.close()
     return {"ok": True, "doc_id": doc_id, **counts}
+
+
+# ---- audio (P10.1b): upload -> Voxtral ASR -> canonical transcript -> the SAME ingest path -------
+
+AUDIO_EXTS = (".mp3", ".m4a", ".wav", ".aiff")
+AUDIO_MAX_BYTES = 200 * 1024 * 1024
+
+
+def _audio_doc_id(stem: str) -> str:
+    """The doc id ingest.ingest() will mint for `<stem>.txt` — same slug function, computed
+    without touching disk, so the 409 guards below can check ingestion state up front."""
+    return _slug(Path(f"{stem}.txt"))
+
+
+def _refuse_if_ingested(conn, stem: str) -> None:
+    doc_id = _audio_doc_id(stem)
+    if conn.execute("SELECT 1 FROM document WHERE id=?", (doc_id,)).fetchone():
+        raise HTTPException(409, f"{stem!r} is already ingested (doc {doc_id}) — the transcript "
+                             "is immutable once ingested (sentence offsets are load-bearing); "
+                             "re-upload the audio to redo it from scratch")
+
+
+@app.post("/projects/{pid}/audio")
+async def upload_audio(pid: str, file: UploadFile, auto_ingest: bool = True):
+    """Upload one audio file -> a transcribe job (ASR -> role mapping -> canonical .txt ->,
+    by default, straight into the existing ingest path). auto_ingest=false stops after the
+    sidecar write for a review-first flow (GET .../transcript, optionally .../redraft +
+    .../redraft/apply) before the explicit POST .../ingest."""
+    _require_project(pid)
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in AUDIO_EXTS:
+        raise HTTPException(400, f"upload one of {AUDIO_EXTS} (got {ext or 'no extension'!r})")
+    data = await file.read()
+    if len(data) > AUDIO_MAX_BYTES:
+        raise HTTPException(413, f"audio upload capped at {AUDIO_MAX_BYTES // (1024 * 1024)}MB")
+    # ponytail: no slug-collision bump like /documents — re-uploading the same filename just
+    # re-transcribes over the old audio/.txt/.asr.json, which is fine pre-ingest (the 409 above
+    # is what actually protects an ingested transcript, not filename uniqueness here).
+    dest = projects.uploads_dir(pid) / file.filename
+    dest.write_bytes(data)
+    job = projects.create_job(pid, "transcribe", {"filename": dest.name, "auto_ingest": auto_ingest})
+    jobs.submit(job["id"], jobs.transcribe_work(pid, dest.name, auto_ingest=auto_ingest))
+    return {"job_id": job["id"], "filename": dest.name}
+
+
+@app.get("/projects/{pid}/audio/{stem}/transcript")
+def get_audio_transcript(pid: str, stem: str):
+    """The pre-ingest review payload: the rendered .txt a transcribe job wrote, plus the roles
+    map and segment/speaker counts from its sidecar."""
+    _require_project(pid)
+    txt_path = projects.uploads_dir(pid) / f"{stem}.txt"
+    if not txt_path.exists():
+        raise HTTPException(404, f"no transcript for {stem!r} — POST /projects/{pid}/audio first")
+    sidecar_path = projects.uploads_dir(pid) / f"{stem}.asr.json"
+    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8")) if sidecar_path.exists() else {}
+    segments = sidecar.get("segments", [])
+    return {"stem": stem, "text": txt_path.read_text(encoding="utf-8"),
+            "roles": sidecar.get("roles", {}), "n_segments": len(segments),
+            "n_speakers": len({s.get("speaker_id") for s in segments})}
+
+
+@app.post("/projects/{pid}/audio/{stem}/redraft")
+def propose_audio_redraft(pid: str, stem: str):
+    """Run the gated redraft pass over the stored sidecar and persist the proposal (never applied
+    here) so .../redraft/apply can act on exactly what this call returned, without re-running the
+    LLM. 409 once {stem} is ingested — redraft is pre-ingest only (see the module note)."""
+    _require_project(pid)
+    conn = _conn(pid)
+    try:
+        _refuse_if_ingested(conn, stem)   # checked before file existence: immutability beats 404
+    finally:
+        conn.close()
+    sidecar_path = projects.uploads_dir(pid) / f"{stem}.asr.json"
+    if not sidecar_path.exists():
+        raise HTTPException(404, f"no transcript for {stem!r} — POST /projects/{pid}/audio first")
+    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    segments = sidecar.get("segments", [])
+    accepted, stats = transcribe.propose_redraft(segments)
+    diff = [{"index": i, "orig": segments[i].get("text", ""), "fixed": acc["text"]}
+            for i, acc in enumerate(accepted) if acc.get("redrafted")]
+    proposal = {"diff": diff, "stats": stats}
+    (projects.uploads_dir(pid) / f"{stem}.redraft.json").write_text(
+        json.dumps(proposal, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"stem": stem, **proposal}
+
+
+@app.post("/projects/{pid}/audio/{stem}/redraft/apply")
+def apply_audio_redraft(pid: str, stem: str, req: RedraftApplyReq):
+    """Apply some or all of a pending .../redraft proposal to `<stem>.txt` — the ORIGINAL
+    rendering is preserved once, as `<stem>.orig.txt` (never overwritten again by a later apply),
+    since researcher review is never destructive. 409 once {stem} is ingested."""
+    _require_project(pid)
+    conn = _conn(pid)
+    try:
+        _refuse_if_ingested(conn, stem)   # checked before file existence: immutability beats 404
+    finally:
+        conn.close()
+    proposal_path = projects.uploads_dir(pid) / f"{stem}.redraft.json"
+    sidecar_path = projects.uploads_dir(pid) / f"{stem}.asr.json"
+    txt_path = projects.uploads_dir(pid) / f"{stem}.txt"
+    if not proposal_path.exists():
+        raise HTTPException(404, f"no pending redraft for {stem!r} — POST "
+                             f"/projects/{pid}/audio/{stem}/redraft first")
+    proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    segments = [dict(s) for s in sidecar.get("segments", [])]
+    wanted = None if req.indices == "all" else set(req.indices)
+    applied = 0
+    for row in proposal.get("diff", []):
+        i = row["index"]
+        if wanted is None or i in wanted:
+            segments[i]["text"] = row["fixed"]
+            applied += 1
+    txt, new_sidecar = transcribe.render_transcript(segments, sidecar.get("roles", {}))
+    orig_path = projects.uploads_dir(pid) / f"{stem}.orig.txt"
+    if not orig_path.exists():
+        orig_path.write_text(txt_path.read_text(encoding="utf-8"), encoding="utf-8")
+    txt_path.write_text(txt, encoding="utf-8")
+    sidecar_path.write_text(json.dumps(new_sidecar, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"ok": True, "stem": stem, "applied": applied}
+
+
+@app.post("/projects/{pid}/audio/{stem}/ingest")
+def ingest_audio_transcript(pid: str, stem: str):
+    """The explicit second step when /audio was uploaded with auto_ingest=false: hands the
+    reviewed (optionally redrafted) `<stem>.txt` to the exact ingest path /documents uses
+    (kind="transcript" — an audio source is always a transcript, so there is nothing to choose)."""
+    _require_project(pid)
+    txt_path = projects.uploads_dir(pid) / f"{stem}.txt"
+    if not txt_path.exists():
+        raise HTTPException(404, f"no transcript for {stem!r} — POST /projects/{pid}/audio first")
+    conn = _conn(pid)
+    try:
+        _refuse_if_ingested(conn, stem)
+    finally:
+        conn.close()
+    job = projects.create_job(pid, "ingest", {"filename": txt_path.name, "kind": "transcript"})
+    jobs.submit(job["id"], jobs.ingest_work(pid, txt_path))
+    return {"job_id": job["id"], "filename": txt_path.name}
 
 
 # ---- coding -------------------------------------------------------------------------------------

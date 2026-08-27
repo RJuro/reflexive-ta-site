@@ -590,6 +590,38 @@ documented in DEPLOY.md. Registry gains `research_question`/`positionality` colu
 ALTER) with `get_project` passthrough — `read_work` injects `research_question` when set;
 setting them via the API is a later phase. 75 new tests (offline; 167 → 242 passing).
 
+**P10.1b — ✅ SHIPPED (2026-08-27):** the audio path (§12) — upload → Voxtral ASR (diarized) →
+role mapping → canonical transcript → optional gated redraft → the EXISTING ingest machinery,
+zero ingest changes. `masshine/transcribe.py` (new): `transcribe_audio` (plain httpx multipart
+to `POST /v1/audio/transcriptions`, always the Mistral credentials regardless of
+`MASSHINE_PROVIDER`/`MASSHINE_LLM_BACKEND` — Voxtral is the only ASR provider; long/oversized
+WAVs sliced by time via stdlib `wave` at ~12-min boundaries and stitched with offset-corrected
+timestamps, mp3/m4a/aiff sent whole up to ~50MB and otherwise a clear error since time-slicing a
+compressed stream needs decoding this build doesn't do — ffmpeg-based chunking noted as the
+upgrade path, not built); `map_roles` (one `roles.prompt` llm.chat_json call PER CHUNK —
+diarization ids aren't stable across chunks, roles are — Python-validated: every speaker_id
+present gets an entry, invented ids dropped, an out-of-enum role coerced to "other");
+`render_transcript` (consecutive same-display-identity segments merge into turns, `\tNAME:\ttext`
+format matching engine/seed_data/*.txt exactly, stitched by RESOLVED ROLE/NAME so a chunk
+boundary is invisible in the rendered transcript); `propose_redraft`/`redraft_gate` (conservative
+cleanup only, one `redraft.prompt` call per chunk, a stdlib-`difflib` word-level edit-distance
+gate normalized for case/punctuation so a genuine mis-hearing fix passes while a paraphrase or a
+word-count drift >15% is rejected outright, no override). `llm.py` gains an `audio_seconds`
+ledger field + `record_audio_usage()` hook so ASR cost rides the same ledger as chat calls, under
+label "asr". `jobs.transcribe_work`: ASR → roles → render → writes `<stem>.txt` +
+`<stem>.asr.json` into the project's uploads dir → (default `auto_ingest=True`) hands the .txt to
+the EXISTING `ingest_work`, so an audio upload ends as a normal ingested document. API:
+`POST /projects/{pid}/audio` (upload, .mp3/.m4a/.wav/.aiff only — 400 otherwise, 413 over 200MB —
+`auto_ingest` flag), `GET .../audio/{stem}/transcript` (pre-ingest review: text + roles + counts),
+`POST .../redraft` (persists a proposal so `.../redraft/apply` never re-runs the LLM),
+`POST .../redraft/apply` (rewrites `<stem>.txt`, preserves the first `<stem>.orig.txt`),
+`POST .../ingest` (the explicit second step of the two-step flow) — redraft and apply both 409
+once the stem is ingested (the transcript is immutable post-ingest; sentence offsets are
+load-bearing). 15 new tests, all offline (ASR HTTP mocked via `transcribe.httpx.post`, blocked by
+default the same way conftest.py blocks `llm.chat_json`; a tiny in-test WAV built with stdlib
+`wave` covers chunk-boundary slicing + timestamp offsetting; a rendered sample is run through the
+REAL `ingest()` to prove zero ingest changes): 242 → 257 passing.
+
 # P10 — The data session (2026-08-27)
 
 Full spec: design/data-session-spec.md — supersedes P9's UI direction (paper-spec §3 engine

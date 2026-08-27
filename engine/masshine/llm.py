@@ -17,7 +17,9 @@ Instrumentation (Phase 2, measurement-first): a side ledger tracks calls, prompt
 IMPLICIT-CACHE hit tokens (usage.prompt_tokens_details.cached_tokens), think-vs-json output split,
 wall time and time-to-first-token — per call and per label — so we can SEE cache efficacy and
 thinking overhead before changing anything. Set MASSHINE_LLM_LOG=1 to also append one JSON line per
-call to exports/llm_log.jsonl.
+call to exports/llm_log.jsonl. The same ledger also carries `audio_seconds` (P10.1b): Voxtral ASR
+calls don't go through chat_json (see masshine/transcribe.py) but feed the ledger via
+`record_audio_usage` so `usage()` reports audio cost alongside LLM cost.
 
 Config from engine/.env (gitignored) or env:
     MASSHINE_BASE_URL, MASSHINE_API_KEY, MASSHINE_MODEL, MASSHINE_RETRIES (default 0 extra retries)
@@ -54,7 +56,7 @@ if _ENV.exists():
             os.environ.setdefault(k.strip(), v.strip())
 
 _FIELDS = ("calls", "prompt_tokens", "completion_tokens", "cached_tokens",
-           "think_chars", "json_chars", "wall_s")
+           "think_chars", "json_chars", "wall_s", "audio_seconds")
 _USAGE = {k: 0 for k in _FIELDS}
 _BY_LABEL: dict[str, dict] = {}
 _USAGE_LOCK = threading.Lock()  # parallel coder calls touch this
@@ -123,7 +125,8 @@ def _client(timeout: float | None = None, retries: int | None = None) -> OpenAI:
 
 
 def _record(label: str, prompt_t: int, completion_t: int, cached_t: int,
-            think_c: int, json_c: int, wall_s: float, ttft_s: float | None) -> None:
+            think_c: int, json_c: int, wall_s: float, ttft_s: float | None,
+            audio_s: float = 0.0) -> None:
     with _USAGE_LOCK:
         _USAGE["calls"] += 1
         _USAGE["prompt_tokens"] += prompt_t
@@ -132,6 +135,7 @@ def _record(label: str, prompt_t: int, completion_t: int, cached_t: int,
         _USAGE["think_chars"] += think_c
         _USAGE["json_chars"] += json_c
         _USAGE["wall_s"] += wall_s
+        _USAGE["audio_seconds"] += audio_s
         d = _BY_LABEL.setdefault(label or "unlabeled", {k: 0 for k in _FIELDS})
         d["calls"] += 1
         d["prompt_tokens"] += prompt_t
@@ -140,12 +144,25 @@ def _record(label: str, prompt_t: int, completion_t: int, cached_t: int,
         d["think_chars"] += think_c
         d["json_chars"] += json_c
         d["wall_s"] += wall_s
+        d["audio_seconds"] += audio_s
     if os.environ.get("MASSHINE_LLM_LOG"):
         _append_log({"label": label or "unlabeled", "model": model(),
                      "prompt_tokens": prompt_t, "cached_tokens": cached_t,
                      "completion_tokens": completion_t, "think_chars": think_c,
                      "json_chars": json_c, "wall_s": round(wall_s, 2),
-                     "ttft_s": round(ttft_s, 2) if ttft_s is not None else None})
+                     "ttft_s": round(ttft_s, 2) if ttft_s is not None else None,
+                     "audio_seconds": round(audio_s, 2) if audio_s else None})
+
+
+def record_audio_usage(label: str, *, prompt_audio_seconds: float, prompt_tokens: int,
+                       completion_tokens: int, wall_s: float) -> None:
+    """The ASR ledger hook (P10.1b): transcribe.py's Voxtral calls don't go through chat_json (no
+    chat-completions shape, no streaming, no thinking) but still cost real money and time, so they
+    ride the SAME ledger — one `_record` per real Voxtral call, under whatever label the caller
+    passes (transcribe.py uses "asr"). think_chars/json_chars/cached_tokens don't apply to an ASR
+    call and stay 0; audio_seconds is the one field only this path ever writes."""
+    _record(label, int(prompt_tokens), int(completion_tokens), 0, 0, 0, wall_s, None,
+            audio_s=float(prompt_audio_seconds))
 
 
 def _append_log(row: dict) -> None:

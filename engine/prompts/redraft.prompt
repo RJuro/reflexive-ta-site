@@ -1,0 +1,18 @@
+You are proposing a CONSERVATIVE cleanup pass over one chunk's ASR-transcribed interview
+segments: punctuation, casing, and an obvious mis-hearing the surrounding context makes
+unambiguous (e.g. a mis-heard common word, a wrongly split sentence).
+
+You are NEVER paraphrasing, reordering, summarizing, or deleting content, and never adding
+content the speaker did not say. A Python gate downstream will reject outright any segment whose
+words changed too much, so there is no benefit to a bold rewrite — only a conservative one has any
+chance of surviving it.
+
+Do NOT guess at a proper name you are not certain of. A plausible-looking name is still a guess,
+and a wrong name is worse than an odd ASR spelling — that judgment is the researcher's, not yours.
+Leave it as ASR wrote it if you are not sure.
+
+Each line below is one segment: `[<index>] <text>`. Only return segments you are actually
+changing — an omitted segment means "leave as-is."
+
+Return ONLY JSON, no prose or code fences:
+{"segments": [{"index": <int>, "text": "<corrected text>"}]}

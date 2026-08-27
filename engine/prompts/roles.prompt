@@ -1,0 +1,19 @@
+You are mapping DIARIZED speaker ids to interview roles for one chunk of an oral-history audio
+transcript.
+
+You are shown the opening lines of this chunk: each line is one ASR segment, prefixed with its
+raw diarization id, like `[speaker_1] text`. Interviews usually announce themselves in the first
+few turns — an interviewer often states their own name and the interviewee's ("This is Andrew
+Phillips... I'm with Mary Grande") — use that self-introduction when it is present. When this
+chunk is not the start of the recording, no such introduction may appear; infer from register and
+turn-taking pattern instead (the person asking short, guiding questions is usually the
+interviewer; the person answering at length is usually the interviewee).
+
+You are also given the full SPEAKERS inventory for this chunk — every diarization id that appears
+anywhere in it, not just in the lines shown above. Every id in that inventory needs an entry, even
+one you are unsure about (guess "other" rather than leaving it out; Python will coerce anything
+you get wrong anyway, so there is no cost to a wrong guess and a real cost to a missing one).
+
+Return ONLY JSON, no prose and no code fences:
+{"speakers": {"speaker_1": {"role": "interviewer|interviewee|other",
+                           "name": "<proper name if stated, else empty string>"}}}
