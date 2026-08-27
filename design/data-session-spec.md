@@ -84,7 +84,7 @@ Project home. A chronological analytic journal — reflexive TA's actual artifac
   passages. Gate visits are logged; the interaction telemetry (challenged, reframed, dropped)
   is the validation data for the MASSHINE deliverables.
 
-## 5. Computational shape: two calls per document
+## 5. Computational shape: few calls per document (read-span is empirical)
 
 With a thinking model (MiniMax-M3), cost and latency live in thinking + output tokens, and
 thinking is paid **per call**. The old pipeline paid it ~19–25 times per document. Fewer,
@@ -114,24 +114,39 @@ restraint cap means the model is never asked for exhaustive coverage (the docume
 mode); and `tools/coverage_check.py` runs per document as a hard gate — front-heavy citation
 deciles auto-fall back to the sectioned coding path, which is kept, not deleted.
 
-Call budget per document: **2** (+ researcher-paced Q&A), vs ~19 single-coder-sectioned and
-~25+ panel. Coder restraint, reuse-before-mint, RQ scoping, and the writable-margin revision
-actions carry over from paper-spec §3.1/§5 unchanged in substance.
+**Read-span calibration (empirical, not doctrine).** Whether one READ call per document is
+too few is an open question. READ takes a `span` parameter — whole-doc / halves /
+section-groups / per-section — same prompt, same validators, same output contract at every
+span. The calibration experiment: one held transcript (Livicia Antoine), READ at each span
+against the same codebook state, compared in Python with no LLM judge: citation coverage
+deciles, code count + evidence density, reuse-vs-mint rate, cross-span code overlap, wall
+time + tokens. Runnable at zero API cost against a local model (`MASSHINE_BASE_URL` is
+already endpoint-agnostic — e.g. gpt-5.6-luna served locally), then confirmed on M3 before
+the default is fixed. Fewer calls remain the goal; the data picks the span.
+
+Call budget per document: **2 at whole-doc span** (+ researcher-paced Q&A), vs ~19
+single-coder-sectioned and ~25+ panel. Coder restraint, reuse-before-mint, RQ scoping, and
+the writable-margin revision actions carry over from paper-spec §3.1/§5 unchanged in
+substance.
 
 ## 6. The familiarization layer
 
 - **Document introduction**: produced by SYNTHESIZE *from the extraction* — the patterns
   that carry the document, what is uncertain or ambiguous, and a closing paragraph on what
-  this document does to the project's emerging story. Written in spoken register (clean
-  prose; evidence sids stored alongside each paragraph, never inline) so it is **TTS-ready
-  by construction**: a ~3-minute listenable briefing to familiarize before working deeper.
-  Session order: intro (listen or read) → walkthrough → open conversation.
+  this document does to the project's emerging story. The intro is a **navigable surface,
+  not detached prose**: every claim carries its evidence sids, rendered in the UI as quiet
+  doors into the passages. The anchors live in structure (per claim/paragraph), never as
+  bracketed ids inside sentence text — which is exactly what keeps it **TTS-ready**: the
+  spoken rendering reads the clean prose, the on-screen rendering stays clickable. A
+  ~3-minute listenable briefing to familiarize before working deeper. Session order: intro
+  (listen or read) → walkthrough → open conversation.
 - **Story-so-far**: a project-level narrative the system revises after each document,
   **versioned per document position** (story v1 after doc 1 … replayable like theme_steps).
   Lives at the top of the Journal. The version trail is itself a reflexivity artifact — the
   interpretation's evolution is inspectable, which no CAQDAS produces.
 - TTS engineering is out of scope for the first build; the contract is only that intro and
-  story text are spoken-register and citation-free in the prose body.
+  story prose is spoken-register with anchors carried structurally, never as ids embedded in
+  sentence text — clickable on screen, clean when read aloud.
 
 ## 7. Epistemology positioning
 
@@ -155,8 +170,10 @@ researcher duty; the three-place paper UI as the app shell (Text keeps the paper
 ## 9. Build order
 
 1. **P10.1 engine** — the P9.1a scope (restraint, reuse, RQ scoping, revision actions,
-   researcher codes, manifest, coverage tool) built into the READ call architecture (§5),
-   sectioned path kept as the coverage-gate fallback.
+   researcher codes, manifest, coverage tool) built into the READ call architecture (§5)
+   with the `span` parameter, sectioned path kept as the coverage-gate fallback; includes
+   the span-calibration harness (`tools/read_span_calibrate.py`, endpoint-agnostic so it
+   runs against a local model first).
 2. **P10.2 engine** — SYNTHESIZE (finding lifecycle + walkthrough + intro + story-so-far)
    + reactions endpoints + session Q&A + on-demand lens. All offline-testable.
 3. **P10.3 UI** — Session (walkthrough + reactions + chat) and Journal; Text = paper view
