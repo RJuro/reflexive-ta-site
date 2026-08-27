@@ -5,11 +5,12 @@ JSON checkpoint the CLI uses: re-POSTing a code/theme job resumes from where it 
 """
 from __future__ import annotations
 
+import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import packs, projects, runner, store
+from . import packs, projects, read, runner, store
 from .coding import code_document, code_sections_panel
 from .compress import compress_batches, propose_merges
 from .consolidate import consolidate_codebook
@@ -18,6 +19,9 @@ from .ingest import ingest
 from .reconcile import reconcile_project
 from .themes import (theorize_panel_sequential, theorize_project_sequential,
                      transcript_block_from_sentences)
+
+READ_SPANS = ("doc", "halves", "groups", "sections")
+COVERAGE_GATE_SHARE = 0.45  # first-3-deciles share above this re-runs the doc at span='sections'
 
 _EXECUTOR = ThreadPoolExecutor(max_workers=1)  # serialize LLM-heavy jobs
 
@@ -200,6 +204,91 @@ def recode_work(pid: str, doc_id: str, mode: str):
         return {"mode": mode, "doc_id": doc_id, "feedback_used": bool(guidance),
                 "comments_addressed": n_addr, "notes_applied": n_addr, "code_counts": counts,
                 "diff": diff}
+    return work
+
+
+def _delete_run_codes(conn, run_id: str, doc_id: str) -> None:
+    """Undo one READ run's newly-minted codes for a doc before the coverage-gate re-run.
+    ponytail: does not retract sids a `reuses` union added to an EXISTING code during the
+    discarded attempt — those stayed grounded citations, just made under a coarser span, and
+    are cheap to leave be. Upgrade path: track per-run added-sid deltas if double-counted reuse
+    evidence ever proves to matter in practice."""
+    conn.execute("DELETE FROM code WHERE origin_doc_id=? AND run_id=?", (doc_id, run_id))
+    conn.commit()
+
+
+def _read_one_doc(conn, run_id: str, doc_id: str, span: str, research_question: str | None,
+                  progress) -> dict:
+    """READ one document at `span`, persist, then the coverage gate: if the first 3 deciles of
+    this doc's citations hold more than COVERAGE_GATE_SHARE of the total, the lost-in-the-middle
+    guard fires — the just-persisted (newly-minted) codes for this doc+run are rolled back and
+    the doc is re-read ONCE at span='sections' (the fine fallback), replacing the front-loaded
+    output. Returns the per-doc digest for the job result."""
+    codes, reuses, declines, drop = read.read_document(conn, doc_id, span, research_question)
+    digest = read.persist_read(conn, run_id, doc_id, codes, reuses, declines)
+    share = read.first30_share(read.citation_deciles(conn, doc_id))
+    fallback = False
+    if share > COVERAGE_GATE_SHARE and span != "sections":
+        progress(stage="coverage-gate", doc_id=doc_id,
+                 message=f"front-loaded citations ({share:.0%}) — re-reading at span=sections")
+        _delete_run_codes(conn, run_id, doc_id)
+        codes, reuses, declines, drop = read.read_document(
+            conn, doc_id, "sections", research_question)
+        digest = read.persist_read(conn, run_id, doc_id, codes, reuses, declines)
+        share = read.first30_share(read.citation_deciles(conn, doc_id))
+        span, fallback = "sections", True
+    digest.update({"span_used": span, "first30_share": round(share, 3),
+                  "coverage_fallback": fallback, "dropped": drop})
+    return digest
+
+
+def read_work(pid: str, span: str | None = None):
+    """READ each not-yet-read document (own checkpoint kind "read" — same skip-what's-done
+    discipline as code_work, a separate file so it never collides with code_work's checkpoints)
+    at the configured span: the `span` argument wins, then MASSHINE_READ_SPAN, then "doc". The
+    sectioned coder+critic/panel path (code_work) is untouched — this is a parallel path, not a
+    replacement."""
+    span = span or os.environ.get("MASSHINE_READ_SPAN", "doc")
+    if span not in READ_SPANS:
+        raise ValueError(f"span must be one of {READ_SPANS}, got {span!r}")
+
+    def work(progress):
+        cp = projects.checkpoint_path(pid, "read")
+        state = runner.load_checkpoint(cp)
+        conn = project_db(projects.project_db_path(pid))
+        try:
+            run = new_run(conn, "read")
+            proj = projects.get_project(pid) or {}
+            research_question = (proj.get("research_question") or "").strip() or None
+            rows = conn.execute(
+                "SELECT id, filename FROM document ORDER BY created_at, id").fetchall()
+            order = [r[0] for r in rows]
+            names = dict(rows)
+            done = state.setdefault("docs", {})
+            total = len(order)
+            results: dict[str, dict] = {}
+            for idx, doc_id in enumerate(order, 1):
+                if doc_id in done:
+                    continue
+                progress(stage="read", doc_id=doc_id, done=idx - 1, total=total,
+                         message=f"reading {names[doc_id]}")
+                digest = _read_one_doc(conn, run, doc_id, span, research_question, progress)
+                results[doc_id] = digest
+                done[doc_id] = digest
+                conn.execute("UPDATE document SET status='read' WHERE id=?", (doc_id,))
+                conn.commit()
+                runner.save_checkpoint(cp, state)
+            if results:
+                if conn.execute("SELECT 1 FROM code_family LIMIT 1").fetchone():
+                    store.set_families_stale(conn, True)
+                for mode in ("standard", "panel"):
+                    n_themes = conn.execute(
+                        "SELECT COUNT(*) FROM theme_v2 WHERE mode=?", (mode,)).fetchone()[0]
+                    if n_themes:
+                        store.set_themes_stale(conn, mode, True)
+        finally:
+            conn.close()
+        return {"span": span, "docs": results}
     return work
 
 

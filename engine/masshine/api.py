@@ -114,6 +114,10 @@ class CodeReq(BaseModel):
     recode: bool = False
 
 
+class ReadReq(BaseModel):
+    span: str | None = None         # "doc" | "halves" | "groups" | "sections" — see jobs.py
+
+
 class ThemeReq(BaseModel):
     mode: str = "standard"
     feedback: bool = False          # True → open theme comments/revisions ride into the walk
@@ -372,6 +376,18 @@ def get_codes(pid: str, coder: str | None = None, doc_id: str | None = None):
         return store.codes_payload(conn, coder=coder, doc_id=doc_id)
     finally:
         conn.close()
+
+
+@app.post("/projects/{pid}/read")
+def run_read(pid: str, req: ReadReq):
+    """The READ call architecture (P10.1a) — restrained whole-document coding, a parallel path
+    alongside /code (the sectioned coder+critic/panel), untouched by this endpoint."""
+    _require_project(pid)
+    if req.span is not None and req.span not in jobs.READ_SPANS:
+        raise HTTPException(400, f"span must be one of {jobs.READ_SPANS}")
+    job = projects.create_job(pid, "read", {"span": req.span})
+    jobs.submit(job["id"], jobs.read_work(pid, req.span))
+    return {"job_id": job["id"]}
 
 
 @app.get("/projects/{pid}/friction/{doc_id}")

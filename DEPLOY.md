@@ -27,6 +27,20 @@ directory.
 | `MASSHINE_RETRIES` | no | extra whole-call retries on a mid-stream idle death; default 0 |
 | `MASSHINE_LLM_LOG` | no | set to `1` to append a per-call JSONL ledger to `exports/` (not persisted unless that path is also volume-mounted — skip for now) |
 
+### Alternative provider: Mistral (EU/GDPR)
+
+The LLM client's default profile (above) targets the MiniMax production endpoint. For a
+deployment that needs an EU/GDPR-compliant provider under contract, set `MASSHINE_PROVIDER=mistral`
+to switch the same OpenAI-compatible client to `api.mistral.ai` instead — no other engine
+behavior changes (same streaming, same usage/cache-token ledger).
+
+| Variable | Required | Notes |
+|---|---|---|
+| `MASSHINE_PROVIDER` | to enable | set to `mistral`; unset/empty keeps the default MiniMax profile above |
+| `MISTRAL_API_KEY` | yes (mistral) | Mistral API key (fallback: `MASSHINE_MISTRAL_API_KEY`) |
+| `MASSHINE_MISTRAL_BASE_URL` | no | defaults to `https://api.mistral.ai/v1` |
+| `MASSHINE_MISTRAL_MODEL` | no | defaults to `glm-5-2` |
+
 ## Persistent storage — do this before the first real coding run
 
 Add a **Storage / Volume** in Coolify mounted at `/data` inside the container. Without it,

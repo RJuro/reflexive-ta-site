@@ -1,4 +1,14 @@
-"""Minimal LLM client — OpenAI-compatible MiniMax-M3 (Q11). KISS, one provider.
+"""Minimal LLM client — OpenAI-compatible MiniMax-M3 (Q11) by default, KISS. A second backend
+(codex-cli, P10.1a) is a thin dispatch on top of the same `chat_json` signature and ledger — the
+two never mix mid-call, so everything below the dispatch in `chat_json` is unchanged.
+
+codex-cli is LOCAL CALIBRATION ONLY — never a deployed backend. It exists solely for
+tools/read_span_calibrate.py to run the read-span experiment against a local model at zero API
+cost before the default span is fixed on M3. The default backend is, and stays, "openai";
+nothing in this codebase selects codex-cli implicitly — it activates only when something sets
+MASSHINE_LLM_BACKEND=codex-cli itself, which the deployed app and its config never do. Do not
+wire it into a production/deploy path, and do not document it anywhere deployment-facing (see
+the calibration harness's own header for its usage).
 
 No temperature / sampling overrides — modern models are tuned for their defaults; we don't touch
 them during dev. Thinking stays ON (M3's default) — the reasoning trace is the interpretive lift.
@@ -11,12 +21,24 @@ call to exports/llm_log.jsonl.
 
 Config from engine/.env (gitignored) or env:
     MASSHINE_BASE_URL, MASSHINE_API_KEY, MASSHINE_MODEL, MASSHINE_RETRIES (default 0 extra retries)
+    MASSHINE_LLM_BACKEND ("openai" default | "codex-cli", local-calibration-only — see above),
+    MASSHINE_CODEX_MODEL (codex-cli only)
+
+Provider profiles (still the "openai" backend — same OpenAI-compatible client, just a different
+base/key/model triple; this is deployment-relevant, unlike codex-cli): MASSHINE_PROVIDER unset
+or empty is EXACTLY the original behavior (MASSHINE_BASE_URL/MASSHINE_API_KEY/MASSHINE_MODEL —
+the MiniMax production config). MASSHINE_PROVIDER=mistral switches to api.mistral.ai (verified
+OpenAI-compatible, including streaming + prompt_tokens_details.cached_tokens — a GDPR-compliant
+alternative for EU deployments): base_url defaults to https://api.mistral.ai/v1 (override
+MASSHINE_MISTRAL_BASE_URL), the key comes from MISTRAL_API_KEY (fallback
+MASSHINE_MISTRAL_API_KEY), model defaults to "glm-5-2" (override MASSHINE_MISTRAL_MODEL).
 """
 from __future__ import annotations
 
 import json
 import os
 import re
+import subprocess
 import threading
 import time
 from pathlib import Path
@@ -54,7 +76,25 @@ def reset_usage() -> None:
         _BY_LABEL.clear()
 
 
+def _provider() -> str:
+    """"" (default) or "mistral" — an OpenAI-COMPATIBLE provider profile switch, not a new
+    backend: both go through the same streamed client below. See the module docstring."""
+    return os.environ.get("MASSHINE_PROVIDER", "").strip().lower()
+
+
+def _resolved_base_and_key() -> tuple[str | None, str | None]:
+    """(base_url, api_key) for the active provider profile. Unset/empty MASSHINE_PROVIDER is
+    EXACTLY the original MASSHINE_BASE_URL/MASSHINE_API_KEY pair — untouched."""
+    if _provider() == "mistral":
+        base = os.environ.get("MASSHINE_MISTRAL_BASE_URL", "https://api.mistral.ai/v1")
+        key = os.environ.get("MISTRAL_API_KEY") or os.environ.get("MASSHINE_MISTRAL_API_KEY")
+        return base, key
+    return os.environ.get("MASSHINE_BASE_URL"), os.environ.get("MASSHINE_API_KEY")
+
+
 def model() -> str:
+    if _provider() == "mistral":
+        return os.environ.get("MASSHINE_MISTRAL_MODEL", "glm-5-2")
     return os.environ.get("MASSHINE_MODEL", "MiniMax-M3")
 
 
@@ -66,8 +106,11 @@ def _default_retries() -> int:
 
 
 def _client(timeout: float | None = None, retries: int | None = None) -> OpenAI:
-    base, key = os.environ.get("MASSHINE_BASE_URL"), os.environ.get("MASSHINE_API_KEY")
+    base, key = _resolved_base_and_key()
     if not (base and key):
+        if _provider() == "mistral":
+            raise RuntimeError("set MISTRAL_API_KEY (or MASSHINE_MISTRAL_API_KEY) for the "
+                               "mistral provider profile (MASSHINE_PROVIDER=mistral)")
         raise RuntimeError("set MASSHINE_BASE_URL and MASSHINE_API_KEY (see engine/.env)")
     # ponytail: with streaming (see chat_json) this is an IDLE timeout — httpx applies the read
     # timeout per chunk, so it bounds SILENCE between tokens, not total call time. A healthy
@@ -126,18 +169,32 @@ def _cached_tokens(usage_obj) -> int:
     return int(getattr(details, "cached_tokens", 0) or 0)
 
 
+def backend() -> str:
+    """"openai" (default, the deployed backend — always wins unless something sets the env var
+    itself) or "codex-cli" (local calibration only, see the module docstring)."""
+    return os.environ.get("MASSHINE_LLM_BACKEND", "openai")
+
+
 def chat_json(system: str, user: str, timeout: float | None = None,
               retries: int | None = None, label: str = "") -> dict:
-    """One structured call → parsed JSON, STREAMED. Default sampling (we don't set temperature);
-    thinking stays ON (M3's default). Streaming makes `timeout` an IDLE timeout (see _client): the
-    call runs as long as tokens keep arriving and aborts only after `timeout` seconds of silence, so
-    a long <think> trace no longer trips a cap and a true hang still dies. The streamed deltas are
-    concatenated; `<think>…</think>` is stripped before the JSON is parsed.
+    """One structured call → parsed JSON. Default backend is the OpenAI-compatible streamed
+    client below; MASSHINE_LLM_BACKEND=codex-cli routes to `_codex_chat_json` instead (same
+    signature and ledger, no streaming, no retry loop — see its docstring). That env var is
+    LOCAL-CALIBRATION-ONLY (see the module docstring) — nothing in this codebase sets it, so the
+    dispatch always takes the openai path unless something outside this module opts in explicitly.
+
+    OpenAI path: STREAMED, default sampling (we don't set temperature); thinking stays ON (M3's
+    default). Streaming makes `timeout` an IDLE timeout (see _client): the call runs as long as
+    tokens keep arriving and aborts only after `timeout` seconds of silence, so a long <think>
+    trace no longer trips a cap and a true hang still dies. The streamed deltas are concatenated;
+    `<think>…</think>` is stripped before the JSON is parsed.
 
     `retries` = EXTRA whole-call retries with exponential backoff around stream consumption (for a
     mid-stream idle death the SDK's request-level retry can't cover). Defaults to MASSHINE_RETRIES
     (0). The theorist passes retries=0 explicitly — its no-retry/resume semantics are load-bearing.
-    `label` tags the ledger (structure / coder / panel:<lens> / reconcile / theorist:step<i>)."""
+    `label` tags the ledger (structure / coder / panel:<lens> / reconcile / theorist:step<i> / read)."""
+    if backend() == "codex-cli":
+        return _codex_chat_json(system, user, timeout, label)
     outer = retries if retries is not None else _default_retries()
     attempt = 0
     while True:
@@ -189,3 +246,82 @@ def _json_from(text: str) -> str:
         text = re.sub(r"^```[a-zA-Z]*\n?|\n?```$", "", text).strip()
     i, j = text.find("{"), text.rfind("}")
     return text[i:j + 1] if i != -1 and j != -1 else text
+
+
+# ---- codex-cli backend (P10.1a) — LOCAL CALIBRATION ONLY, never a deployed backend --------------
+# `codex exec` as a subprocess, JSON events on stdout, the prompt on STDIN (arg "-" tells codex to
+# read it there instead of argv, sidestepping OS arg-length limits on a whole-transcript prompt).
+# Verified invocation on this machine, codex-cli 0.147.0. Only reachable via an explicit
+# MASSHINE_LLM_BACKEND=codex-cli — see the module docstring; do not call this from any code path
+# that a deployment could reach by default.
+
+_CODEX_DEFAULT_TIMEOUT = 1200.0  # local inference is slow; this is a plain subprocess timeout,
+                                 # NOT the openai path's idle timeout — there is no streaming here.
+
+
+def _codex_chat_json(system: str, user: str, timeout: float | None, label: str) -> dict:
+    """codex-cli backend for chat_json (dev/calibration only — see the module docstring). Codex
+    has no separate system slot, so `system` and `user` are concatenated into one prompt. stdout
+    is JSONL; the answer text is the LAST `item.completed` event whose item is an `agent_message`
+    (codex can emit more than one turn of scratch/tool chatter before its final answer — only the
+    last agent_message is the answer). Usage rides a `turn.completed` event. stderr can carry
+    harmless noise (codex-cli is known to log e.g. "failed to load models cache" even on a clean
+    run) — it is captured but never inspected; only stdout's parseability decides success. A
+    missing `codex` binary fails loudly (FileNotFoundError re-raised with a clear message) —
+    there is no silent fallback to the paid openai path."""
+    model = os.environ.get("MASSHINE_CODEX_MODEL")
+    if not model:
+        raise RuntimeError("set MASSHINE_CODEX_MODEL (e.g. gpt-5.6-luna) for the codex-cli backend")
+    prompt = f"{system}\n\n----\n\n{user}"
+    t0 = time.perf_counter()
+    try:
+        proc = subprocess.run(
+            ["codex", "exec", "--model", model, "--skip-git-repo-check", "--ephemeral",
+             "-s", "read-only", "--json", "-"],
+            input=prompt, capture_output=True, text=True, timeout=timeout or _CODEX_DEFAULT_TIMEOUT,
+        )
+    except FileNotFoundError as e:
+        raise RuntimeError(
+            "codex-cli backend selected (MASSHINE_LLM_BACKEND=codex-cli) but the `codex` binary "
+            "is not on PATH — install codex-cli or unset MASSHINE_LLM_BACKEND. Refusing to fall "
+            "back to the openai backend silently."
+        ) from e
+    wall = time.perf_counter() - t0
+    text, prompt_t, completion_t, reasoning_t = _parse_codex_jsonl(proc.stdout)
+    if not text:
+        raise RuntimeError(
+            f"codex-cli returned no agent_message (exit {proc.returncode}); "
+            f"stderr tail: {proc.stderr[-500:]}")
+    payload = _json_from(text)
+    # reasoning_output_tokens has no dedicated ledger slot; it rides think_chars the way the
+    # openai path's <think>-block char count approximates thinking overhead — a token count in a
+    # char-count field, so this is approximate by construction, not a token-accurate figure.
+    _record(label, prompt_t, completion_t, 0, reasoning_t, len(payload), wall, None)
+    return json.loads(payload)
+
+
+def _parse_codex_jsonl(stdout: str) -> tuple[str, int, int, int]:
+    """(answer_text, input_tokens, output_tokens, reasoning_output_tokens) from codex exec's
+    JSONL stdout. Non-JSON lines are skipped (codex can interleave plain progress noise); the
+    LAST agent_message wins if several turns complete."""
+    text = ""
+    prompt_t = completion_t = reasoning_t = 0
+    for line in stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        ev_type = ev.get("type")
+        if ev_type == "item.completed":
+            item = ev.get("item") or {}
+            if item.get("type") == "agent_message":
+                text = item.get("text") or text
+        elif ev_type == "turn.completed":
+            usage = ev.get("usage") or {}
+            prompt_t = usage.get("input_tokens", 0) or 0
+            completion_t = usage.get("output_tokens", 0) or 0
+            reasoning_t = usage.get("reasoning_output_tokens", 0) or 0
+    return text, prompt_t, completion_t, reasoning_t

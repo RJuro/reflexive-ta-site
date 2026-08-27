@@ -563,6 +563,33 @@ and a full audit trail, never silent deletion.*
 Deferred to P9: manual researcher-authored codes on passages; exemplar-quote curation;
 cross-case retrieval matrix (code × source); methods-section export.
 
+**P10.1a — ✅ SHIPPED (2026-08-27):** the READ call architecture (§5) as a NEW parallel path —
+the sectioned coder+critic/panel pipeline (`coding.py`, `code_work`) is untouched. `read.prompt`
++ `masshine/read.py`: restrained whole-document coding (25-code hard cap, reuse-before-mint
+against a PROJECT CODEBOOK block with the researcher's own codes listed first, optional
+research-question scoping with `out_of_scope` declines, a per-code `uncertainty` clause in
+place of an always-on rationale), Python-validated (grounding, cap, invalid-reuse dropping —
+model proposes, Python disposes) and persisted with zero extra LLM calls (new ids continue the
+one shared C-sequence, reuses union evidence, declines fold into one assistant memo per doc).
+`span` (`doc | halves | groups | sections`) controls call count per document; same prompt/
+validators at every span. `jobs.read_work` + `POST /projects/{pid}/read`: own checkpoint kind
+"read", span resolved as param > `MASSHINE_READ_SPAN` env > "doc", plus the coverage gate
+(>45% of a doc's citations in its first 3 deciles triggers one re-read at span="sections",
+replacing the front-loaded output — the lost-in-the-middle guard promised in §5). A second LLM
+backend, `codex-cli` (`MASSHINE_LLM_BACKEND=codex-cli`), is **local calibration only** — never
+a deployed path, reachable only by explicit env opt-in, fails loudly if the `codex` binary is
+missing. `tools/read_span_calibrate.py`: the span-calibration harness (never run in CI/tests),
+compares all four spans against the same empty codebook state with zero persistence, with an
+optional estimated-cost-in-EUR column (`MASSHINE_PRICE_IN_EUR_PER_M`/`_OUT_EUR_PER_M`, omitted
+when unset; documents the Mistral glm-5-2 university-contract rate, €1.19/€3.74 per M
+in/out). Separately (same file, unrelated to codex-cli, deployment-relevant): the `openai`
+backend gains provider profiles — `MASSHINE_PROVIDER=mistral` points the same OpenAI-compatible
+streamed client at `api.mistral.ai` (EU/GDPR) instead of MiniMax, unset/empty stays
+byte-identical to the original `MASSHINE_BASE_URL`/`MASSHINE_API_KEY`/`MASSHINE_MODEL`;
+documented in DEPLOY.md. Registry gains `research_question`/`positionality` columns (guarded
+ALTER) with `get_project` passthrough — `read_work` injects `research_question` when set;
+setting them via the API is a later phase. 75 new tests (offline; 167 → 242 passing).
+
 # P10 — The data session (2026-08-27)
 
 Full spec: design/data-session-spec.md — supersedes P9's UI direction (paper-spec §3 engine

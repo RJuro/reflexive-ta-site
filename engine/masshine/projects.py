@@ -50,6 +50,12 @@ def _registry() -> sqlite3.Connection:
     cols = {r[1] for r in conn.execute("PRAGMA table_info(project)")}
     if "archived" not in cols:
         conn.execute("ALTER TABLE project ADD COLUMN archived INTEGER DEFAULT 0")
+    # P10.1a: the project declaration (data-session-spec.md §9) — columns only; setting them is
+    # a later phase, this just gives read_work somewhere to read research_question FROM.
+    if "research_question" not in cols:
+        conn.execute("ALTER TABLE project ADD COLUMN research_question TEXT")
+    if "positionality" not in cols:
+        conn.execute("ALTER TABLE project ADD COLUMN positionality TEXT")
     conn.commit()
     return conn
 
@@ -94,8 +100,12 @@ def create_project(name: str, pack_id: str | None = None) -> dict:
 
 
 def _project_row(r) -> dict:
-    return {"id": r[0], "name": r[1], "pack_id": r[2], "created_at": r[3],
-            "archived": bool(r[4]) if len(r) > 4 else False}
+    d = {"id": r[0], "name": r[1], "pack_id": r[2], "created_at": r[3],
+         "archived": bool(r[4]) if len(r) > 4 else False}
+    if len(r) > 5:  # get_project's wider SELECT (P10.1a: the project declaration)
+        d["research_question"] = r[5]
+        d["positionality"] = r[6]
+    return d
 
 
 def list_projects(include_archived: bool = False) -> list[dict]:
@@ -111,8 +121,9 @@ def list_projects(include_archived: bool = False) -> list[dict]:
 
 def get_project(pid: str) -> dict | None:
     conn = _registry()
-    r = conn.execute("SELECT id, name, pack_id, created_at, archived FROM project WHERE id = ?",
-                     (pid,)).fetchone()
+    r = conn.execute(
+        "SELECT id, name, pack_id, created_at, archived, research_question, positionality "
+        "FROM project WHERE id = ?", (pid,)).fetchone()
     conn.close()
     return _project_row(r) if r else None
 

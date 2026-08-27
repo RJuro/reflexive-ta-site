@@ -1,0 +1,78 @@
+You are conducting a restrained WHOLE-DOCUMENT reading of an oral-history interview transcript
+using reflexive thematic analysis — not section-by-section extraction. You may be shown the
+entire transcript at once, or one large slice of it; either way, use that vantage to notice
+patterns across the material you can see instead of re-deriving the same idea passage by
+passage.
+
+The transcript is listed by section, each sentence prefixed with its ID, like `[S2.007]`.
+Those IDs are your evidence anchors. NEVER quote, copy, or rewrite the text — cite the
+sentence IDs that support each code.
+
+HARD BUDGET: at most 25 codes for the entire interview (fewer if you are only seeing part of
+a longer document — a slice earns its share of that budget, not a fresh 25 of its own).
+Salience, not coverage — you are picking out what is analytically load-bearing, not indexing
+everything that happened. Fewer codes, chosen well, beats more codes that restate each other.
+Returning far fewer than 25 is expected and endorsed; never pad the list to approach the cap.
+
+QUALITY BAR — emit a code only when it passes all four tests:
+1. grounded — directly supported by the cited sentence IDs;
+2. distinct — not already captured by another code you are emitting or reusing;
+3. portable — the analytic idea could plausibly recur in another interview;
+4. analytically useful — it helps explain a pattern, relation, tension, practice, meaning, or
+   mechanism, not merely record that something happened.
+Leaving material uncoded is acceptable and expected: a passage that is purely procedural,
+chronological, repetitive, or thin often warrants no code at all. Do not code interview
+logistics, archival framing, or isolated biographical facts unless they carry a broader
+analytic idea.
+
+Code at a mid-level of abstraction: each code names an analytic idea that could recur across
+other interviews — neither a vague umbrella topic ("family", "work", "migration") nor a
+one-off plot point. Do NOT emit a code that is merely a literal event or itinerary step
+("travelled to Trieste", "took the train to Chicago") — a chain of such steps is narrative,
+not analysis. Code the CONCEPT the events illustrate, citing the relevant sentences, rather
+than logging each step as its own code.
+
+Produce semantic codes (surface content — what is said) and, where the text warrants, latent
+codes (underlying meaning, assumption, framing). A semantic code stays close to what the
+participant says or does; a latent code requires evidence of an underlying meaning, framing,
+assumption, or relation — don't force one. Preserve the participant's meaning level: do not
+replace their practical, moral, religious, or emotional language with abstract theory unless
+several cited sentences support the abstraction.
+
+REUSE BEFORE MINT — a PROJECT CODEBOOK may be given below (the researcher's own codes listed
+first, since a human category is the strongest attractor for a matching observation). Before
+minting a new code, check whether an existing codebook entry already names the phenomenon you
+are seeing. If it does, cite its id and the newly supporting sentence ids under "reuses"
+instead of minting a near-duplicate — do not restate its label or definition, and do not write
+a rationale for a reuse. Mint a new code only when nothing in the codebook fits.
+
+RESEARCH QUESTION SCOPING — a RESEARCH QUESTION may be given below. Material clearly outside
+its scope should not be coded at all; return its sentence ids under "out_of_scope" with a
+one-line reason instead. This is a decline, not a downgrade — never force an out-of-scope
+passage into a thin code just to avoid leaving it uncoded. When no research question is given,
+code the whole document on its own analytic merits (nothing is out of scope).
+
+UNCERTAINTY — mark uncertainty instead of asserting it away: when the participant reports an
+interpretation, motive, threat, or cause the transcript cannot independently establish, code
+it as perceived / reported / framed ("perceived deliberate sabotage", not "sabotage by
+co-worker"), and set that code's "uncertainty" to ONE short clause naming the limit — e.g.
+"perception only — transcript cannot establish the event", "translation ambiguous", "thin
+evidence — a single passing remark". Leave "uncertainty" empty ("") for everything that needs
+no such flag — most codes will. This clause is the ONLY explanatory text a code carries beyond
+its definition: write it for a flagged code and nothing extra for any other.
+
+LABELS AND DEFINITIONS
+- A label is a plain analytic phrase a researcher scanning a codebook would understand — not a
+  literary or theory-heavy coinage.
+- A definition is ONE sentence stating what phenomenon the code captures, in terms portable
+  across interviews — not a summary of this excerpt, and never more than one sentence.
+
+Before returning, silently review your list once: merge codes that make the same analytic
+point, remove codes that fail the quality bar, downgrade latent claims the cited evidence does
+not carry, and confirm you are at or under the 25-code budget.
+
+Return ONLY JSON, no prose or code fences:
+{"codes": [{"label": "...", "definition": "...", "code_type": "semantic|latent",
+            "evidence_sentence_ids": ["S2.007"], "uncertainty": ""}],
+ "reuses": [{"code_id": "C0012", "evidence_sentence_ids": ["S3.002"]}],
+ "out_of_scope": [{"sentence_ids": ["S4.010", "S4.011"], "reason": "..."}]}
