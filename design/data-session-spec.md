@@ -121,9 +121,11 @@ section-groups / per-section — same prompt, same validators, same output contr
 span. The calibration experiment: one held transcript (Livicia Antoine), READ at each span
 against the same codebook state, compared in Python with no LLM judge: citation coverage
 deciles, code count + evidence density, reuse-vs-mint rate, cross-span code overlap, wall
-time + tokens. Runnable at zero API cost against a local model (`MASSHINE_BASE_URL` is
-already endpoint-agnostic — e.g. gpt-5.6-luna served locally), then confirmed on M3 before
-the default is fixed. Fewer calls remain the goal; the data picks the span.
+time + tokens. Runnable at zero API cost against a local model (gpt-5.6-luna via the
+codex-cli backend), then confirmed on M3 before the default is fixed. Fewer calls remain
+the goal; the data picks the span. **The codex-cli/luna backend is a local calibration
+instrument ONLY** — explicit env opt-in, never a deployed or online backend, never
+documented in deployment docs.
 
 Call budget per document: **2 at whole-doc span** (+ researcher-paced Q&A), vs ~19
 single-coder-sectioned and ~25+ panel. Coder restraint, reuse-before-mint, RQ scoping, and
