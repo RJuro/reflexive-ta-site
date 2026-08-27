@@ -92,8 +92,9 @@ larger calls amortize one reasoning budget over the whole transcript; prompts ge
 not more numerous; output discipline is enforced in one place.
 
 - **Call 1 — READ.** Full numbered transcript + codebook index (researcher codes first) +
-  research question. Returns: section boundaries with gists (absorbs `structure()`),
-  restrained codes (hard cap ~20–25/doc, evidence as sid lists), `reuses` against the
+  research question. (`structure()` stays at ingest — sentence ids are minted per section
+  and the whole substrate hangs off them; READ absorbs the coder+critic calls only.)
+  Returns: restrained codes (hard cap ~20–25/doc, evidence as sid lists), `reuses` against the
   codebook (filing at source — assimilation's routine work largely disappears; a separate
   assimilation pass remains only as a retrofit/reorganize tool), `out_of_scope` declines,
   uncertainty flags. Output discipline: one-line definitions; rationale only where an
@@ -148,7 +149,35 @@ substance.
   story prose is spoken-register with anchors carried structurally, never as ids embedded in
   sentence text — clickable on screen, clean when read aloud.
 
-## 7. Epistemology positioning
+## 7. Project history (git-backed)
+
+Each project directory is its own **git repository** (engine/data/ is ignored by the main
+repo, so nesting is clean). Auto-commit at quiescent moments: after every completed job
+(READ, SYNTHESIZE, import), after a researcher session, and always **before any destructive
+re-run** — the safety point. Alongside the binary DB, each commit writes the canonical
+pretty-printed export, so project history is *diffable*: what changed between two sessions
+reads as a diff of findings, codes, and story — and the git log doubles as the R5/R8 audit
+artifact (full provenance for a methods section).
+
+**No git UX leaks into the product.** The UI concept is a linear timeline: "History —
+restore to here", plus researcher-labeled save points ("mark this moment"). No branches,
+merges, or remotes in v1 (forked counterfactual analyses are a future note). Restore is
+whole-project, executed at job quiescence (the single job worker makes this safe).
+Fine-grained undo remains the revision log's job; history is the coarse instrument.
+
+## 8. Design language
+
+Projects are the front door: creating one is prominent, and a project is **core documents +
+notes** (researcher notes as first-class quick capture on the project home). The feel:
+simple, visually appealing, the paper aesthetic carried through (serif, calm, archival) —
+the researcher works at a slightly higher level with artifacts the model made, but the
+connection to the material must stay felt. The rule that enforces it: **every artifact is
+made of the material** — intros, steps, and story speak with anchored passages and the
+participants' own words, never in abstract summary register ("stupid summaries" are a
+validation failure, not a style choice), and the full marked-up text is always one click
+away.
+
+## 9. Epistemology positioning
 
 The project declaration (research question + positionality, paper-spec §3.1c) plus an
 explicit epistemology line: analysis is conducted *by the human–AI assemblage*, dialogue
@@ -157,7 +186,7 @@ verbatim provenance, positional coverage, audited human gates. Claims we never m
 autonomous theme generation. Orthodox reflexive-TA reviewers will still say no; the journal
 is what lets everyone else say yes.
 
-## 8. What survives / what's demoted
+## 10. What survives / what's demoted
 
 **Survives untouched**: ingest, sentence ids + offsets, grounding gate, reconcile, revision
 log, memos/comments, guidance loop, export + manifest, coverage tool, theme walk (as the
@@ -167,7 +196,7 @@ gated structural moves), auth, jobs.
 researcher duty; the three-place paper UI as the app shell (Text keeps the paper design).
 **Deleted from the plan**: standing-panel-by-default; chip-dense codebook home.
 
-## 9. Build order
+## 11. Build order
 
 1. **P10.1 engine** — the P9.1a scope (restraint, reuse, RQ scoping, revision actions,
    researcher codes, manifest, coverage tool) built into the READ call architecture (§5)
@@ -184,7 +213,7 @@ researcher duty; the three-place paper UI as the app shell (Text keeps the paper
    colleague's; the researcher path from debrief to accepted finding works without ever
    visiting a codebook view.
 
-## 10. Open questions (deliberately deferred)
+## 12. Open questions (deliberately deferred)
 
 Walkthrough length calibration (how many steps before fatigue); whether Q&A transcripts
 belong in the journal wholesale or as researcher-promoted excerpts; adjudication workspace
