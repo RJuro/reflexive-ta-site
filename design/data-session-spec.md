@@ -84,29 +84,56 @@ Project home. A chronological analytic journal — reflexive TA's actual artifac
   passages. Gate visits are logged; the interaction telemetry (challenged, reframed, dropped)
   is the validation data for the MASSHINE deliverables.
 
-## 5. Pipeline simplification
+## 5. Computational shape: two calls per document
 
-- **Single coder + critic** becomes the default mode. The blind 3-lens panel remains available
-  per project but stops being the flagship; friction machinery survives for it and for
-  on-demand second readings. Roughly a third of the coding cost.
-- Coder restraint, reuse-before-mint, RQ scoping, and the writable-margin revision actions:
-  unchanged from paper-spec §3.1/§5 (P9.1a work — still to build, minus panel-first framing).
-- Assimilation (paper-spec §3.2): unchanged — it is what keeps the codebook a stable,
-  saturating analytic object underneath the dialogue.
-- **New: the debrief generator.** One call per document after assimilation: input = the doc's
-  restrained codes (+ evidence), the assimilation digest (minted/filed), the theme-walk step
-  snapshot (deltas), memos, research question, and the researcher's standing reactions.
-  Output = the typed walkthrough steps. Python-validated: every cited sid must resolve
-  (grounding gate), every referenced code/finding id must exist; steps failing validation are
-  dropped and counted. Stored per doc (replayable like theme_steps).
-- **New: the session Q&A endpoint.** One call per researcher turn; context = retrieval over
-  codes/sentences/findings (never whole-corpus stuffing — the lost-in-the-middle guard
-  applies to chat too). On-demand lens reading = one call scoped to one passage.
+With a thinking model (MiniMax-M3), cost and latency live in thinking + output tokens, and
+thinking is paid **per call**. The old pipeline paid it ~19–25 times per document. Fewer,
+larger calls amortize one reasoning budget over the whole transcript; prompts get richer,
+not more numerous; output discipline is enforced in one place.
 
-Call budget per document: ~16 coding (coder+critic per section) + 1 assimilation + 1 theme
-step + 1 debrief ≈ **19**, vs ~25+ under the panel default. Q&A researcher-paced.
+- **Call 1 — READ.** Full numbered transcript + codebook index (researcher codes first) +
+  research question. Returns: section boundaries with gists (absorbs `structure()`),
+  restrained codes (hard cap ~20–25/doc, evidence as sid lists), `reuses` against the
+  codebook (filing at source — assimilation's routine work largely disappears; a separate
+  assimilation pass remains only as a retrofit/reorganize tool), `out_of_scope` declines,
+  uncertainty flags. Output discipline: one-line definitions; rationale only where an
+  uncertainty flag warrants it; no rationale on reuses.
+- **Call 2 — SYNTHESIZE.** Transcript + READ output + current findings + story-so-far +
+  standing researcher reactions. Returns: the theme/finding update (the walk step), the
+  typed walkthrough steps (§3), the **document introduction** (§6), and the revised
+  **story-so-far** (§6). Python-validated throughout: every cited sid must resolve
+  (grounding gate), every referenced code/finding id must exist; failures dropped and
+  counted.
+- **The session Q&A endpoint**: one call per researcher turn; context = retrieval over
+  codes/sentences/findings, never whole-corpus stuffing. On-demand lens reading = one call
+  scoped to one passage. Critic and panel become on-demand instruments of the same kind.
 
-## 6. Epistemology positioning
+**Whole-document coding is the regime the lost-in-the-middle literature warns about** — three
+defenses: a ~15k-token transcript is far below the measured degradation regimes; the
+restraint cap means the model is never asked for exhaustive coverage (the documented failure
+mode); and `tools/coverage_check.py` runs per document as a hard gate — front-heavy citation
+deciles auto-fall back to the sectioned coding path, which is kept, not deleted.
+
+Call budget per document: **2** (+ researcher-paced Q&A), vs ~19 single-coder-sectioned and
+~25+ panel. Coder restraint, reuse-before-mint, RQ scoping, and the writable-margin revision
+actions carry over from paper-spec §3.1/§5 unchanged in substance.
+
+## 6. The familiarization layer
+
+- **Document introduction**: produced by SYNTHESIZE *from the extraction* — the patterns
+  that carry the document, what is uncertain or ambiguous, and a closing paragraph on what
+  this document does to the project's emerging story. Written in spoken register (clean
+  prose; evidence sids stored alongside each paragraph, never inline) so it is **TTS-ready
+  by construction**: a ~3-minute listenable briefing to familiarize before working deeper.
+  Session order: intro (listen or read) → walkthrough → open conversation.
+- **Story-so-far**: a project-level narrative the system revises after each document,
+  **versioned per document position** (story v1 after doc 1 … replayable like theme_steps).
+  Lives at the top of the Journal. The version trail is itself a reflexivity artifact — the
+  interpretation's evolution is inspectable, which no CAQDAS produces.
+- TTS engineering is out of scope for the first build; the contract is only that intro and
+  story text are spoken-register and citation-free in the prose body.
+
+## 7. Epistemology positioning
 
 The project declaration (research question + positionality, paper-spec §3.1c) plus an
 explicit epistemology line: analysis is conducted *by the human–AI assemblage*, dialogue
@@ -115,7 +142,7 @@ verbatim provenance, positional coverage, audited human gates. Claims we never m
 autonomous theme generation. Orthodox reflexive-TA reviewers will still say no; the journal
 is what lets everyone else say yes.
 
-## 7. What survives / what's demoted
+## 8. What survives / what's demoted
 
 **Survives untouched**: ingest, sentence ids + offsets, grounding gate, reconcile, revision
 log, memos/comments, guidance loop, export + manifest, coverage tool, theme walk (as the
@@ -125,12 +152,13 @@ gated structural moves), auth, jobs.
 researcher duty; the three-place paper UI as the app shell (Text keeps the paper design).
 **Deleted from the plan**: standing-panel-by-default; chip-dense codebook home.
 
-## 8. Build order
+## 9. Build order
 
 1. **P10.1 engine** — the P9.1a scope (restraint, reuse, RQ scoping, revision actions,
-   researcher codes, manifest, coverage tool) with single-coder default framing.
-2. **P10.2 engine** — assimilation (paper-spec §3.2) + finding status layer + debrief
-   generator + reactions endpoints + session Q&A + on-demand lens. All offline-testable.
+   researcher codes, manifest, coverage tool) built into the READ call architecture (§5),
+   sectioned path kept as the coverage-gate fallback.
+2. **P10.2 engine** — SYNTHESIZE (finding lifecycle + walkthrough + intro + story-so-far)
+   + reactions endpoints + session Q&A + on-demand lens. All offline-testable.
 3. **P10.3 UI** — Session (walkthrough + reactions + chat) and Journal; Text = paper view
    opened-at-evidence; codebook drawer.
 4. **P10.4 validation** — run the Livicia Antoine transcript end-to-end; compare the
@@ -139,7 +167,7 @@ researcher duty; the three-place paper UI as the app shell (Text keeps the paper
    colleague's; the researcher path from debrief to accepted finding works without ever
    visiting a codebook view.
 
-## 9. Open questions (deliberately deferred)
+## 10. Open questions (deliberately deferred)
 
 Walkthrough length calibration (how many steps before fatigue); whether Q&A transcripts
 belong in the journal wholesale or as researcher-promoted excerpts; adjudication workspace
