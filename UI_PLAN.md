@@ -563,6 +563,16 @@ and a full audit trail, never silent deletion.*
 Deferred to P9: manual researcher-authored codes on passages; exemplar-quote curation;
 cross-case retrieval matrix (code × source); methods-section export.
 
+# P10 — The data session (2026-08-27)
+
+Full spec: design/data-session-spec.md — supersedes P9's UI direction (paper-spec §3 engine
+work carries forward). The reframe: not AI-augmented NVivo but a data session — the system
+codes invisibly, then debriefs the researcher in a paced walkthrough (patterns, tensions,
+uncertainties, cross-case deltas, declined material), every claim a door into the text;
+reactions (agree/challenge/reframe/park) steer the next document. Journal replaces codebook
+as home; findings carry status with an evidence-visit acceptance gate; single coder + critic
+default with on-demand second lenses; codebook demotes to drawer + export.
+
 # P9 — The paper shape (2026-07-26)
 
 Full spec: design/paper-spec.md (mockup: design/masshine-paper-mockup.html). The rethink:
