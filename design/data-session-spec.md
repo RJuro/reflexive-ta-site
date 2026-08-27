@@ -127,6 +127,11 @@ the goal; the data picks the span. **The codex-cli/luna backend is a local calib
 instrument ONLY** — explicit env opt-in, never a deployed or online backend, never
 documented in deployment docs.
 
+**Providers.** Production default: MiniMax-M3. Deployable alternative: **Mistral-hosted
+glm-5-2** under the university contract (GDPR) via `MASSHINE_PROVIDER=mistral` — verified
+drop-in OpenAI-compatible (streaming + usage + cached-token telemetry identical), so it is
+a config profile, not a backend. Local-only: gpt-5.6-luna via codex-cli, calibration only.
+
 Call budget per document: **2 at whole-doc span** (+ researcher-paced Q&A), vs ~19
 single-coder-sectioned and ~25+ panel. Coder restraint, reuse-before-mint, RQ scoping, and
 the writable-margin revision actions carry over from paper-spec §3.1/§5 unchanged in
