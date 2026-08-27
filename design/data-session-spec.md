@@ -224,7 +224,38 @@ researcher duty; the three-place paper UI as the app shell (Text keeps the paper
    colleague's; the researcher path from debrief to accepted finding works without ever
    visiting a codebook view.
 
-## 12. Open questions (deliberately deferred)
+## 12. The audio path (upload → Voxtral → canonical transcript)
+
+Fieldwork enters as sound: a project accepts audio uploads (mp3/m4a/wav) and produces the
+same canonical transcript the rest of the engine already eats — the audio path lands on the
+existing substrate with **zero ingest changes**.
+
+1. **Transcribe** — Mistral Voxtral (`voxtral-mini-latest`, env-overridable) via plain
+   multipart `POST /v1/audio/transcriptions` with `diarize=true` +
+   `timestamp_granularities[]=segment` (verified live: segments carry
+   start/end/speaker_id/text; usage carries `prompt_audio_seconds` + `audio_tokens` → the
+   ledger). ASR always uses the Mistral credentials regardless of `MASSHINE_PROVIDER` — it
+   is the only ASR provider. Long audio is chunked at segment/silence boundaries (~10–15
+   min), timestamps offset on stitch; diarization speaker ids are NOT stable across chunks —
+   **roles are**, so mapping happens per chunk and stitching is by role.
+2. **Role mapping** — one small LLM call over the opening segments (interviews announce
+   themselves: "This is Andrew Phillips… I'm with Mary Grande") → `{speaker_id → {role:
+   interviewer|interviewee|other, name?}}`; Python validates full coverage; the researcher
+   can rename/override before ingest.
+3. **Render** — consecutive same-speaker segments merge into turns, emitted in the corpus's
+   canonical `\tNAME:\ttext` format (exactly what ingest parses). The diarized segment JSON
+   is kept as a sidecar with timestamps — the future where an evidence door *plays the
+   narrator's voice* at that moment is one join away (noted, not built).
+4. **Optional redraft pass** (researcher-triggered, PRE-INGEST ONLY): conservative
+   segment-by-segment cleanup — punctuation, casing, obvious mis-hearings; NEVER paraphrase.
+   Verification is dual: a Python edit-distance gate per segment (a redraft changing more
+   than a bounded share of words is rejected outright) and a researcher-facing diff
+   (accept per segment or wholesale; the original is always kept). Proper names are
+   researcher territory — ASR wrote "Jankovic" for "Yankovik" in the live test, and no model
+   can know which is right. **After ingest the transcript is immutable** (sentence offsets
+   are load-bearing); later fixes mean re-ingest + re-read, through the existing machinery.
+
+## 13. Open questions (deliberately deferred)
 
 Walkthrough length calibration (how many steps before fatigue); whether Q&A transcripts
 belong in the journal wholesale or as researcher-promoted excerpts; adjudication workspace
