@@ -130,7 +130,11 @@ documented in deployment docs.
 **Providers.** Production default: MiniMax-M3. Deployable alternative: **Mistral-hosted
 glm-5-2** under the university contract (GDPR) via `MASSHINE_PROVIDER=mistral` — verified
 drop-in OpenAI-compatible (streaming + usage + cached-token telemetry identical), so it is
-a config profile, not a backend. Local-only: gpt-5.6-luna via codex-cli, calibration only.
+a config profile, not a backend. Priced €1.19/M input, €3.74/M output (2026-08-27; thinking
+counts as output) — not free: a 30-doc corpus at READ+SYNTHESIZE is roughly €5–10 depending
+on thinking share, which is exactly why call-count amortization matters. The calibration
+harness prices its own report from the ledger. Local-only: gpt-5.6-luna via codex-cli,
+calibration only.
 
 Call budget per document: **2 at whole-doc span** (+ researcher-paced Q&A), vs ~19
 single-coder-sectioned and ~25+ panel. Coder restraint, reuse-before-mint, RQ scoping, and
