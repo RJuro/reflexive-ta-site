@@ -1,6 +1,7 @@
 # P10 — The data session
 
-*Spec, 2026-08-27. Supersedes the UI direction of [paper-spec.md](paper-spec.md) (§2, §4–§6
+*Spec, 2026-08-27. **Start with [MASSHINE.md](MASSHINE.md)** — the consolidated front-door
+spec; this document is the detail behind it. Supersedes the UI direction of [paper-spec.md](paper-spec.md) (§2, §4–§6
 there); the engine changes in paper-spec §3 carry forward and are referenced below. Grounding:
 the deep-research taxonomy (compass artifact), the Nirosha pairing, reviewer rounds 1–4.*
 
