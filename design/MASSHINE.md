@@ -16,7 +16,67 @@ is what this interview does to what we thought after the last one. The researche
 challenges, reframes, and decides. The machine never owns an interpretation, and every
 sentence it says is one click from the verbatim words that produced it.
 
-## 2. The simplification
+## 2. How knowing moves — the loop architecture
+
+The system model in one line: **evidence ascends, direction descends, and every crossing is
+checked.** Analysis is a set of loops running up and down the abstraction layers, and the
+whole apparatus — gates, guidance, sittings, versions — exists to keep those two currents
+honest against each other.
+
+| layer | object | changes how |
+|---|---|---|
+| L3 | the story-so-far **and the research focus itself** | revised per document; versioned |
+| L2 | findings — cross-case claims | standing computed from support below |
+| L1 | codes — grounded observations | ≤25/doc, every one anchored in sentence ids |
+| L0 | the material | verbatim, immutable after ingest |
+
+**The upward current is evidence, and it is the only way anything comes to exist.** Nothing
+at layer N may exist without anchors at N−1: codes pass the grounding gate, findings carry
+their supporting codes, the story is built from findings. Any claim can be walked down to
+the participant's actual words — that is what the export proves.
+
+**The downward current is direction, and it is how the researcher governs.** The researcher
+runs the analysis the way a CEO runs a company: by direction and exception, at whatever
+altitude they are working — reframe the story, challenge a finding, reject a code, mark a
+passage, shift the focus. Direction never edits evidence. It changes **how the next ascent
+reads**: guidance into READ and SYNTHESIZE, scope, summoned lenses, verdicts.
+
+**The check at every crossing — direction is tested, not obeyed.** A top-down steer becomes
+*candidate* structure that must earn its standing from the material on the next pass, and
+the system owes a **check-back**: here is what supports your framing, here is what strains
+it, here is what I could not find. A steer the material cannot carry comes back flagged —
+never silently absorbed. The machine is an honest analyst, not a sycophant; agreement it
+cannot ground is worthless to a researcher.
+
+**Abduction lives in the residue.** What refuses to fit — a passage no code catches, a code
+no finding wants, a finding that strains the story, evidence that contradicts a steer — is a
+first-class signal, surfaced rather than smoothed. Residue is where new frames come from:
+the system may *propose* a reframing from an anomaly (abduction), and the researcher
+disposes. An analysis with no residue on display should read as suspicious, not as finished.
+
+**The focus itself is in the loop.** Unless the researcher pins it, the research question is
+emergent: versioned like the story, revisable by the researcher at any time, refinable by
+proposal from the machine when the material keeps pointing somewhere else. Because focus
+evolves, **declined material is parked, never buried** — when the question shifts, what was
+out of scope is re-offered on the next read.
+
+**Decisions happen at the right altitude.** In the walkthrough: fast, cheap stance — agree,
+challenge, reframe, park. Structural verdicts — keep-and-name, merge, split, demote, drop —
+only at a deliberate review sitting with the pooled cross-case evidence in view (§5), because
+that is the first moment the researcher actually knows enough to give them.
+
+The named loops, each one full descent-and-ascent with its check: the **reading loop** (per
+document: READ ascends codes under the current codebook, guidance, and focus), the **session
+loop** (per sitting: SYNTHESIZE ascends findings and story; the walkthrough descends as an
+invitation to direct; reactions descend into guidance), and the **review loop** (per phase:
+verdicts descend; the next synthesis checks them against pooled evidence and reports back).
+
+*Build consequences (P10.2 targets):* the research question becomes a versioned object with
+a proposal path; SYNTHESIZE performs the check-back on every standing steer and reports fit;
+declines are re-evaluated against the current focus on each read; anomalies surface as typed
+walkthrough material rather than being dropped.
+
+## 3. The simplification
 
 The system grew a full CAQDAS surface — codebooks, families, merge queues, curation views —
 and that turned out to be the wrong product. Managing the machine's taxonomy is clerical work;
@@ -37,7 +97,7 @@ it made the researcher the AI's librarian. The deletions ARE the design:
 steps, and the project story speak with anchored passages and the participants' own words.
 Abstract summary register is a validation failure, not a style choice.
 
-## 3. The pipeline
+## 4. The pipeline
 
 ```
 audio ──► Voxtral ASR (diarized) ──► role mapping ──► canonical transcript ──┐
@@ -63,7 +123,7 @@ Everything downstream of ingest hangs off **stable sentence ids with character o
 model cites ids; it never emits quote text. Quotes are resolved from offsets at render time,
 which is why fabrication is structurally impossible rather than merely checked for.
 
-## 4. The three surfaces
+## 5. The three surfaces
 
 - **Session** — the paced walkthrough of one document: patterns (with their *weakest* evidence,
   not only the best), tensions, uncertainties, cross-case deltas, and what was declined as
@@ -78,7 +138,7 @@ which is why fabrication is structurally impossible rather than merely checked f
 - **Text** — the transcript typeset as a document, marginalia in the gutter, always one click
   from any claim. The destination, never homework.
 
-## 5. Choice of model — and where it runs
+## 6. Choice of model — and where it runs
 
 Model choice is a **methods fact**, not a preference: the resolved model is recorded per job and
 in the export manifest, so a project coded partly with one model is honest in the record.
@@ -95,7 +155,7 @@ in the export manifest, so a project coded partly with one model is honest in th
 
 Because everything speaks OpenAI conventions, providers are a config profile — not a backend.
 
-## 6. What the researcher actually does
+## 7. What the researcher actually does
 
 1. Make a project; state the research question and a positionality note (both exported).
 2. Drop in interviews — audio or text. Audio is transcribed, diarized, speaker-role-mapped,
@@ -107,14 +167,14 @@ Because everything speaks OpenAI conventions, providers are a config profile —
    what changed.
 7. Export: findings, codes, every revision, the audit trail, the model manifest.
 
-## 7. Invariants (never simplified away)
+## 8. Invariants (never simplified away)
 
 Verbatim provenance by construction · positional coverage across the whole document (measured,
 gated) · append-only revision log, nothing destructive · researcher gates on every structural
 change · declined-material logged · full audit-trail export · per-project git history with
 restore points · private material never leaves the gitignored folders.
 
-## 8. Status (2026-08-27)
+## 9. Status (2026-08-27)
 
 **Built and deployed** — READ with span parameter + coverage gate; the audio path end-to-end
 (verified live: diarization, role mapping, ingest); provider profiles; span-calibration
@@ -123,7 +183,7 @@ harness; the P8 authority substrate (revisions, researcher codes, theme authorit
 **Next** — SYNTHESIZE (walkthrough, intro, story-so-far), finding lifecycle, git history,
 then validation: the Livicia Antoine transcript end-to-end against Nirosha's human coding.
 
-## 9. Positioning
+## 10. Positioning
 
 Reliable application, verbatim provenance, corpus-wide coverage, and audited human gates are
 what this system claims. Autonomous theme generation is what it does not claim, and the

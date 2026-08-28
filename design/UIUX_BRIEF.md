@@ -23,7 +23,9 @@ and the participants' own words, and the marked-up transcript is always one clic
 
 ## 2. Read these first, in order
 
-1. `design/MASSHINE.md` — the consolidated spec. §2's deletions table IS the design stance.
+1. `design/MASSHINE.md` — the consolidated spec. §2 (the loop architecture: evidence
+   ascends, direction descends, every crossing checked) is the system model your design must
+   EXPRESS — the two currents should be visible and felt. §3's deletions table is the stance.
 2. `design/data-session-spec.md` — the detail: walkthrough step types (§3), journal +
    acceptance gate (§4), familiarization layer (§6), git-backed history (§7), design
    language (§8), audio path (§12).
@@ -100,6 +102,11 @@ for a brand-new project (the blank notebook must invite, not lecture).
   never group characterization.
 - Use REAL content from the seed transcripts in the mockup — the "made of the material"
   rule applies to mockups too. No lorem ipsum, no invented participants.
+- **Make the loops visible** (MASSHINE.md §2): evidence rising (anchors, computed standing),
+  direction descending (stance, guidance trail), and above all the **check-back moment** —
+  the system answering a researcher's steer with "supports / strains / could not find" —
+  plus the evolving research question (versioned, with machine-proposed refinements) and
+  residue on display (what didn't fit, offered as the seed of a reframe).
 
 ## 6. Technical frame
 
