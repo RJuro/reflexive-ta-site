@@ -63,12 +63,16 @@ and the participants' own words, and the marked-up transcript is always one clic
    the next document's reading. Beneath it: **open conversation** — "where does she talk
    about pay?", "read this passage against the grain" (summons a second lens for one
    passage only).
-6. **The journal** (project home): findings with lifecycle (emerging → supported /
-   challenged / dropped / accepted), memos in both voices, and the **story-so-far** — a
-   versioned narrative revised after each document (v1 after doc 1 … the evolution itself
-   is inspectable). **The acceptance gate**: a finding cannot become "accepted" until its
-   evidence doors have actually been opened — design the affordance that makes this feel
-   natural, not bureaucratic.
+6. **The journal** (project home): findings, memos in both voices, and the
+   **story-so-far** — a versioned narrative revised after each document (v1 after doc 1 …
+   the evolution itself is inspectable). Findings do NOT ask the researcher for verdicts
+   they can't yet give: each carries a computed evidential **standing** (from support below
+   — never a researcher input) and the researcher's lightweight **stance** (their walkthrough
+   reactions, rolled up). **Verdicts** — keep-and-name, merge, split, demote, drop — happen
+   only at a deliberate **theme review sitting** with the pooled cross-case evidence in view
+   (RTA phase 4 made literal), and naming a finding requires having opened its evidence.
+   Design the sitting as its own moment — a different register from the daily walkthrough —
+   and make the standing/stance distinction legible at a glance.
 7. **The text** whenever a claim deserves scrutiny — the paper view, opened at the passage,
    marginalia in the gutter. Destination, never homework.
 8. **History**: every processing run and session is a restore point (git-backed). Linear
