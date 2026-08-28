@@ -59,8 +59,9 @@ typed, ordered by the generator:
 Each step: statement, evidence sids (doors to Text), linked code/finding ids, and a prompt
 for the researcher. **Reactions are the input**: *agree* · *challenge* (with note) ·
 *reframe* (edit the statement — researcher wording wins, original kept) · *park*. Reactions
-persist, update finding status, and feed `compile_guidance` — the next document is read under
-the researcher's reactions.
+persist and feed `compile_guidance` — the next document is read under the researcher's
+reactions. Reactions are step-level STEERING, never verdicts on findings (see §4: verdicts
+belong to the theme review sitting).
 
 Beneath the walkthrough, **open conversation** over the coded corpus (QBA grammar): "where
 does she talk about pay?", "is this perception or event?", "compare with Grande on kin
@@ -73,17 +74,35 @@ generated.
 
 Project home. A chronological analytic journal — reflexive TA's actual artifact set:
 
-- **Findings**: statement + status (`emerging` → `supported` / `challenged` / `dropped` /
-  `accepted`), evidence trail, per-document delta history, researcher notes. Findings are
-  `theme_v2` rows + a status/lifecycle layer — the P8b theme-authority machinery (relabel,
-  reclaim, merge, demote) carries over as the researcher's editing surface, reached from the
-  journal, not from a taxonomy view.
+Findings carry NO researcher-managed status enum — an earlier draft's
+`emerging → supported/challenged/dropped/accepted` asked the researcher for verdicts they
+cannot yet render (after doc 1 there is no cross-case evidence; mid-corpus the corpus isn't
+done; and "supported/challenged" are facts about evidence, not decisions). Instead, three
+layers matching what is actually knowable when:
+
+- **Standing** (computed, never clicked): the evidential state derived from coverage and
+  deltas, in plain prose — "recurs in 5 of 7 interviews · complicated by EI-845". Always
+  visible, always honest, no status-pill vocabulary.
+- **Stance** (researcher, lightweight, anytime): the walkthrough reactions —
+  agree / challenge (note) / reframe / park — are attention and steering signals on STEPS,
+  feeding the next document's reading. Never verdicts. A finding may show its stance trace
+  ("you challenged this after doc 4").
+- **Verdict** (researcher, at a **theme review sitting** — reflexive TA's phase 4 made
+  literal): a distinct, deliberately-entered mode, offered when saturation shows
+  (new-codes-per-doc trending to zero) or researcher-invoked, and repeatable. It walks
+  candidate findings one at a time WITH the full cross-case evidence — strongest and weakest
+  passages, contradicting deltas, the finding's history — and asks the phase-4 questions.
+  Verdicts: **keep-and-name** (the researcher writes the final label and definition —
+  acceptance in RTA terms IS defining and naming), merge, split, demote to memo, drop. All
+  are revisions: append-only, reversible, riding the P8b theme-authority machinery. Before
+  any sitting, no verdict UI exists anywhere — the interface must not offer "accept" during
+  early analysis.
+- **The evidence gate** (R6) lives inside the sitting as its natural discipline: you cannot
+  keep-and-name a finding whose evidence you haven't opened. Gate visits are logged; the
+  sitting's telemetry (kept, merged, dropped, renamed) is the validation data for the
+  MASSHINE deliverables.
 - **Memos**, both voices: assistant memos (uncertainty flags, split/refine proposals,
   cross-case questions — the layer Nirosha had and our export lacked) and researcher memos.
-- **The acceptance gate** (R6, enforced by design, not checkbox): a finding cannot move to
-  `accepted` until its evidence doors have been opened — the researcher has actually read the
-  passages. Gate visits are logged; the interaction telemetry (challenged, reframed, dropped)
-  is the validation data for the MASSHINE deliverables.
 
 ## 5. Computational shape: few calls per document (read-span is empirical)
 

@@ -70,8 +70,11 @@ which is why fabrication is structurally impossible rather than merely checked f
   out-of-scope. Reactions persist and feed the next read. Open conversation underneath.
 - **Journal** — project home. Findings with their evidence and history, memos in both voices
   (the assistant's uncertainty flags and refine proposals; the researcher's own), and the
-  versioned story-so-far. A finding cannot be accepted until its evidence has actually been
-  opened.
+  versioned story-so-far. Findings carry a computed evidential **standing**, the researcher's
+  lightweight **stance**, and — only at a deliberate **theme review sitting** (RTA phase 4
+  made literal, with full cross-case evidence in view) — **verdicts**: keep-and-name, merge,
+  split, demote, drop. No verdict is offered earlier, and naming requires having opened the
+  evidence.
 - **Text** — the transcript typeset as a document, marginalia in the gutter, always one click
   from any claim. The destination, never homework.
 
