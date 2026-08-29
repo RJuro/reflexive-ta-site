@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MASSHINE · Research workbench</title>
+  <style>
+    :root {
+      --bg: oklch(98.6% 0.005 85);
+      --surface: oklch(100% 0 0);
+      --fg: oklch(21% 0.012 60);
+      --muted: oklch(46% 0.012 60);
+      --border: oklch(91.5% 0.006 75);
+      --accent: oklch(53% 0.13 30);
+      --accent-soft: color-mix(in oklch, var(--accent) 9%, transparent);
+      --fg-soft: color-mix(in oklch, var(--fg) 5%, transparent);
+      --fg-mid: color-mix(in oklch, var(--fg) 12%, transparent);
+      --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+      --rail: 232px;
+      --aside: 284px;
+      --radius: 8px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg); font: 14px/1.55 var(--font-body); -webkit-font-smoothing: antialiased; }
+    button, input, textarea, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { font-family: var(--font-display); font-weight: 500; text-wrap: balance; }
+    p { text-wrap: pretty; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .app { min-height: 100vh; display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); }
+    .rail { position: fixed; inset: 0 auto 0 0; width: var(--rail); display: flex; flex-direction: column; padding: 22px 14px 18px; border-right: 1px solid var(--border); background: color-mix(in oklch, var(--bg) 90%, transparent); backdrop-filter: blur(16px); z-index: 30; }
+    .brand { padding: 0 10px 22px; font: 650 11px/1 var(--font-body); letter-spacing: .18em; color: var(--muted); }
+    .project-switch { width: 100%; min-height: 52px; text-align: left; padding: 8px 10px; border: 0; border-radius: var(--radius); background: transparent; }
+    .project-switch:hover { background: var(--fg-soft); }
+    .project-switch strong { display: block; font-size: 13px; font-weight: 620; }
+    .project-switch span { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+    .nav { display: grid; gap: 2px; margin-top: 18px; }
+    .nav button { min-height: 44px; border: 0; border-radius: var(--radius); background: transparent; text-align: left; padding: 8px 10px; color: var(--muted); }
+    .nav button:hover { color: var(--fg); background: var(--fg-soft); }
+    .nav button[aria-current="page"] { color: var(--fg); background: var(--fg-mid); font-weight: 600; }
+    .rail-section { margin-top: 28px; padding: 0 10px; }
+    .kicker { margin: 0 0 10px; font: 600 10px/1.3 var(--font-mono); letter-spacing: .11em; text-transform: uppercase; color: var(--muted); }
+    .material-link { display: block; padding: 8px 0; border-top: 1px solid var(--border); }
+    .material-link strong { display: block; font-size: 12.5px; font-weight: 540; }
+    .material-link span { color: var(--muted); font-size: 11px; }
+    .rail-foot { margin-top: auto; padding: 0 10px; color: var(--muted); font-size: 11px; }
+    .workspace { grid-column: 2; min-width: 0; }
+    .topbar { position: sticky; top: 0; z-index: 20; height: 64px; display: flex; align-items: center; padding: 0 28px; border-bottom: 1px solid var(--border); background: color-mix(in oklch, var(--bg) 91%, transparent); backdrop-filter: blur(16px); }
+    .top-context { min-width: 0; }
+    .top-context strong { display: block; font-size: 12.5px; font-weight: 620; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .top-context span { display: block; font-size: 11px; color: var(--muted); }
+    .top-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+    .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: var(--radius); padding: 9px 14px; background: transparent; font-size: 13px; font-weight: 560; transition: background .16s, color .16s, border-color .16s, transform .08s; }
+    .btn:hover { background: var(--fg-soft); }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--fg); color: var(--surface); border-color: var(--fg); }
+    .btn-primary:hover { background: color-mix(in oklch, var(--fg) 88%, var(--surface)); color: var(--surface); }
+    .btn-secondary { border-color: var(--border); background: var(--surface); }
+    .btn-secondary:hover { border-color: var(--fg); background: var(--surface); }
+    .btn-text { padding-inline: 8px; color: var(--muted); }
+    .btn-text:hover { color: var(--fg); }
+    .btn[disabled] { opacity: .42; cursor: default; transform: none; }
+    .screen { display: none; min-height: calc(100vh - 64px); }
+    .screen.active { display: block; animation: reveal .28s ease-out; }
+    @keyframes reveal { from { opacity: 0; transform: translateY(4px); } }
+    .screen-grid { display: grid; grid-template-columns: minmax(0, 1fr) var(--aside); min-height: calc(100vh - 64px); }
+    .main-column { padding: 58px clamp(28px, 5vw, 74px) 92px; min-width: 0; }
+    .side-column { border-left: 1px solid var(--border); padding: 38px 24px 80px; background: color-mix(in oklch, var(--surface) 46%, transparent); }
+    .content { max-width: 920px; margin: 0 auto; }
+    .narrow { max-width: 700px; }
+    .page-head { margin-bottom: 46px; }
+    .page-head h1 { font-size: clamp(34px, 4vw, 52px); line-height: 1.05; letter-spacing: -.025em; margin-bottom: 12px; }
+    .page-head p { max-width: 62ch; margin-bottom: 0; color: var(--muted); font-size: 15px; }
+    .eyebrow { margin: 0 0 12px; font: 600 10px/1.3 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .meta { color: var(--muted); font-size: 12px; }
+    .serif { font-family: var(--font-display); }
+    .rule { border: 0; border-top: 1px solid var(--border); margin: 36px 0; }
+    .focus-line { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 28px; padding: 0 0 28px; border-bottom: 1px solid var(--border); }
+    .focus-line blockquote { margin: 0; padding-left: 18px; border-left: 2px solid var(--accent); font: 500 22px/1.38 var(--font-display); }
+    .focus-line small { display: block; margin-top: 10px; font-size: 11.5px; color: var(--muted); }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin: 44px 0 18px; }
+    .section-head h2 { margin: 0; font-size: 22px; }
+    .section-head p { margin: 0; color: var(--muted); font-size: 12px; }
+
+    /* Closest seed layout: custom split, adapted into a layered research map. */
+    .map-shell { position: relative; display: grid; grid-template-columns: 70px minmax(0, 1fr) 70px; border-top: 1px solid var(--fg); border-bottom: 1px solid var(--border); }
+    .current { writing-mode: vertical-rl; display: flex; align-items: center; justify-content: center; gap: 9px; padding: 18px 0; font: 600 10px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+    .current::after { content: ""; width: 1px; height: 64px; background: currentColor; }
+    .current.direction { color: var(--accent); transform: rotate(180deg); }
+    .current.evidence { color: var(--muted); }
+    .map-levels { border-inline: 1px solid var(--border); }
+    .map-level { display: grid; grid-template-columns: 126px minmax(0, 1fr); min-height: 104px; border-bottom: 1px solid var(--border); }
+    .map-level:last-child { border-bottom: 0; }
+    .level-label { padding: 22px 16px; font-size: 11px; color: var(--muted); }
+    .level-label strong { display: block; color: var(--fg); font-size: 12.5px; font-weight: 620; margin-bottom: 3px; }
+    .node-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .node { position: relative; min-height: 103px; padding: 20px 18px; border: 0; border-left: 1px solid var(--border); background: transparent; text-align: left; }
+    .node:hover { background: var(--fg-soft); }
+    .node.selected { background: var(--surface); box-shadow: inset 0 -2px var(--fg); }
+    .node strong { display: block; font: 500 15px/1.3 var(--font-display); }
+    .node span { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; }
+    .node.compact strong { font-family: var(--font-body); font-size: 12.5px; font-weight: 560; }
+    .folded { color: var(--muted); }
+    .crossing { margin-top: 20px; padding: 22px 0 4px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 22px; border-top: 1px solid var(--border); }
+    .crossing h3 { font-size: 19px; margin-bottom: 8px; }
+    .crossing p { margin-bottom: 10px; color: var(--muted); }
+    .evidence-door { display: inline-flex; min-height: 32px; align-items: center; border: 0; border-bottom: 1px solid var(--border); padding: 2px 0; margin-right: 12px; background: transparent; color: var(--muted); font: 11px/1 var(--font-mono); }
+    .evidence-door:hover { color: var(--fg); border-color: var(--fg); }
+    .status-line { padding: 15px 0; border-top: 1px solid var(--border); }
+    .status-line:first-of-type { border-top-color: var(--fg); }
+    .status-line button { width: 100%; border: 0; background: transparent; text-align: left; padding: 0; }
+    .status-line button:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+    .status-line strong { display: block; font-size: 12.5px; font-weight: 590; }
+    .status-line span { display: block; margin-top: 4px; color: var(--muted); font-size: 11.5px; }
+    .note-field { width: 100%; min-height: 92px; resize: vertical; margin-top: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+    .note-field:focus { border-color: var(--fg); outline-color: var(--accent); }
+
+    /* Session: one point at a time. */
+    .session-track { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 34px; }
+    .session-track i { height: 2px; background: var(--border); }
+    .session-track i.done { background: var(--fg); }
+    .step-frame { min-height: 420px; }
+    .step-kind { display: flex; justify-content: space-between; gap: 20px; color: var(--muted); font: 11px/1.3 var(--font-mono); text-transform: uppercase; letter-spacing: .08em; }
+    .step-claim { max-width: 27ch; margin: 24px 0 18px; font: 500 clamp(28px, 4vw, 43px)/1.12 var(--font-display); letter-spacing: -.025em; }
+    .step-body { max-width: 62ch; color: var(--muted); font-size: 15px; }
+    .reaction-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 30px; }
+    .reaction-bar .btn.active { background: var(--accent-soft); color: var(--accent); }
+    .checkback { margin-top: 28px; max-width: 700px; border-top: 1px solid var(--fg); }
+    .checkback-row { display: grid; grid-template-columns: 110px 1fr; gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+    .checkback-row strong { font-size: 12px; }
+    .checkback-row p { margin: 0; color: var(--muted); font-size: 13.5px; }
+    .second-lens { display: none; margin-top: 24px; padding: 18px 0 0 18px; border-top: 1px solid var(--border); border-left: 1px solid var(--fg); color: var(--muted); }
+    .second-lens.open { display: block; animation: reveal .22s ease-out; }
+    .conversation { margin-top: 54px; padding-top: 28px; border-top: 1px solid var(--border); }
+    .ask-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .field { width: 100%; min-height: 44px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; }
+    .field:focus { border-color: var(--fg); outline-color: var(--accent); }
+
+    /* Journal uses the seed log-list rhythm. */
+    .versioned-story { padding: 30px 0 8px; border-top: 1px solid var(--fg); }
+    .versioned-story p { max-width: 64ch; font: 500 20px/1.65 var(--font-display); }
+    .finding { padding: 24px 0; border-top: 1px solid var(--border); }
+    .finding:first-child { border-top-color: var(--fg); }
+    .finding-top { display: grid; grid-template-columns: minmax(0, 1fr) 148px; gap: 24px; }
+    .finding h3 { margin: 0 0 10px; font-size: 21px; }
+    .standing { color: var(--muted); font-size: 12.5px; }
+    .stance { padding-left: 14px; border-left: 1px solid var(--border); color: var(--muted); font-size: 11.5px; }
+    .finding:first-child .stance { border-left: 2px solid var(--accent); color: var(--accent); }
+    .finding-evidence { display: none; margin-top: 18px; padding: 16px 0 0 18px; border-top: 1px solid var(--border); }
+    .finding.open .finding-evidence { display: block; }
+    .timeline { margin-top: 10px; }
+    .timeline-row { display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: 16px; padding: 13px 0; border-top: 1px solid var(--border); align-items: baseline; }
+    .timeline-row time { font: 11px/1.3 var(--font-mono); color: var(--muted); }
+
+    /* Text preserves the approved archival page and margin behavior. */
+    .text-stage { padding: 48px clamp(18px, 5vw, 58px) 90px; background: color-mix(in oklch, var(--bg) 84%, var(--border)); }
+    .paper { max-width: 900px; margin: 0 auto; padding: 54px 48px 70px; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 18px 44px color-mix(in oklch, var(--fg) 9%, transparent); }
+    .paper-head { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 17px; margin-bottom: 38px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .passage { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 32px; margin-bottom: 24px; scroll-margin-top: 100px; }
+    .passage.highlight .transcript-line { background: var(--accent-soft); box-shadow: 0 0 0 5px var(--accent-soft); }
+    .transcript-line { margin: 0; font: 400 17px/1.82 var(--font-display); }
+    .speaker { color: var(--muted); font-size: .74em; font-variant: small-caps; letter-spacing: .09em; }
+    .margin-note { opacity: .18; padding-left: 12px; border-left: 2px solid var(--border); color: var(--muted); font-size: 11.5px; transition: opacity .18s, border-color .18s; }
+    .passage:hover .margin-note, .passage.highlight .margin-note, .margin-note.pinned { opacity: 1; border-left-color: var(--fg); }
+    .margin-note strong { display: block; color: var(--fg); font-weight: 590; margin-bottom: 4px; }
+
+    /* Dialogs are deliberate moments: audio gate, new project, theme sitting. */
+    dialog { width: min(760px, calc(100vw - 28px)); max-height: calc(100vh - 28px); border: 1px solid var(--border); border-radius: 12px; padding: 0; background: var(--surface); color: var(--fg); box-shadow: 0 28px 90px color-mix(in oklch, var(--fg) 24%, transparent); }
+    dialog::backdrop { background: color-mix(in oklch, var(--fg) 30%, transparent); backdrop-filter: blur(5px); }
+    .dialog-head { display: flex; align-items: start; gap: 20px; padding: 24px 26px; border-bottom: 1px solid var(--border); }
+    .dialog-head h2 { margin: 0; font-size: 26px; }
+    .dialog-head .btn { margin-left: auto; min-height: 36px; }
+    .dialog-body { padding: 28px 26px 32px; overflow: auto; }
+    .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 22px 0 30px; }
+    .diff-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 16px 0; border-top: 1px solid var(--border); }
+    .diff-old { color: var(--muted); text-decoration: line-through; }
+    .reading-state { display: none; text-align: center; padding: 32px 0 12px; }
+    .reading-state.active { display: block; }
+    .reading-line { max-width: 360px; height: 2px; margin: 22px auto; background: var(--border); overflow: hidden; }
+    .reading-line i { display: block; width: 62%; height: 100%; background: var(--fg); animation: read 2.3s ease-in-out infinite alternate; }
+    @keyframes read { to { width: 84%; } }
+    .review-sheet { width: min(920px, calc(100vw - 28px)); }
+    .pooled { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    .quote-row { padding: 15px 0; border-top: 1px solid var(--border); }
+    .quote-row p { margin: 5px 0 0; font-family: var(--font-display); }
+    .drawer { position: fixed; z-index: 45; top: 64px; right: 0; bottom: 0; width: min(410px, 100vw); padding: 34px 28px 60px; overflow: auto; border-left: 1px solid var(--border); background: var(--surface); box-shadow: -18px 0 50px color-mix(in oklch, var(--fg) 10%, transparent); transform: translateX(105%); transition: transform .25s ease; }
+    .drawer.open { transform: none; }
+    .drawer-head { display: flex; align-items: start; gap: 18px; }
+    .drawer-head h2 { font-size: 28px; margin: 0; }
+    .drawer-head .btn { margin-left: auto; }
+    .family { margin-top: 32px; }
+    .family h3 { font-family: var(--font-display); font-size: 14px; font-variant: small-caps; letter-spacing: .06em; }
+    .index-row { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; color: var(--muted); font-size: 12px; }
+    .index-row i { flex: 1; border-bottom: 1px dotted var(--border); }
+    .mobile-only { display: none; }
+
+    @media (max-width: 1040px) {
+      :root { --aside: 250px; }
+      .map-shell { grid-template-columns: 48px minmax(0, 1fr) 48px; }
+      .map-level { grid-template-columns: 105px minmax(0, 1fr); }
+      .node-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .node:nth-child(3) { border-top: 1px solid var(--border); }
+    }
+    @media (max-width: 820px) {
+      .app { display: block; padding-bottom: 68px; }
+      .rail { inset: auto 0 0 0; width: 100%; height: 68px; padding: 8px; border: 0; border-top: 1px solid var(--border); flex-direction: row; background: color-mix(in oklch, var(--bg) 94%, transparent); }
+      .brand, .project-switch, .rail-section, .rail-foot { display: none; }
+      .nav { width: 100%; margin: 0; grid-template-columns: repeat(4, 1fr); }
+      .nav button { min-height: 50px; text-align: center; padding: 6px; font-size: 12px; }
+      .workspace { grid-column: auto; }
+      .topbar { height: 58px; padding: 0 14px; }
+      .top-actions .btn-text { display: none; }
+      .screen { min-height: calc(100vh - 126px); }
+      .screen-grid { display: block; min-height: 0; }
+      .main-column { padding: 36px 18px 64px; }
+      .side-column { border-left: 0; border-top: 1px solid var(--border); padding: 32px 18px 60px; }
+      .page-head { margin-bottom: 34px; }
+      .focus-line { grid-template-columns: 1fr; gap: 10px; }
+      .map-shell { grid-template-columns: 30px minmax(0, 1fr) 30px; }
+      .map-level { grid-template-columns: 1fr; }
+      .level-label { border-bottom: 1px solid var(--border); }
+      .node-list { grid-template-columns: 1fr; }
+      .node { min-height: 82px; border-left: 0; border-top: 1px solid var(--border); }
+      .node:first-child { border-top: 0; }
+      .node:nth-child(3) { border-top: 1px solid var(--border); }
+      .crossing, .finding-top, .pooled, .roles, .diff-row { grid-template-columns: 1fr; }
+      .crossing .btn { justify-self: start; }
+      .timeline-row { grid-template-columns: 72px 1fr; }
+      .timeline-row .btn { grid-column: 2; justify-self: start; }
+      .passage { grid-template-columns: 1fr; gap: 8px; }
+      .margin-note { opacity: 1; margin-left: 12px; }
+      .paper { padding: 34px 22px 50px; }
+      .paper-head { display: block; }
+      .ask-row { grid-template-columns: 1fr; }
+      .mobile-only { display: inline-flex; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="rail" data-od-id="project-navigation">
+      <div class="brand">MASSHINE</div>
+      <button class="project-switch" data-od-id="project-switcher" id="projectSwitcher">
+        <strong>Migration &amp; kin networks</strong><span>2 documents · focus v2</span>
+      </button>
+      <nav class="nav" aria-label="Project surfaces">
+        <button data-view="home" aria-current="page" data-od-id="nav-home">Home</button>
+        <button data-view="session" data-od-id="nav-session">Session</button>
+        <button data-view="journal" data-od-id="nav-journal">Journal</button>
+        <button data-view="text" data-od-id="nav-text">Text</button>
+      </nav>
+      <div class="rail-section">
+        <p class="kicker">Material</p>
+        <a class="material-link" href="#" data-open-text="p-mother"><strong>Grande, M.</strong><span>read · 21 emerging codes</span></a>
+        <a class="material-link" href="#" data-open-text="p-rodwin"><strong>Rodwin, M.</strong><span>read · account revised</span></a>
+      </div>
+      <div class="rail-foot">Reading model · MiniMax M3<br>Every run recorded in export</div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar" data-od-id="project-toolbar">
+        <button class="btn btn-text mobile-only" id="mobileProjectSwitcher" data-od-id="mobile-project-switcher">Project</button>
+        <div class="top-context"><strong id="topTitle">Project home</strong><span id="topSub">Migration &amp; kin networks</span></div>
+        <div class="top-actions">
+          <button class="btn btn-text" id="codebookAction" data-od-id="open-codebook-action">Code index</button>
+          <button class="btn btn-text" data-od-id="export-action">Export record</button>
+          <button class="btn btn-primary" id="addMaterial" data-od-id="add-material-action">Add material</button>
+        </div>
+      </header>
+
+      <main id="content">
+        <section class="screen active" id="home" data-od-id="home-screen">
+          <div class="screen-grid">
+            <div class="main-column">
+              <div class="content">
+                <header class="page-head" data-od-id="project-heading">
+                  <p class="eyebrow">Project · active analysis</p>
+                  <h1>Migration &amp; kin networks</h1>
+                  <p>Direction is set at the top. Evidence rises from the material. The system brings forward only the crossings that need judgment.</p>
+                </header>
+
+                <div class="focus-line" data-od-id="research-focus">
+                  <div><p class="kicker">Focus · v2</p><span class="meta">Researcher wording</span></div>
+                  <blockquote>How do households absorb the costs of migration?<small>v1 · How do families organize transatlantic migration?</small></blockquote>
+                </div>
+
+                <div class="section-head"><h2 data-od-id="analytic-map-heading">The analysis at a glance</h2><p>project → findings → codes → documents</p></div>
+                <div class="map-shell" data-od-id="analytic-hierarchy">
+                  <div class="current direction">Direction descends</div>
+                  <div class="map-levels">
+                    <div class="map-level">
+                      <div class="level-label"><strong>Findings</strong>claims across cases</div>
+                      <div class="node-list">
+                        <button class="node selected" data-node="household" data-od-id="theme-household"><strong>Households absorb migration’s unpaid costs</strong><span>2 of 2 documents · 19 supporting codes</span></button>
+                        <button class="node" data-node="structures" data-od-id="theme-structures"><strong>Structural forces author the trajectory</strong><span>2 of 2 documents · 16 supporting codes</span></button>
+                        <button class="node" data-node="transit" data-od-id="theme-transit"><strong>Transit exposes and segments migrants</strong><span>2 of 2 documents · 18 supporting codes</span></button>
+                      </div>
+                    </div>
+                    <div class="map-level">
+                      <div class="level-label"><strong>Emerging codes</strong>generated, folded</div>
+                      <div class="node-list">
+                        <button class="node compact" data-node="provisioning" data-od-id="code-provisioning"><strong>Maternal solitary provisioning through informal exchange</strong><span>Grande · 3 passages</span></button>
+                        <button class="node compact" data-node="childcare" data-od-id="code-childcare"><strong>Kinship and neighbor networks as childcare infrastructure</strong><span>Grande + Rodwin</span></button>
+                        <button class="node compact folded" data-node="folded" data-od-id="codes-folded"><strong>37 more remain folded</strong><span>Open only when needed</span></button>
+                      </div>
+                    </div>
+                    <div class="map-level">
+                      <div class="level-label"><strong>Documents</strong>immutable material</div>
+                      <div class="node-list">
+                        <button class="node compact" data-node="grande" data-od-id="document-grande"><strong>DP-40 · Mary Grande</strong><span>12 sections · session complete</span></button>
+                        <button class="node compact" data-node="rodwin" data-od-id="document-rodwin"><strong>EI-845 · Minnie Rodwin</strong><span>account revised after reading</span></button>
+                        <button class="node compact" id="openAudioReview" data-od-id="document-audio-arrival"><strong>New audio</strong><span>role review before ingest</span></button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="current evidence">Evidence rises</div>
+                </div>
+
+                <div class="crossing" data-od-id="selected-crossing">
+                  <div>
+                    <p class="eyebrow">Current crossing</p>
+                    <h3 id="detailTitle">Households absorb migration’s unpaid costs</h3>
+                    <p id="detailBody">Standing is firm across both interviews. Grande complicates the account by recalling the farm as a loved home, not only an economy.</p>
+                    <div id="detailEvidence"><button class="evidence-door" data-open-text="p-mother">DP-40 · S2.003</button><button class="evidence-door" data-open-text="p-cow">DP-40 · S2.023</button><button class="evidence-door" data-open-text="p-rodwin">EI-845 · S9.019</button></div>
+                  </div>
+                  <button class="btn btn-secondary" data-view="session" data-od-id="open-session-action">Open session</button>
+                </div>
+              </div>
+            </div>
+            <aside class="side-column" data-od-id="attention-rail">
+              <p class="kicker">Needs judgment · 3</p>
+              <div class="status-line"><button data-view="session"><strong>Your framing was checked</strong><span>“Kin networks” is narrower than the material.</span></button></div>
+              <div class="status-line"><button data-view="journal"><strong>One finding strains the story</strong><span>Warmth toward the farm does not fit the cost frame.</span></button></div>
+              <div class="status-line"><button id="openAudioReviewSide"><strong>Audio roles need review</strong><span>Names stay researcher territory before ingest.</span></button></div>
+              <div class="section-head" style="margin-top:42px"><h2 style="font-size:18px">Quick note</h2></div>
+              <textarea class="note-field" data-od-id="quick-note" placeholder="Write a note to the project…"></textarea>
+              <button class="btn btn-text" data-od-id="save-note-action">Save to journal</button>
+              <hr class="rule">
+              <p class="kicker">Method</p>
+              <label class="meta" for="modelSelect">Reading model</label>
+              <select class="field" id="modelSelect" data-od-id="model-picker"><option>MiniMax M3</option><option>GLM-5.2</option><option>Mistral Large</option><option>Magistral Medium</option></select>
+              <p class="meta" style="margin-top:9px">Selection is recorded per run and included in the methods export.</p>
+            </aside>
+          </div>
+        </section>
+
+        <section class="screen" id="session" data-od-id="session-screen">
+          <div class="screen-grid">
+            <div class="main-column">
+              <div class="content narrow">
+                <header class="page-head" data-od-id="session-heading">
+                  <p class="eyebrow">Data session · DP-40 Grande</p>
+                  <h1>What this interview changes</h1>
+                  <p>Five points, paced one at a time. Every statement opens the words beneath it.</p>
+                </header>
+                <div class="session-track" id="sessionTrack"><i class="done"></i><i></i><i></i><i></i><i></i></div>
+                <div class="step-frame" id="stepFrame" data-od-id="walkthrough-step"></div>
+                <div style="display:flex;justify-content:space-between;gap:10px;margin-top:16px">
+                  <button class="btn btn-text" id="prevStep" data-od-id="previous-step">← Previous</button>
+                  <button class="btn btn-primary" id="nextStep" data-od-id="next-step">Next point →</button>
+                </div>
+                <div class="conversation" data-od-id="open-conversation">
+                  <p class="eyebrow">Ask the material</p>
+                  <h2 style="font-size:24px">A question, not a chat.</h2>
+                  <p class="meta">Answers stay retrieval-grounded and link back to passages.</p>
+                  <div class="ask-row"><input class="field" data-od-id="material-question" placeholder="Where does she talk about pay?"><button class="btn btn-primary" data-od-id="ask-material-action">Ask</button></div>
+                </div>
+              </div>
+            </div>
+            <aside class="side-column" data-od-id="session-introduction">
+              <p class="kicker">Introduction · 3 min</p>
+              <p class="serif" style="font-size:17px;line-height:1.7">Mary Grande’s account begins with a household divided across the Atlantic. Her father is in the United States; her mother farms and barters at home. <button class="evidence-door" data-open-text="p-mother">S2.003</button></p>
+              <p class="serif" style="font-size:17px;line-height:1.7">The journey depends on people rather than institutions, including an acquaintance who replaces stolen clothes in transit. <button class="evidence-door" data-open-text="p-clothes">S1.019</button></p>
+              <button class="btn btn-secondary" id="listenIntro" data-od-id="listen-intro-action">Listen to introduction</button>
+            </aside>
+          </div>
+        </section>
+
+        <section class="screen" id="journal" data-od-id="journal-screen">
+          <div class="screen-grid">
+            <div class="main-column">
+              <div class="content narrow">
+                <header class="page-head" data-od-id="journal-heading">
+                  <p class="eyebrow">Analytic journal · version 2</p>
+                  <h1>The account so far</h1>
+                  <p>Findings show what the evidence can currently carry and how the researcher has steered the next reading.</p>
+                </header>
+                <article class="versioned-story" data-od-id="story-so-far">
+                  <div style="display:flex;justify-content:space-between;gap:18px"><p class="kicker">Story · after Rodwin</p><button class="btn btn-text" data-od-id="story-version-action">Compare v1</button></div>
+                  <p>Across both interviews, migration is financed less with money than with people. Households split across the Atlantic; women and children absorb much of the work. Yet Grande’s affection for the farm resists a story told only through cost.</p>
+                  <button class="evidence-door" data-open-text="p-mother">DP-40 · S2.003</button><button class="evidence-door" data-open-text="p-cow">DP-40 · S2.023</button><button class="evidence-door" data-open-text="p-rodwin">EI-845 · S9.019</button>
+                </article>
+                <div class="section-head"><h2 data-od-id="findings-heading">Findings</h2><button class="btn btn-secondary" id="openReview" data-od-id="start-review-action">Begin review sitting</button></div>
+                <div data-od-id="findings-list">
+                  <article class="finding" id="finding-household" data-od-id="finding-household">
+                    <div class="finding-top"><div><h3>Households absorb migration’s unpaid costs</h3><p class="standing">Standing · recurs in both interviews · 19 supporting codes · 2 tensions</p></div><div class="stance">Stance · reframed after Grande; agreed after Rodwin</div></div>
+                    <button class="btn btn-text finding-toggle">Show pooled evidence</button>
+                    <div class="finding-evidence"><p>Strongest: maternal provisioning, family labor, kin reception. Weakest: the narrator’s warmth toward household work complicates a purely cost-based reading.</p><button class="evidence-door" data-open-text="p-mother">S2.003</button><button class="evidence-door" data-open-text="p-cow">S2.023</button></div>
+                  </article>
+                  <article class="finding" id="finding-structures" data-od-id="finding-structures">
+                    <div class="finding-top"><div><h3>Macro-structural forces author the migration trajectory</h3><p class="standing">Standing · recurs in both interviews · war, borders, labor demand, and crisis</p></div><div class="stance">Stance · challenged: “author” may overstate the evidence</div></div>
+                    <button class="btn btn-text finding-toggle">Show pooled evidence</button>
+                    <div class="finding-evidence"><p>The material names war, conscription, coal work, and economic crisis, but often narrates causation through family feeling rather than structure.</p></div>
+                  </article>
+                  <article class="finding" id="finding-home" data-od-id="finding-home">
+                    <div class="finding-top"><div><h3>The homeland is remembered as an integrated lifeworld</h3><p class="standing">Standing · single case · Grande only · evidence remains thin</p></div><div class="stance">Stance · parked</div></div>
+                    <button class="btn btn-text finding-toggle">Show pooled evidence</button>
+                    <div class="finding-evidence"><p>The barn, animals, food work, and barter are recalled as one ordinary order of home.</p><button class="evidence-door" data-open-text="p-cow">S2.023</button></div>
+                  </article>
+                </div>
+                <div class="section-head"><h2 data-od-id="residue-heading">Doesn’t fit yet</h2><p>residue, kept visible</p></div>
+                <div class="crossing"><div><h3>A loved cow, a barn under the same roof</h3><p>No standing finding currently holds these passages without reducing them to household production. They may be the seed of a different account of home.</p><button class="evidence-door" data-open-text="p-cow">DP-40 · S2.023</button></div><button class="btn btn-secondary">Read under a home-making frame</button></div>
+              </div>
+            </div>
+            <aside class="side-column" data-od-id="history-timeline">
+              <p class="kicker">History</p>
+              <div class="timeline">
+                <div class="timeline-row"><time>Today</time><span>Focus changed to v2</span><button class="btn btn-text">Restore</button></div>
+                <div class="timeline-row"><time>Today</time><span>Rodwin read · account revised</span></div>
+                <div class="timeline-row"><time>28 Aug</time><span>Marked “before re-focus”</span><button class="btn btn-text">Restore</button></div>
+                <div class="timeline-row"><time>28 Aug</time><span>Grande session · 5 reactions</span></div>
+              </div>
+              <button class="btn btn-secondary" style="margin-top:18px" data-od-id="mark-moment-action">Mark this moment</button>
+            </aside>
+          </div>
+        </section>
+
+        <section class="screen" id="text" data-od-id="text-screen">
+          <div class="text-stage">
+            <div class="paper" data-od-id="transcript-paper">
+              <header class="paper-head"><span>DP-40 · Mary Yankovik Grande</span><span>Ellis Island Oral History Project · 1989</span></header>
+              <div class="passage" id="p-clothes" data-od-id="passage-clothes"><p class="transcript-line"><span class="speaker">Grande</span>&ensp;But part of our clothes was stolen in Trieste, so a fellow that my mother knew, he went in, I believe, in London, to buy some clothes for us. He could speak American.</p><button class="margin-note"><strong>Material precarity in transit</strong>Recovery depends on an acquaintance with linguistic capital. · S1.019</button></div>
+              <div class="passage" id="p-mother" data-od-id="passage-mother"><p class="transcript-line"><span class="speaker">Grande</span>&ensp;Well, my father was here in the States since 1911. In fact, he was, during World War One, here in the United States, and my mother was a farmer, and she raised some cattle and bartered with them.</p><button class="margin-note"><strong>Maternal solitary provisioning</strong>The divided household places farming and exchange with the mother. · S2.003</button></div>
+              <div class="passage" id="p-home" data-od-id="passage-home"><p class="transcript-line"><span class="speaker">Grande</span>&ensp;It was three rooms, living room and kitchen in the middle and a small room on the side. And then facing what would be, I guess, the east side was half, was a barn where the cattle were.</p><button class="margin-note"><strong>Integrated domestic-productive dwelling</strong>Home and productive space form one building. · S2.007–008</button></div>
+              <div class="passage" id="p-cow" data-od-id="passage-cow"><p class="transcript-line"><span class="speaker">Grande</span>&ensp;I enjoyed it because they were part of my life. In fact, I had a pet cow that I loved very much.</p><button class="margin-note"><strong>Residue</strong>Affection strains a reading of the farm only as economic burden. · S2.022–023</button></div>
+              <div class="passage" id="p-labor" data-od-id="passage-labor"><p class="transcript-line"><span class="speaker">Grande</span>&ensp;I had to help with, when they killed the pigs I had to catch the blood. I didn’t like it, but that was part of my job.</p><button class="margin-note"><strong>Child labor in household production</strong>Necessary work is narrated as ordinary obligation. · S2.040–041</button></div>
+              <div class="passage" id="p-barter" data-od-id="passage-barter"><p class="transcript-line"><span class="speaker">Grande</span>&ensp;And then she bartered with the cattle, and sometimes I’d stay with the neighbors overnight when she’d go and barter to different places.</p><button class="margin-note"><strong>Kinship and neighbor childcare</strong>Care is redistributed so provisioning work can continue. · S4.020</button></div>
+              <div class="passage" id="p-coal" data-od-id="passage-coal"><p class="transcript-line"><span class="speaker">Grande</span>&ensp;Well, he was working in coal mines.</p><button class="margin-note"><strong>Labor demand shapes destination</strong>The father’s settlement is tied to extractive work. · S9.019</button></div>
+              <div class="passage" id="p-rodwin" data-od-id="passage-rodwin"><p class="transcript-line"><span class="speaker">Rodwin</span>&ensp;And when you look back on it now … Well, we were always together. Always together.</p><button class="margin-note"><strong>Kin network as settlement infrastructure</strong>A cross-case echo, held with its own register. · S9.018–019</button></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="audioDialog" data-od-id="audio-review-dialog">
+    <div class="dialog-head"><div><p class="eyebrow">Before ingest · audio arrival</p><h2>Review the transcript</h2></div><button class="btn btn-text" data-close-dialog>Close</button></div>
+    <div class="dialog-body" id="audioReviewBody">
+      <p>The recording is transcribed and diarized. Confirm who is speaking before the text becomes fixed.</p>
+      <div class="roles"><label><span class="meta">Speaker 1 · detected role</span><input class="field" value="Andrew Phillips · interviewer"></label><label><span class="meta">Speaker 2 · detected role</span><input class="field" value="Mary Grande · interviewee"></label></div>
+      <p class="kicker">Suggested redraft · 2 of 214 segments</p>
+      <div class="diff-row"><p class="diff-old">Kandijaright over Novo Mesto</p><p>Kandija, right over Novo Mesto</p></div>
+      <p class="meta">“Marija Yankovik” was heard as “Jankovic.” Proper names are left unchanged for researcher review.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:24px"><button class="btn btn-secondary">Keep original</button><button class="btn btn-secondary">Accept this fix</button><button class="btn btn-primary" id="ingestAudio" data-od-id="ingest-audio-action">Fix text and begin reading</button></div>
+    </div>
+    <div class="dialog-body reading-state" id="readingState" data-od-id="reading-progress-state"><p class="eyebrow">Reading DP-40</p><h2>The material is being read closely.</h2><p class="meta">Grounding passages, comparing with the existing codebook, and checking coverage across the document.</p><div class="reading-line"><i></i></div><p class="serif" id="readingPhrase">Beginning with the journey and the divided household…</p><button class="btn btn-secondary" data-close-dialog>Leave this running</button></div>
+  </dialog>
+
+  <dialog id="projectDialog" data-od-id="new-project-dialog">
+    <div class="dialog-head"><div><p class="eyebrow">New project</p><h2>Open a fresh notebook</h2></div><button class="btn btn-text" data-close-dialog>Close</button></div>
+    <div class="dialog-body"><label><span class="meta">Project name</span><input class="field" placeholder="Untitled research project"></label><label style="display:block;margin-top:18px"><span class="meta">Research question · version 1</span><textarea class="note-field" placeholder="What is this inquiry trying to understand?"></textarea></label><label style="display:block;margin-top:18px"><span class="meta">Positionality note</span><textarea class="note-field" placeholder="State the standpoint this reading begins from."></textarea></label><button class="btn btn-primary" style="margin-top:22px">Create project</button></div>
+  </dialog>
+
+  <dialog class="review-sheet" id="reviewDialog" data-od-id="theme-review-sitting">
+    <div class="dialog-head"><div><p class="eyebrow">Theme review sitting · 1 of 3</p><h2>Everything on the table</h2></div><button class="btn btn-text" data-close-dialog>Close</button></div>
+    <div class="dialog-body">
+      <h3 style="font-size:25px">Households absorb migration’s unpaid costs</h3>
+      <p class="meta">Standing · 2 interviews · 19 supporting codes · 2 tensions</p>
+      <div class="pooled">
+        <div><p class="kicker">Strongest support</p><div class="quote-row"><span class="meta">Grande · S2.003</span><p>“…my mother was a farmer, and she raised some cattle and bartered with them.”</p></div><div class="quote-row"><span class="meta">Rodwin · S9.019</span><p>“We were always together. Always together.”</p></div></div>
+        <div><p class="kicker">Weakest and contrary</p><div class="quote-row"><span class="meta">Grande · S2.023 · unread</span><p>“I had a pet cow that I loved very much.”</p><button class="btn btn-secondary" id="readGateEvidence">Open this evidence</button></div></div>
+      </div>
+      <hr class="rule">
+      <p class="meta" id="gateMessage">Evidence gate · 8 of 9 passages opened. Naming is unavailable until the unread passage has been opened.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px"><button class="btn btn-primary" id="keepName" disabled>Keep &amp; name</button><button class="btn btn-secondary">Merge</button><button class="btn btn-secondary">Split</button><button class="btn btn-secondary">Demote to memo</button><button class="btn btn-text">Drop</button></div>
+    </div>
+  </dialog>
+
+  <aside class="drawer" id="codebookDrawer" aria-hidden="true" data-od-id="codebook-drawer">
+    <div class="drawer-head"><div><p class="eyebrow">Infrastructure · exportable</p><h2>Emerging codebook</h2></div><button class="btn btn-text" id="closeDrawer">Close</button></div>
+    <p class="meta">The system maintains this index. It is available for scrutiny, not assigned as daily clerical work.</p>
+    <div class="family"><h3>Household as migrating unit</h3><div class="index-row"><span>Maternal solitary provisioning</span><i></i><span>3</span></div><div class="index-row"><span>Paternal absence and maternal sole responsibility</span><i></i><span>2</span></div><div class="index-row"><span>Kinship and neighbor childcare</span><i></i><span>4</span></div></div>
+    <div class="family"><h3>Transit and exposure</h3><div class="index-row"><span>Material precarity in transit zones</span><i></i><span>1</span></div><div class="index-row"><span>Kin-based brokerage and linguistic capital</span><i></i><span>2</span></div></div>
+    <div class="family"><h3>Remembered household worlds</h3><div class="index-row"><span>Integrated domestic-productive dwelling</span><i></i><span>5</span></div><div class="index-row"><span>Animals as companions in childhood</span><i></i><span>3</span></div></div>
+  </aside>
+
+  <script>
+    const screens = [...document.querySelectorAll('.screen')];
+    const navButtons = [...document.querySelectorAll('.nav [data-view]')];
+    const titles = { home: ['Project home', 'Migration & kin networks'], session: ['Data session', 'DP-40 · Grande'], journal: ['Analytic journal', 'Story and findings'], text: ['Text', 'DP-40 · Grande'] };
+    function showView(id) {
+      screens.forEach(s => s.classList.toggle('active', s.id === id));
+      navButtons.forEach(b => b.setAttribute('aria-current', b.dataset.view === id ? 'page' : 'false'));
+      document.getElementById('topTitle').textContent = titles[id][0];
+      document.getElementById('topSub').textContent = titles[id][1];
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    document.addEventListener('click', e => {
+      const view = e.target.closest('[data-view]');
+      if (view) { e.preventDefault(); showView(view.dataset.view); }
+    });
+
+    const details = {
+      household: ['Households absorb migration’s unpaid costs', 'Standing is firm across both interviews. Grande complicates the account by recalling the farm as a loved home, not only an economy.', [['DP-40 · S2.003','p-mother'],['DP-40 · S2.023','p-cow'],['EI-845 · S9.019','p-rodwin']]],
+      structures: ['Structural forces author the trajectory', 'War, borders, coal work, and economic crisis recur. The word “author” remains challenged because the narrators often explain change through family feeling.', [['DP-40 · S1.017','p-clothes'],['DP-40 · S9.019','p-coal']]],
+      transit: ['Transit exposes and segments migrants', 'The journey sorts people through class and status while acquaintances and co-ethnic networks provide practical protection.', [['DP-40 · S1.019','p-clothes']]],
+      provisioning: ['Maternal solitary provisioning through informal exchange', 'A grounded code from Grande: the mother farms, barters cattle, and travels without alternative transport.', [['DP-40 · S2.003','p-mother']]],
+      childcare: ['Kinship and neighbor networks as childcare infrastructure', 'Children stay with relatives and neighbors so adult economic activity can continue.', [['DP-40 · S4.020','p-barter']]],
+      folded: ['37 more codes remain folded', 'Codes are searchable and exportable. The system brings one forward only when it carries a finding, contradicts direction, or needs a structural decision.', []],
+      grande: ['DP-40 · Mary Grande', 'Twelve sections are fixed after ingest. The session is complete and five reactions now guide the next reading.', [['Open transcript','p-mother']]],
+      rodwin: ['EI-845 · Minnie Rodwin', 'The second interview strengthens the household finding and complicates the account of remembered homeland.', [['Cross-case passage · S9.019','p-rodwin']]
+    };
+    document.querySelectorAll('.node[data-node]').forEach(node => node.addEventListener('click', () => {
+      document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+      node.classList.add('selected');
+      const [title, body, evidence] = details[node.dataset.node];
+      document.getElementById('detailTitle').textContent = title;
+      document.getElementById('detailBody').textContent = body;
+      const host = document.getElementById('detailEvidence'); host.replaceChildren();
+      evidence.forEach(([label, target]) => { const b = document.createElement('button'); b.className = 'evidence-door'; b.textContent = label; b.dataset.openText = target; host.appendChild(b); });
+      if (node.dataset.node === 'folded') { drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+    }));
+
+    function openEvidence(id) {
+      showView('text');
+      document.querySelectorAll('.passage').forEach(p => p.classList.remove('highlight'));
+      const passage = document.getElementById(id);
+      if (passage) { passage.classList.add('highlight'); window.setTimeout(() => window.scrollTo({ top: Math.max(0, passage.getBoundingClientRect().top + window.scrollY - 90), behavior: 'smooth' }), 80); }
+    }
+    document.addEventListener('click', e => { const door = e.target.closest('[data-open-text]'); if (door) { e.preventDefault(); openEvidence(door.dataset.openText); } });
+    document.querySelectorAll('.margin-note').forEach(note => note.addEventListener('click', () => note.classList.toggle('pinned')));
+    document.querySelectorAll('.finding-toggle').forEach(toggle => toggle.addEventListener('click', () => { const f = toggle.closest('.finding'); f.classList.toggle('open'); toggle.textContent = f.classList.contains('open') ? 'Hide pooled evidence' : 'Show pooled evidence'; }));
+
+    const steps = [
+      { kind:'Pattern', claim:'The household runs as a divided economy: wage work abroad, farming and barter at home.', body:'This pattern is carried by the father’s long absence and the mother’s provisioning. The weakest evidence is the narrator’s brief treatment of remittances.', evidence:[['S2.003','p-mother'],['S4.020','p-barter']] },
+      { kind:'Tension', claim:'The farm is remembered as work and as a loved world.', body:'A cost-frame explains the labor but flattens the attachment. The pet cow and shared dwelling remain evidence against a one-register account.', evidence:[['S2.022–023','p-cow']], lens:'A phenomenological reading treats proximity to animals as part of the remembered texture of home, not a sign of deprivation.' },
+      { kind:'Uncertainty', claim:'The Trieste theft is the family’s account of an event, not an event the transcript can establish.', body:'What is grounded is the loss and the response: replacement clothes came through an acquaintance who “could speak American.”', evidence:[['S1.019–020','p-clothes']] },
+      { kind:'Your direction · checked', claim:'You framed kin networks as migration infrastructure.', body:'The direction was tested against both interviews.', check:[['Supports','Relatives arrange lodging, work, and reception in both accounts.'],['Strains','Grande’s help in transit comes from “a fellow that my mother knew” — an acquaintance, not kin.'],['Could not find','Nothing yet shows the network holding past arrival. “Infrastructure” may imply more persistence than the material carries.']] },
+      { kind:'Declined', claim:'Citizenship ritual was left outside the current focus.', body:'Grande’s later account of voting is grounded but does not currently bear on household migration costs. It remains parked and will be re-offered if the focus changes.', evidence:[] }
+    ];
+    let stepIndex = 0;
+    function renderStep() {
+      const s = steps[stepIndex];
+      document.querySelectorAll('#sessionTrack i').forEach((i,n) => i.classList.toggle('done', n <= stepIndex));
+      document.getElementById('stepFrame').innerHTML = `<div class="step-kind"><span>${s.kind}</span><span>${stepIndex + 1} of ${steps.length}</span></div><h2 class="step-claim">${s.claim}</h2><p class="step-body">${s.body}</p>${s.evidence?.length ? `<div>${s.evidence.map(([l,t]) => `<button class="evidence-door" data-open-text="${t}">${l}</button>`).join('')}</div>` : ''}${s.check ? `<div class="checkback">${s.check.map(([l,t]) => `<div class="checkback-row"><strong>${l}</strong><p>${t}</p></div>`).join('')}</div>` : ''}${s.lens ? `<button class="btn btn-secondary" id="lensToggle">Read this passage through a second lens</button><div class="second-lens" id="secondLens"><p class="kicker">Second lens · this passage only</p><p>${s.lens}</p></div>` : ''}<div class="reaction-bar"><button class="btn">Agree</button><button class="btn">Challenge</button><button class="btn">Reframe</button><button class="btn">Park</button></div>`;
+      document.querySelectorAll('.reaction-bar .btn').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('.reaction-bar .btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); }));
+      const lens = document.getElementById('lensToggle'); if (lens) lens.addEventListener('click', () => document.getElementById('secondLens').classList.toggle('open'));
+    }
+    document.getElementById('nextStep').addEventListener('click', () => { stepIndex = (stepIndex + 1) % steps.length; renderStep(); });
+    document.getElementById('prevStep').addEventListener('click', () => { stepIndex = (stepIndex - 1 + steps.length) % steps.length; renderStep(); });
+    renderStep();
+
+    const audioDialog = document.getElementById('audioDialog');
+    ['openAudioReview','openAudioReviewSide','addMaterial'].forEach(id => document.getElementById(id)?.addEventListener('click', () => audioDialog.showModal()));
+    document.getElementById('projectSwitcher').addEventListener('click', () => document.getElementById('projectDialog').showModal());
+    document.getElementById('mobileProjectSwitcher').addEventListener('click', () => document.getElementById('projectDialog').showModal());
+    document.querySelectorAll('[data-close-dialog]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
+    document.getElementById('ingestAudio').addEventListener('click', () => { document.getElementById('audioReviewBody').style.display='none'; document.getElementById('readingState').classList.add('active'); });
+    document.getElementById('openReview').addEventListener('click', () => document.getElementById('reviewDialog').showModal());
+    document.getElementById('readGateEvidence').addEventListener('click', () => { document.getElementById('reviewDialog').close(); openEvidence('p-cow'); document.getElementById('keepName').disabled = false; document.getElementById('gateMessage').textContent = 'Evidence gate · all 9 passages opened. Naming is now available.'; });
+    document.getElementById('listenIntro').addEventListener('click', e => { e.currentTarget.textContent = e.currentTarget.textContent.startsWith('Listen') ? 'Pause · 0:42 of 3:06' : 'Listen to introduction'; });
+    const drawer = document.getElementById('codebookDrawer');
+    document.getElementById('codebookAction').addEventListener('click', () => { drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false'); });
+    document.querySelector('.node[data-node="folded"]').addEventListener('dblclick', () => { drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false'); });
+    document.getElementById('closeDrawer').addEventListener('click', () => { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); });
+  </script>
+</body>
+</html>
