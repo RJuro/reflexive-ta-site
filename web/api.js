@@ -83,6 +83,21 @@ window.MASSHINE_API = (() => {
 
     job: id => j(`/jobs/${id}`),
     jobs: pid => j(`/projects/${pid}/jobs`),
+
+    // P10.2 — SYNTHESIZE, the loop mechanisms (design/P10.2-CONTRACT.md §4). The engine for these
+    // is being built in parallel; every call here is meant to be wrapped in .catch() by the caller
+    // so a 404/500 degrades the panel quietly instead of breaking the app.
+    synthesize: (pid, payload = {}) => j(`/projects/${pid}/synthesize`, json('POST', payload)),
+    session: (pid, docId) => j(`/projects/${pid}/session/${docId}`),
+    stepReact: (pid, stepId, payload) => j(`/projects/${pid}/steps/${stepId}/react`, json('POST', payload)),
+    journal: pid => j(`/projects/${pid}/journal`),
+    needsJudgment: pid => j(`/projects/${pid}/needs-judgment`),
+    setFocus: (pid, text) => j(`/projects/${pid}/focus`, json('POST', { text })),
+    focusProposal: (pid, n, decision) =>
+      j(`/projects/${pid}/focus/proposal/${n}`, json('POST', { decision })),
+    evidenceOpened: (pid, tid, sid) =>
+      j(`/projects/${pid}/findings/${tid}/evidence-opened`, json('POST', { sid })),
+    reframeResidue: (pid, idx) => j(`/projects/${pid}/residue/${idx}/reframe`, json('POST', {})),
   };
 
   api.models = () => j('/models');

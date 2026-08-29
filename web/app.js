@@ -37,6 +37,17 @@
     renamingDoc: null,          // doc_id currently showing an inline rename input (sidebar)
     role: 'editor',             // 'editor' | 'viewer' (P3.8) — resolved from GET /me at init
     author: localStorage.getItem('masshine_author') || null,  // identity-lite (P3.7)
+
+    // P10.4 — the research workbench, coded against design/P10.2-CONTRACT.md while the engine
+    // for these endpoints is built in parallel. Each is null until loaded, and stays null (never
+    // throws) on a 404/500 — every render path below treats null as "not yet available" and
+    // degrades that one panel quietly rather than breaking the view. See loadProject()/openSession().
+    journal: null,              // GET /journal → {focus, story, findings, residue, memos, history} | null
+    needsJudgment: null,        // GET /needs-judgment → {items, count} | null
+    sessionData: {},            // docId → GET /session/{doc_id} result, or `false` if unavailable
+    focusEditing: false,        // Home: focus textarea open for edit
+    openFindings: new Set(),    // Journal: finding ids with pooled evidence expanded
+    reviewSitting: null,        // Journal: {ids, idx} while the review-sitting overlay is open
   };
   const isViewer = () => S.role === 'viewer';
 
@@ -93,6 +104,32 @@
     if (docs.length <= 1) return sid;
     const d = docById(docId);
     return d ? `${sourceShort(d)} · ${sid}` : sid;
+  }
+
+  // ---- P10.4: evidence "doors" (design/UIUX_BRIEF.md §5 — "doors, not decoration") shared by
+  // Home/Session/Journal. A ref is "doc#sid" or a bare "sid"; bare ids resolve against
+  // `fallbackDoc` since SYNTHESIZE's per-document artifacts (session steps, intro) don't
+  // doc-qualify their sids, while cross-document artifacts (findings, story) already do, matching
+  // the existing codes/themes evidence convention (doc_id#sid). ------------------------------------
+  function modelLabel() { return S.modelLabel || ''; }
+
+  function evidenceRef(raw, fallbackDoc) {
+    const s = String(raw);
+    if (s.includes('#')) { const [doc, sid] = s.split('#'); return { doc, sid }; }
+    return { doc: fallbackDoc || null, sid: s };
+  }
+  function evidenceDoorsHtml(refs, fallbackDoc) {
+    if (!refs || !refs.length) return '';
+    return `<div class="wb-evd-row">${refs.map(r => {
+      const { doc, sid } = evidenceRef(r, fallbackDoc);
+      return `<button class="wb-evd" data-doc="${esc(doc || '')}" data-sid="${esc(sid)}">${esc(sidChipLabel(doc, sid))}</button>`;
+    }).join('')}</div>`;
+  }
+  function wireEvidenceDoors(root) {
+    root.querySelectorAll('.wb-evd[data-sid]').forEach(b => b.addEventListener('click', () => {
+      if (!b.dataset.doc) { toast('No document reference for this passage', true); return; }
+      openDocView(b.dataset.doc, b.dataset.sid);
+    }));
   }
 
   // Relative time for note/memo timestamps (F7/P3.7) — coarse buckets, no library.
@@ -239,16 +276,19 @@
     const detail = await API.project(pid);
     S.detail = detail;
     S.mode = detail.mode || (detail.project.pack_id ? 'panel' : 'standard');
-    const [codes, themes, comments, memos, families, mergeProposals] = await Promise.all([
+    const [codes, themes, comments, memos, families, mergeProposals, journal, needsJudgment] = await Promise.all([
       API.codes(pid).catch(() => []),
       API.themes(pid, S.mode).catch(() => ({ themes: [], snapshots: [], stale: false })),
       API.comments(pid).catch(() => []),
       API.memos(pid).catch(() => []),
       API.families(pid).catch(() => ({ families: [], stale: false })),
       API.mergeProposals(pid, 'pending').catch(() => []),
+      API.journal(pid).catch(() => null),           // P10.4 — soft-fail while the engine builds this
+      API.needsJudgment(pid).catch(() => null),
     ]);
     S.codes = codes; S.themes = themes; S.comments = comments; S.families = families;
-    S.mergeProposals = mergeProposals;
+    S.mergeProposals = mergeProposals; S.journal = journal; S.needsJudgment = needsJudgment;
+    S.sessionData = {};
     S.memos = {};
     S.memosList = memos;
     for (const m of memos) S.memos[`${m.target_type}:${m.target_id}`] = m;
@@ -323,7 +363,7 @@
   }
 
   // ---- jobs ------------------------------------------------------------------------------------
-  const JOB_LABEL = { ingest: 'Reading source', code_standard: 'Coding', code_panel: 'Coding · panel', recode: 'Re-coding with feedback', theme: 'Building themes', consolidate: 'Consolidating codebook', compress: 'Scanning for redundant codes', read: 'Reading document', transcribe: 'Transcribing audio' };
+  const JOB_LABEL = { ingest: 'Reading source', code_standard: 'Coding', code_panel: 'Coding · panel', recode: 'Re-coding with feedback', theme: 'Building themes', consolidate: 'Consolidating codebook', compress: 'Scanning for redundant codes', read: 'Reading document', transcribe: 'Transcribing audio', synthesize: 'Synthesizing' };
   function watchJob(jobId, kind, reattach) {
     if (S.jobs[jobId]) return;
     S.jobs[jobId] = { id: jobId, kind, status: 'running', progress: {} };
@@ -422,6 +462,10 @@
   }
   const runRecode = docId => act(() => API.recode(S.pid, docId, S.mode), 'recode');
   const runRead = () => act(() => API.runRead(S.pid, null), 'read');
+  // P10.2: SYNTHESIZE — one call after READ, produces findings/steps/intro/story for the doc in
+  // session (design/P10.2-CONTRACT.md §3). Soft-fails like every other new call here — act()
+  // already toasts on error, so an unavailable engine just shows the usual failure toast.
+  const runSynthesize = () => act(() => API.synthesize(S.pid, {}), 'synthesize');
 
   // ---- audio upload done sheet (P10.3) — roles detected + a link to review the transcript ------
   function openAudioDoneSheet(result) {
@@ -557,7 +601,22 @@
     S.sessionStep = 0;
     S.sessionExpanded = false;
     if (!opts?.noPush) _pushNavState();
+    ensureSessionData(docId);   // fire-and-forget — renderSession re-renders when it lands
     render();
+  }
+
+  // ---- P10.4: GET /session/{doc_id} (design/P10.2-CONTRACT.md §4) — the SYNTHESIZE-built
+  // walkthrough. Cached per doc; `false` means "asked, unavailable" (engine not there yet or this
+  // doc has no synthesis) — renderSession falls back to the client-built walkthrough either way,
+  // undefined vs false only controls whether we've already asked. -------------------------------
+  async function ensureSessionData(docId) {
+    if (!docId || S.sessionData[docId] !== undefined) return S.sessionData[docId];
+    try { S.sessionData[docId] = await API.session(S.pid, docId); }
+    catch (e) { S.sessionData[docId] = false; }
+    // full render(), not just renderContent() — the rail (renderSessionRail) reads the same
+    // cache and only repaints from render(); missing this left it stuck on "Loading…" forever.
+    if (S.view === 'session' && S.docId === docId) render();
+    return S.sessionData[docId];
   }
 
   function select(type, id) {
@@ -772,7 +831,7 @@
       <div>
         <div class="group__label">Project</div>
         <button class="row ${S.view === 'overview' ? 'is-active' : ''}" data-nav="overview">
-          <span class="row__name">Home</span>
+          <span class="row__name">Home</span><span class="row__count">${S.needsJudgment?.count || ''}</span>
         </button>
         <button class="row ${S.view === 'session' ? 'is-active' : ''}" data-nav="session">
           <span class="row__name">Session</span>
@@ -785,7 +844,7 @@
           <span class="row__name">Text</span>
         </button>
       </div>
-      <div class="side-foot">${esc(pack?.title || 'Standard coding')}${S.mode === 'panel' ? `<br>${lensList().length || 3} lenses, blind` : ''}</div>`;
+      <div class="side-foot">${esc(modelLabel() || '')}</div>`;
     $('nav-home').addEventListener('click', () => switchView('home'));
     $('nav-add')?.addEventListener('click', openUploadSheet);
     sb.querySelectorAll('[data-nav-doc]').forEach(b =>
@@ -939,6 +998,92 @@
     if (S.view === 'overview') return renderProjectHome(c);
   }
 
+  // ==== P10.4 — the right rail ====================================================================
+  // One shared slot (index.html's #rail — see .workbody), contextual per view: Home carries "Needs
+  // judgment" + the method block; Session carries the document introduction; Journal carries the
+  // history timeline. Text uses the #inspector column instead (unchanged from P10.3) — the rail
+  // stays empty (and collapses, see .rail.is-empty) wherever a view doesn't populate it.
+  function renderRail() {
+    const rail = $('rail');
+    if (!rail) return;
+    if (!S.detail) { rail.className = 'rail is-empty'; rail.innerHTML = ''; return; }
+    if (S.view === 'overview') return renderHomeRail(rail);
+    if (S.view === 'session') return renderSessionRail(rail);
+    if (S.view === 'journal') return renderJournalRail(rail);
+    rail.className = 'rail is-empty'; rail.innerHTML = '';
+  }
+
+  // "Needs judgment" (GET /needs-judgment) is a queue of EXCEPTIONS ONLY — never clerical work
+  // (design/P10.2-CONTRACT.md §4/rule 4). Items route to wherever a researcher can actually act.
+  function goToNeedsJudgmentItem(it) {
+    const tt = it.target_type;
+    if (tt === 'document') { openSession(it.target_id); return; }
+    if (tt === 'focus') { switchView('overview'); return; }
+    if (tt === 'step' || tt === 'session') { switchView('session'); return; }
+    switchView('journal'); // finding / theme / residue / anything else
+  }
+  function renderHomeRail(rail) {
+    rail.className = 'rail';
+    const nj = S.needsJudgment;
+    const items = nj?.items || [];
+    rail.innerHTML = `
+      <div class="wb-rail-sec">
+        <p class="wb-rail-kicker">Needs judgment${nj ? ` · ${nj.count ?? items.length}` : ''}</p>
+        ${nj === null ? '<p class="wb-unavailable">Not available yet.</p>'
+          : items.length ? items.map((it, i) => `
+            <button class="wb-nj-item" data-nj="${i}">
+              <strong>${esc(it.title || '')}</strong><span>${esc(it.detail || '')}</span>
+            </button>`).join('')
+          : '<p class="wb-unavailable">Nothing needs a decision right now.</p>'}
+      </div>
+      <hr class="wb-hair">
+      <div class="wb-rail-sec">
+        <p class="wb-rail-kicker">Method</p>
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px" for="ph-model">Reading model</label>
+        <select id="ph-model" ${isViewer() ? 'disabled' : ''}></select>
+        <p class="decl-note" id="ph-model-note">Which model reads this project. Recorded with every run — the export says what produced each finding.</p>
+      </div>`;
+    rail.querySelectorAll('[data-nj]').forEach(b =>
+      b.addEventListener('click', () => goToNeedsJudgmentItem(items[Number(b.dataset.nj)])));
+    wireModelPicker(S.detail.project);
+  }
+  function renderSessionRail(rail) {
+    if (!S.docId) { rail.className = 'rail is-empty'; rail.innerHTML = ''; return; }
+    rail.className = 'rail';
+    const sd = S.sessionData[S.docId];
+    if (sd === undefined) {
+      rail.innerHTML = `<p class="wb-rail-kicker">Introduction</p><p class="wb-unavailable">Loading…</p>`;
+      return;
+    }
+    if (sd === false) {
+      rail.innerHTML = `<p class="wb-rail-kicker">Introduction</p>
+        <p class="wb-unavailable">Not available yet — the session shown is built directly from codes and themes.</p>`;
+      return;
+    }
+    if (!sd.intro || !sd.intro.length) {
+      rail.innerHTML = `<p class="wb-rail-kicker">Introduction</p>
+        <p class="wb-unavailable">Not written yet — it appears once this document is synthesized.</p>`;
+      return;
+    }
+    rail.innerHTML = `
+      <p class="wb-rail-kicker">Introduction</p>
+      <div class="wb-intro">${sd.intro.map(p =>
+        `<p>${esc(p.para)} ${evidenceDoorsHtml(p.sids, S.docId)}</p>`).join('')}</div>
+      <button class="btn-quiet" id="rail-listen" disabled title="Not available yet">Listen to introduction</button>`;
+    wireEvidenceDoors(rail);
+  }
+  function renderJournalRail(rail) {
+    rail.className = 'rail';
+    const j = S.journal;
+    if (!j) { rail.innerHTML = `<p class="wb-rail-kicker">History</p><p class="wb-unavailable">Not available yet.</p>`; return; }
+    const hist = j.history || [];
+    rail.innerHTML = `
+      <p class="wb-rail-kicker">History</p>
+      ${hist.length ? hist.map(h =>
+        `<div class="wb-timeline-row"><time>${esc(h.at ? timeAgo(h.at) : '')}</time><span>${esc(h.label || h.kind || '')}</span></div>`).join('')
+        : '<p class="wb-unavailable">Nothing recorded yet.</p>'}`;
+  }
+
   async function renderHome(c) {
     c.innerHTML = `<div class="home">
       <h1>MASSHINE</h1>
@@ -1064,9 +1209,9 @@
         <p>MASSHINE reads any plain-text source — interview transcripts, field notes, focus groups, documents.</p>
         <div class="journey__steps">
           <div class="journey__step"><span class="journey__num">1</span> Add a source (.txt / .md)</div>
-          <div class="journey__step"><span class="journey__num">2</span> Run coding — ${S.mode === 'panel' ? 'a blind panel of lenses reads it' : 'the coder reads it blind'}</div>
-          <div class="journey__step"><span class="journey__num">3</span> Read, then leave notes — the model considers them when you re-code</div>
-          <div class="journey__step"><span class="journey__num">4</span> Build themes into the project catalogue</div>
+          <div class="journey__step"><span class="journey__num">2</span> Read it — one restrained pass over the whole document</div>
+          <div class="journey__step"><span class="journey__num">3</span> Walk the session — agree, challenge, reframe, park</div>
+          <div class="journey__step"><span class="journey__num">4</span> The account builds in the journal as you go</div>
         </div><br>
         <button class="primary" id="journey-add">Add a source</button>
       </div>`;
@@ -1280,7 +1425,16 @@
   const SESH_CAP = 7;
   const SESH_KIND_LABEL = { pattern: 'A pattern here', uncertainty: 'Worth flagging', delta: 'What this changes' };
   const SESH_KIND_COLOR = { pattern: 'var(--accent)', uncertainty: 'var(--amber)', delta: 'var(--lens-critical)' };
+  const WB_STEP_KIND_LABEL = { pattern: 'A pattern here', tension: 'A tension', uncertainty: 'Worth flagging',
+    delta: 'What this changes', declined: 'Declined as out of scope', checkback: 'Your framing, checked' };
 
+  // ==== P10.4 — Session ============================================================================
+  // GET /session/{doc_id} (design/P10.2-CONTRACT.md §4) is the real, SYNTHESIZE-built walkthrough.
+  // Three states, in order: (1) doc unread → the existing "Read this document" empty state;
+  // (2) the endpoint is unreachable (404/error — engine not there yet) → fall back to the P10.3
+  // client-built walkthrough below, so the session never goes dead just because SYNTHESIZE isn't
+  // deployed; (3) the endpoint answers but the doc has no synthesis yet → an empty state whose
+  // primary action runs Synthesize. Only once real steps exist do we render them for real.
   function renderSession(c) {
     if (!S.detail.documents.length) {
       c.innerHTML = `<div class="sesh">
@@ -1294,21 +1448,160 @@
     if (!S.docId || !docById(S.docId)) S.docId = S.detail.documents[0].doc_id;
     const d = docById(S.docId);
     const docCodes = S.codes.filter(x => x.origin_doc_id === S.docId && x.status === 'active');
-    if (!docCodes.length) {
+    const sd = S.sessionData[S.docId];   // undefined = loading, false = engine unreachable, object = real
+    ensureSessionData(S.docId);
+
+    if (!docCodes.length && !(sd && sd.steps?.length)) {
       c.innerHTML = `<div class="sesh">
         <div class="sesh__head"><h1>Session — ${esc(docTitle(d))}</h1>
           <p class="sub">This document hasn't been read yet — there's nothing to debrief.</p></div>
         ${isViewer() ? '' : `
         <button class="primary" id="sesh-read" style="margin-right:8px">Read this document</button>
         <button class="btn-quiet" id="sesh-code">Run coding (older method)</button>
-        <p class="hint" style="margin-top:14px;max-width:52ch">Read is one restrained pass over the whole
-        document — a few minutes, one model call. Coding is the older section-by-section method
-        (or the blind lens panel, if this project has one) — still here as an advanced option.</p>`}
+        <p class="hint" style="margin-top:14px;max-width:52ch">Reading takes one pass over the whole
+        document — a few minutes. The older section-by-section method is still available under
+        advanced options.</p>`}
       </div>`;
       $('sesh-read')?.addEventListener('click', runRead);
       $('sesh-code')?.addEventListener('click', runCoding);
       return;
     }
+    if (sd && !sd.steps?.length) {
+      c.innerHTML = `<div class="sesh">
+        <div class="sesh__head"><h1>Session — ${esc(docTitle(d))}</h1>
+          <p class="sub">This document has been read, but not yet synthesized — there is nothing to walk through yet.</p></div>
+        ${isViewer() ? '' : `<button class="primary" id="sesh-synth">Synthesize</button>`}
+      </div>`;
+      $('sesh-synth')?.addEventListener('click', runSynthesize);
+      return;
+    }
+    if (sd && sd.steps?.length) return renderSessionReal(c, d, sd);
+    return renderSessionFallback(c, d, docCodes);
+  }
+
+  // The real walkthrough — one server-built step at a time, with the check-back rendered specially.
+  function renderSessionReal(c, d, sd) {
+    const steps = sd.steps;
+    const idx = Math.max(0, Math.min(S.sessionStep, steps.length - 1));
+    const step = steps[idx];
+    const isCB = step.kind === 'checkback';
+    // Supporting line: which finding this feeds (looked up from the Journal, when loaded) — the
+    // walkthrough step itself carries no free-text summary beyond its statement.
+    const linkedFinding = step.finding_id && (S.journal?.findings || []).find(f => f.id === step.finding_id);
+    const supportLine = linkedFinding ? `Feeds — ${linkedFinding.label || linkedFinding.central_concept || linkedFinding.id}` : '';
+    c.innerHTML = `<div class="sesh">
+      <div class="sesh__head">
+        <h1>Session — ${esc(docTitle(d))}</h1>
+        <p class="sub">What this interview carries, one point at a time. Agree, challenge, reframe, or park each — your reactions steer the next read.</p>
+      </div>
+      <div class="wb-track">${steps.map((s, i) => `<i class="${i <= idx ? 'done' : ''}"></i>`).join('')}</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+        <span class="hint">${esc(WB_STEP_KIND_LABEL[step.kind] || step.kind)}</span>
+        <span class="hint">${idx + 1} of ${steps.length}</span>
+      </div>
+      <div class="sesh-step">
+        <p class="wb-claim">${esc(step.statement)}</p>
+        ${supportLine ? `<p class="wb-under">${esc(supportLine)}</p>` : ''}
+        ${evidenceDoorsHtml(step.sids, d.doc_id)}
+        ${step.weakest_sids?.length ? `<p class="hint" style="margin-top:12px">Weakest evidence — worth reading before this leans on it</p>${evidenceDoorsHtml(step.weakest_sids, d.doc_id)}` : ''}
+        ${isCB ? renderCheckbackBlock(step, d.doc_id) : ''}
+        ${!isViewer() ? `
+        <div class="sesh-reactions" style="margin-top:20px">
+          <button class="sesh-react ${step.reaction === 'agree' ? 'is-active' : ''}" data-react="agree">Agree</button>
+          <button class="sesh-react ${step.reaction === 'challenge' ? 'is-active' : ''}" data-react="challenge">Challenge…</button>
+          <button class="sesh-react ${step.reaction === 'reframe' ? 'is-active' : ''}" data-react="reframe">Reframe…</button>
+          <button class="sesh-react ${step.reaction === 'park' ? 'is-active' : ''}" data-react="park">Park</button>
+        </div>
+        <div id="sesh-inline"></div>` : ''}
+        ${step.reaction_note ? `<p class="hint" style="margin-top:10px">${esc(step.reaction_note)}</p>` : ''}
+      </div>
+      <div class="sesh-nav">
+        <button class="btn-quiet" id="sesh-prev" ${idx === 0 ? 'disabled' : ''}>← Previous</button>
+        <button class="btn-quiet" id="sesh-next" ${idx >= steps.length - 1 ? 'disabled' : ''}>Next →</button>
+      </div>
+      ${renderAskTheMaterialHtml()}
+    </div>`;
+    wireEvidenceDoors(c);
+    $('sesh-prev')?.addEventListener('click', () => { S.sessionStep = Math.max(0, idx - 1); renderContent(); });
+    $('sesh-next')?.addEventListener('click', () => { S.sessionStep = Math.min(steps.length - 1, idx + 1); renderContent(); });
+    wireAskTheMaterial(c);
+    if (!isViewer()) wireRealStepReactions(c, step);
+  }
+
+  function renderCheckbackBlock(step, docId) {
+    const cb = step.checkback || {};
+    return `<div class="wb-cb">
+      <p class="hint" style="margin-bottom:2px">Your framing:</p>
+      <p class="wb-mine" style="font-family:var(--font-display);font-size:15px;margin:4px 0 14px">${esc(cb.steer || '')}</p>
+      ${cb.supports?.text ? `<div class="wb-cb-row supports"><b>Supports</b><p>${esc(cb.supports.text)} ${evidenceDoorsHtml(cb.supports.sids, docId)}</p></div>` : ''}
+      ${cb.strains?.text ? `<div class="wb-cb-row strains"><b>Strains</b><p>${esc(cb.strains.text)} ${evidenceDoorsHtml(cb.strains.sids, docId)}</p></div>` : ''}
+      ${cb.not_found?.text ? `<div class="wb-cb-row notfound"><b>Not found</b><p>${esc(cb.not_found.text)}</p></div>` : ''}
+      ${cb.proposal && !isViewer() ? `<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="primary" id="cb-adopt">Adopt: ${esc(cb.proposal)}</button>
+        <button class="btn-bare" id="cb-keep">Keep my framing</button></div>` : ''}
+    </div>`;
+  }
+
+  // Reactions on a real step ride POST /steps/{id}/react (design/P10.2-CONTRACT.md §4).
+  function wireRealStepReactions(c, step) {
+    const send = (reaction, note, statement) => {
+      API.stepReact(S.pid, step.id, { reaction, note, statement }).then(() => {
+        step.reaction = reaction; if (note) step.reaction_note = note;
+        S.sessionStep += 1;
+        renderContent();
+      }).catch(e => toast(String(e.message || e), true));
+    };
+    c.querySelectorAll('[data-react]').forEach(b => b.addEventListener('click', () => {
+      const kind = b.dataset.react;
+      if (kind === 'agree' || kind === 'park') { send(kind); return; }
+      const box = $('sesh-inline');
+      if (kind === 'challenge') {
+        box.innerHTML = `<div class="sesh-inline"><textarea id="sesh-note" rows="2" placeholder="What's off about this?"></textarea>
+          <button class="btn-quiet" id="sesh-note-go">Send</button></div>`;
+        $('sesh-note').focus();
+        $('sesh-note-go').addEventListener('click', () => {
+          const v = $('sesh-note').value.trim();
+          if (!v) return;
+          send('challenge', v);
+        });
+      } else if (kind === 'reframe') {
+        box.innerHTML = `<div class="sesh-inline"><input id="sesh-reframe" type="text" value="${esc(step.statement)}">
+          <button class="btn-quiet" id="sesh-reframe-go">Save</button></div>`;
+        $('sesh-reframe').focus(); $('sesh-reframe').select();
+        $('sesh-reframe-go').addEventListener('click', () => {
+          const v = $('sesh-reframe').value.trim();
+          if (!v || v === step.statement) return;
+          send('reframe', null, v);
+        });
+      }
+    }));
+    $('cb-adopt')?.addEventListener('click', () => send('reframe', null, step.checkback?.proposal));
+    $('cb-keep')?.addEventListener('click', () => send('agree'));
+  }
+
+  // "Ask the material" — no backend yet (READ FIRST #1 / the brief): a question, not a chat, and
+  // honestly not wired to anything. Soft-fails without ever making a network call.
+  function renderAskTheMaterialHtml() {
+    return `<div class="wb-sec">
+      <p class="wb-rail-kicker">Ask the material</p>
+      <p class="hint" style="margin-bottom:10px">A question, not a chat — answers would stay grounded in this document and link back to passages.</p>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="ask-material-q" placeholder="Where does she talk about pay?"
+          style="flex:1;padding:8px 11px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface);font-size:12.5px;outline:none">
+        <button class="btn-quiet" id="ask-material-go">Ask</button>
+      </div>
+      <p class="hint" id="ask-material-a" style="margin-top:10px"></p>
+    </div>`;
+  }
+  function wireAskTheMaterial(c) {
+    const go = () => { $('ask-material-a').textContent = 'Not available yet.'; };
+    $('ask-material-go')?.addEventListener('click', go);
+    $('ask-material-q')?.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  }
+
+  // ---- P10.3 fallback: the client-built walkthrough, kept verbatim as the graceful-degradation
+  // path for when GET /session/{doc_id} 404s/errors (engine not deployed yet). -------------------
+  function renderSessionFallback(c, d, docCodes) {
     const steps = buildWalkthrough(S.docId);
     if (!steps.length) {
       c.innerHTML = `<div class="sesh"><div class="sesh__head"><h1>Session — ${esc(docTitle(d))}</h1>
@@ -1399,12 +1692,183 @@
     }));
   }
 
-  // ==== P10.3 — Journal (spec §4, kept modest this pass) ============================================
-  // Findings (current theme data — the finding-status lifecycle isn't built in the backend yet, so
-  // this renders what exists honestly rather than faking emerging/supported/accepted), researcher
-  // notes + assistant/researcher memos in chronological order. The old Notes queue view still
-  // exists (unrouted from nav) — "see all" reaches it.
+  // ==== P10.4 — Journal ============================================================================
+  // GET /journal (design/P10.2-CONTRACT.md §4) is the real analytic record: versioned story,
+  // findings with computed standing + rolled-up stance, residue, memos, history. When it's
+  // unavailable (engine not there yet) this falls back to the P10.3 theme-based rendering below,
+  // kept verbatim, so the view never goes blank.
   function renderJournal(c) {
+    if (!S.journal) return renderJournalFallback(c);
+    return renderJournalReal(c, S.journal);
+  }
+
+  function renderJournalReal(c, j) {
+    const story = j.story || {};
+    const findings = j.findings || [];
+    const residue = j.residue || [];
+    const memos = (S.memosList || []).filter(m => (m.body || '').trim())
+      .slice().sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+    const recentNotes = S.comments.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 6);
+    c.innerHTML = `<div class="jrnl">
+      <h1>Journal</h1>
+      <p class="sub">Everything here was computed from evidence beneath it, or written by a named hand.</p>
+
+      <div class="jrnl-section">
+        <div class="wb-sec-head"><h2 style="margin:0">Story · version ${esc(story.n ?? '')}</h2>
+          ${(story.versions || []).length > 1 ? `<p class="hint">${story.versions.length} versions</p>` : ''}</div>
+        ${(story.paras || []).length
+          ? story.paras.map(p => `<p class="serif-body" style="font-family:var(--font-serif);font-size:15.5px;line-height:1.7;margin:0 0 12px">${esc(p.para)} ${evidenceDoorsHtml(p.sids)}</p>`).join('')
+          : '<p class="empty">No story yet — it is written after the first synthesis.</p>'}
+        ${(story.versions || []).length > 1 ? `<div class="wb-evd-row">${story.versions.map(n =>
+          `<button class="btn-bare" data-story-version="${n}">v${n}</button>`).join('')}</div>` : ''}
+      </div>
+
+      <div class="jrnl-section">
+        <div class="wb-sec-head"><h2 style="margin:0">Findings · ${findings.length}</h2>
+          ${!isViewer() && findings.length ? '<button class="btn-quiet" id="jrnl-begin-review">Begin review sitting</button>' : ''}</div>
+        ${findings.length ? findings.map(f => {
+          const open = S.openFindings.has(f.id);
+          const total = f.evidence_total ?? (f.key_evidence_sentence_ids || []).length;
+          const openedN = f.evidence_opened_count ?? (f.opened_evidence || []).length;
+          return `<div class="wb-finding ${open ? 'is-open' : ''}" data-fid="${esc(f.id)}">
+            <h3>${esc(f.label || f.central_concept || f.id)}</h3>
+            <p class="wb-standing">Standing · ${esc(f.standing_note || f.standing || 'not yet computed')}</p>
+            ${f.stance ? `<p class="wb-stance"><span class="wb-mine-tag" style="text-transform:none">Stance</span> · ${esc(f.stance)}</p>` : ''}
+            <button class="btn-bare" data-toggle-finding="${esc(f.id)}" style="margin-top:8px">${open ? 'Hide pooled evidence' : 'Show pooled evidence'}</button>
+            <div class="wb-finding-evidence">
+              ${f.central_concept && f.label ? `<p>${esc(f.central_concept)}</p>` : ''}
+              <div class="wb-evd-row">${(f.key_evidence_sentence_ids || []).map(raw => {
+                const { doc, sid } = evidenceRef(raw);
+                return `<button class="wb-evd" data-finding="${esc(f.id)}" data-doc="${esc(doc || '')}" data-sid="${esc(sid)}">${esc(sidChipLabel(doc, sid))}</button>`;
+              }).join('') || '<span class="hint">no evidence resolved</span>'}</div>
+              <p class="hint" style="margin-top:8px">${openedN} of ${total} opened</p>
+            </div>
+          </div>`;
+        }).join('') : `<p class="empty">${S.codes.length ? 'No findings yet — synthesize to build the first ones.' : 'Nothing coded yet.'}</p>`}
+      </div>
+
+      <div class="jrnl-section">
+        <h2>Doesn't fit yet</h2>
+        ${residue.length ? residue.map((r, i) => `
+          <div class="wb-residue" data-residue-idx="${i}">
+            <p>${esc(r.note)} ${evidenceDoorsHtml(r.sids)}</p>
+            ${r.reframe_offer ? `<p style="color:var(--muted);font-size:13px">${esc(r.reframe_offer)}</p>` : ''}
+            ${!isViewer() ? `<div style="display:flex;gap:8px;margin-top:6px">
+              <button class="btn-quiet" data-residue-reframe="${i}">Read under a different frame</button>
+              <button class="btn-bare" data-residue-dismiss="${i}">Leave it</button></div>` : ''}
+          </div>`).join('') : '<p class="empty">Nothing left over right now.</p>'}
+      </div>
+
+      <div class="jrnl-section">
+        <h2>Notes · ${S.comments.length} <a class="jrnl-more" href="#" id="jrnl-all-notes">see all →</a></h2>
+        ${recentNotes.length ? recentNotes.map(n => `
+          <div class="memo-row">
+            <div class="memo-row__meta">${n.author ? `<b>${esc(n.author)}</b> · ` : ''}${timeAgo(n.created_at)} · <span class="note__status note__status--${n.status === 'open' ? 'open' : 'addressed'}">${n.status}</span></div>
+            <p class="memo-row__body">${esc(n.body)}</p>
+          </div>`).join('') : '<p class="empty">No notes yet.</p>'}
+      </div>
+
+      <div class="jrnl-section">
+        <h2>Memos · both voices</h2>
+        ${memos.length ? memos.map(m => `
+          <div class="memo-row">
+            <div class="memo-row__meta">${m.author === 'assistant' ? '<b>assistant</b>' : (m.author ? `<b>${esc(m.author)}</b>` : '<b>researcher</b>')} · on ${esc(m.target_type)}${m.updated_at ? ` · ${timeAgo(m.updated_at)}` : ''}</div>
+            <p class="memo-row__body">${esc(m.body)}</p>
+          </div>`).join('') : '<p class="empty">No memos yet.</p>'}
+      </div>
+    </div>`;
+    wireEvidenceDoors(c);
+    c.querySelectorAll('[data-toggle-finding]').forEach(b => b.addEventListener('click', () => {
+      const fid = b.dataset.toggleFinding;
+      if (S.openFindings.has(fid)) S.openFindings.delete(fid); else S.openFindings.add(fid);
+      renderContent();
+    }));
+    c.querySelectorAll('[data-finding]').forEach(b => b.addEventListener('click', () => {
+      const fid = b.dataset.finding, doc = b.dataset.doc, sid = b.dataset.sid;
+      if (!isViewer()) {
+        API.evidenceOpened(S.pid, fid, sid).then(() => {
+          const f = findings.find(x => x.id === fid);
+          if (f && !(f.opened_evidence || []).includes(sid)) {
+            f.opened_evidence = [...(f.opened_evidence || []), sid];
+            f.evidence_opened_count = (f.evidence_opened_count || 0) + 1;
+          }
+        }).catch(() => { /* recording the gate visit is best-effort — never block opening the text */ });
+      }
+      if (doc) openDocView(doc, sid); else toast('No document reference for this passage', true);
+    }));
+    c.querySelectorAll('[data-story-version]').forEach(b => b.addEventListener('click', () =>
+      toast(`Version ${b.dataset.storyVersion}'s text isn't retrievable yet — only the current version is.`)));
+    c.querySelectorAll('[data-residue-reframe]').forEach(b => b.addEventListener('click', async () => {
+      try { await API.reframeResidue(S.pid, b.dataset.residueReframe); toast('Queued — it will guide the next read.'); }
+      catch (e) { toast(String(e.message || e), true); }
+    }));
+    c.querySelectorAll('[data-residue-dismiss]').forEach(b => b.addEventListener('click', () => {
+      b.closest('.wb-residue')?.remove(); // local-only: no residue-decline endpoint in the contract
+    }));
+    $('jrnl-begin-review')?.addEventListener('click', () => openReviewSitting(findings));
+    $('jrnl-all-notes')?.addEventListener('click', e => { e.preventDefault(); switchView('notes'); });
+  }
+
+  // ---- review sitting (design/P10.2-CONTRACT.md §4/§5 rule 6 — verdicts only here, never during
+  // the daily walkthrough) — one finding at a time, pooled evidence, and the existing theme-revise
+  // verdict actions (relabel/merge/demote), per the brief. "Keep & name" stays unavailable until
+  // every pooled passage has been opened, explained as a sentence rather than a lock icon. ---------
+  function openReviewSitting(findings) {
+    if (!findings.length) return;
+    S.reviewSitting = { ids: findings.map(f => f.id), idx: 0 };
+    renderReviewSitting(findings);
+  }
+  function renderReviewSitting(findings) {
+    const rs = S.reviewSitting;
+    if (!rs) return;
+    const f = findings.find(x => x.id === rs.ids[rs.idx]);
+    if (!f) { closeReviewSitting(); return; }
+    const total = f.evidence_total ?? (f.key_evidence_sentence_ids || []).length;
+    const openedN = f.evidence_opened_count ?? (f.opened_evidence || []).length;
+    const canName = total > 0 && openedN >= total;
+    const root = $('sheet-root');
+    root.innerHTML = `
+      <div class="sheet-wrap" id="sheet-bg">
+        <div class="sheet wb-sitting">
+          <p class="eyebrow" style="text-transform:uppercase;font-size:10.5px;letter-spacing:.08em;color:var(--muted)">Review sitting · ${rs.idx + 1} of ${rs.ids.length}</p>
+          <h2>${esc(f.label || f.central_concept || f.id)}</h2>
+          <p class="wb-standing">Standing · ${esc(f.standing_note || f.standing || 'not yet computed')}</p>
+          <div class="wb-sitting-pooled">
+            ${(f.key_evidence_sentence_ids || []).map(raw => {
+              const { doc, sid } = evidenceRef(raw);
+              const t = doc ? (S.sentText[doc] || {})[sid] || '' : '';
+              return `<div class="wb-sitting-quote"><span class="meta hint">${esc(sidChipLabel(doc, sid))}</span>
+                <p>${esc(t.slice(0, 200))}${t.length > 200 ? '…' : ''}</p></div>`;
+            }).join('') || '<p class="empty">No pooled evidence resolved.</p>'}
+          </div>
+          <p class="wb-gate">${openedN} of ${total} passages opened.${canName ? '' : ' Naming becomes available once every passage has been read.'}</p>
+          <div class="sheet__foot" style="justify-content:flex-start;flex-wrap:wrap">
+            <button class="btn-quiet" id="rs-name" ${canName ? '' : 'disabled'}>Keep &amp; name</button>
+            <button class="btn-quiet" id="rs-merge">Merge</button>
+            <button class="btn-quiet" id="rs-demote">Demote to memo</button>
+            <span class="tb-spacer"></span>
+            <button class="btn-bare" id="rs-prev" ${rs.idx === 0 ? 'disabled' : ''}>← Previous</button>
+            <button class="btn-bare" id="rs-next" ${rs.idx >= rs.ids.length - 1 ? 'disabled' : ''}>Next →</button>
+            <button class="btn-quiet" id="rs-close">Close</button>
+          </div>
+        </div>
+      </div>`;
+    const close = () => { root.innerHTML = ''; S.reviewSitting = null; };
+    $('rs-close').addEventListener('click', close);
+    $('sheet-bg').addEventListener('click', e => { if (e.target.id === 'sheet-bg') close(); });
+    $('rs-prev').addEventListener('click', () => { rs.idx = Math.max(0, rs.idx - 1); renderReviewSitting(findings); });
+    $('rs-next').addEventListener('click', () => { rs.idx = Math.min(rs.ids.length - 1, rs.idx + 1); renderReviewSitting(findings); });
+    $('rs-merge').addEventListener('click', () => openMergeThemeIntoSheet(f.id));
+    $('rs-demote').addEventListener('click', () => openDemoteThemeSheet(f.id));
+    $('rs-name')?.addEventListener('click', () => {
+      if (!canName) return;
+      const v = prompt('Name this finding:', f.label || f.central_concept || '');
+      if (v && v.trim()) reviseTheme(f.id, 'relabel', v.trim()).then(ok => { if (ok) close(); });
+    });
+  }
+  function closeReviewSitting() { $('sheet-root').innerHTML = ''; S.reviewSitting = null; }
+
+  function renderJournalFallback(c) {
     const findings = (S.themes?.themes || []).filter(t => t.status === 'active')
       .sort((a, b) => (b.supporting_code_ids || []).length - (a.supporting_code_ids || []).length);
     const memos = (S.memosList || []).filter(m => (m.body || '').trim())
@@ -2226,13 +2690,117 @@
   // Core documents + add material (text/audio) + the project declaration + a project-notes memo.
   // Replaces the old codes/coverage dashboard as the "overview" view's content (kept below,
   // unrouted, as renderOverviewDashboard — nothing lost, just no longer the primary landing page).
+  // ---- P10.4: Home — project front door. Focus is now the versioned object from GET /journal
+  // (design/P10.2-CONTRACT.md §2/§4); when that endpoint is unavailable, this falls back to the
+  // pre-P10.2 mirror (project.research_question) for both reading AND writing, so the field never
+  // stops working just because the engine's focus versioning isn't there yet. ----------------------
+  async function decideFocusProposal(n, decision) {
+    try {
+      await API.focusProposal(S.pid, n, decision);
+      S.journal = await API.journal(S.pid).catch(() => S.journal);
+      S.detail = await API.project(S.pid).catch(() => S.detail);
+      toast(decision === 'accept' ? 'Focus updated' : 'Proposal declined');
+      render();
+    } catch (e) { toast(String(e.message || e), true); }
+  }
   function renderProjectHome(c) {
     const proj = S.detail.project;
     const docs = S.detail.documents;
-    const nFindings = (S.themes?.themes || []).filter(t => t.status === 'active').length;
+    const j = S.journal;
+    const findingsSrc = j?.findings || (S.themes?.themes || []).filter(t => t.status === 'active')
+      .map(t => ({ id: t.id, label: themeLabel(t), central_concept: themeClaim(t), supporting_code_ids: t.supporting_code_ids || [] }));
+    const codesSrc = S.codes.filter(x => x.status === 'active');
+    const nFindings = findingsSrc.length;
+
+    const focus = j?.focus;
+    const focusActive = focus?.active;
+    const focusText = S.focusEditing ? null : (focusActive?.text ?? proj.research_question ?? '');
+    const focusHistory = focus?.history || [];
+    const prevFocus = focusHistory.filter(h => h.n < (focusActive?.n || 0)).sort((a, b) => b.n - a.n)[0];
+    const versionLabel = focusActive?.n
+      ? `v${focusActive.n}${focusActive.author === 'researcher' ? ' · your wording' : focusActive.author === 'assistant' ? ' · machine wording' : ''}` : '';
+    const proposal = focus?.proposal;
+
+    const mapRow = (lbl, sub, itemsHtml) => `<div class="wb-map-row">
+        <div class="wb-map-row__label"><strong>${esc(lbl)}</strong>${esc(sub)}</div>
+        <div class="wb-map-items">${itemsHtml}</div>
+      </div>`;
+    const findingsShown = findingsSrc.slice(0, 4);
+    const findingsMore = findingsSrc.length - findingsShown.length;
+    const findingsHtml = findingsSrc.length
+      ? findingsShown.map(f => `<button class="wb-map-item" data-map-nav="journal">
+          <strong>${esc(f.label || f.central_concept || f.id)}</strong>
+          <span>${(f.supporting_code_ids || []).length} supporting code${(f.supporting_code_ids || []).length === 1 ? '' : 's'}</span>
+        </button>`).join('') + (findingsMore > 0 ? `<button class="wb-map-item is-quiet" data-map-nav="journal">+${findingsMore} more</button>` : '')
+      : `<div class="wb-map-item is-quiet">Nothing yet — findings appear after the first synthesis.</div>`;
+    const codesShown = codesSrc.slice(0, 3);
+    const codesMore = codesSrc.length - codesShown.length;
+    const codesHtml = codesSrc.length
+      ? codesShown.map(cd => `<button class="wb-map-item" data-map-drawer="1">
+          <strong>${esc(label(cd))}</strong><span>${esc(docTitle(docById(cd.origin_doc_id)) || '')}</span>
+        </button>`).join('') + (codesMore > 0 ? `<button class="wb-map-item is-quiet" data-map-drawer="1">+${codesMore} more remain folded</button>` : '')
+      : `<div class="wb-map-item is-quiet">Nothing coded yet.</div>`;
+    const docsHtml = docs.length
+      ? docs.map(d => `<button class="wb-map-item" data-map-doc="${esc(d.doc_id)}">
+          <strong>${esc(docTitle(d))}</strong><span>${docIsProcessed(d) ? 'session complete' : 'not yet read'}</span>
+        </button>`).join('')
+      : `<div class="wb-map-item is-quiet">No documents yet.</div>`;
+
     c.innerHTML = `<div class="phome">
       <h1>${esc(proj.name)}</h1>
-      <p class="sub">${docs.length} document${docs.length === 1 ? '' : 's'} · ${nFindings} finding${nFindings === 1 ? '' : 's'}${S.mode === 'panel' ? ` · ${lensList().length || 3} lenses` : ''}</p>
+      <p class="sub">${docs.length} document${docs.length === 1 ? '' : 's'} · ${nFindings} finding${nFindings === 1 ? '' : 's'} · ${codesSrc.length} code${codesSrc.length === 1 ? '' : 's'}</p>
+
+      <div class="phome-section">
+        <h2>Focus${versionLabel ? ` · ${versionLabel}` : ''}</h2>
+        <div class="wb-focus">
+          ${S.focusEditing ? `
+            <textarea id="focus-ta" placeholder="What is this project trying to find out?">${esc(focusActive?.text ?? proj.research_question ?? '')}</textarea>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn-quiet" id="focus-save">Save</button>
+              <button class="btn-quiet" id="focus-cancel">Cancel</button>
+            </div>` : `
+            <blockquote>${focusText ? esc(focusText) : '<span class="empty">Not set yet.</span>'}</blockquote>
+            ${prevFocus ? `<small>v${prevFocus.n} · ${esc(prevFocus.text)}</small>` : ''}
+            ${!isViewer() ? `<button class="btn-bare" id="focus-edit" style="margin-top:6px">Edit</button>` : ''}`}
+        </div>
+        ${proposal ? `<div class="wb-proposal">
+            <p class="kicker">Focus proposal</p>
+            <blockquote>${esc(proposal.text)}</blockquote>
+            ${proposal.rationale ? `<p class="why">${esc(proposal.rationale)}</p>` : ''}
+            ${!isViewer() ? `<div style="display:flex;gap:8px">
+              <button class="btn-quiet" id="focus-prop-adopt">Adopt</button>
+              <button class="btn-bare" id="focus-prop-decline">Decline</button></div>` : ''}
+          </div>` : ''}
+      </div>
+
+      <div class="phome-section">
+        <h2>Positionality</h2>
+        <div class="decl-field">
+          <textarea id="ph-pos" ${isViewer() ? 'readonly' : ''} placeholder="Your standpoint relative to the material…">${esc(proj.positionality || '')}</textarea>
+        </div>
+      </div>
+
+      <div class="phome-section">
+        <div class="wb-sec-head"><h2 style="margin:0">The analysis at a glance</h2><p class="hint">findings → codes → documents</p></div>
+        <div class="wb-map">
+          <div class="wb-map-axis dir">Direction descends</div>
+          <div class="wb-map-rows">
+            ${mapRow('Findings', 'claims across cases', findingsHtml)}
+            ${mapRow('Emerging codes', 'generated, folded', codesHtml)}
+            ${mapRow('Documents', 'immutable material', docsHtml)}
+          </div>
+          <div class="wb-map-axis">Evidence rises</div>
+        </div>
+      </div>
+
+      <div class="phome-section">
+        <h2>Material</h2>
+        ${docs.length ? docs.map(d => `
+          <div class="doc-row" data-doc="${d.doc_id}">
+            <span class="doc-row__name">${esc(docTitle(d))}</span>
+            <span class="doc-row__meta">${esc(KINDS[d.kind] || d.kind)} · ${d.n_sentences} sentences · ${esc((d.status || 'ingested').replace(/^coded:/, 'coded · '))}</span>
+          </div>`).join('') : '<p class="empty">No documents yet — add material below.</p>'}
+      </div>
 
       <div class="phome-section">
         <h2>Add material</h2>
@@ -2244,56 +2812,50 @@
       </div>
 
       <div class="phome-section">
-        <h2>Core documents</h2>
-        ${docs.length ? docs.map(d => `
-          <div class="doc-row" data-doc="${d.doc_id}">
-            <span class="doc-row__name">${esc(docTitle(d))}</span>
-            <span class="doc-row__meta">${esc(KINDS[d.kind] || d.kind)} · ${d.n_sentences} sentences · ${esc((d.status || 'ingested').replace(/^coded:/, 'coded · '))}</span>
-          </div>`).join('') : '<p class="empty">No documents yet — add material above.</p>'}
-      </div>
-
-      <div class="phome-section">
-        <h2>Project declaration</h2>
-        <div class="decl-grid">
-          <div class="decl-field">
-            <label>Research question</label>
-            <textarea id="ph-rq" ${isViewer() ? 'readonly' : ''} placeholder="What is this project trying to find out?">${esc(proj.research_question || '')}</textarea>
-          </div>
-          <div class="decl-field">
-            <label>Positionality</label>
-            <textarea id="ph-pos" ${isViewer() ? 'readonly' : ''} placeholder="Your standpoint relative to the material…">${esc(proj.positionality || '')}</textarea>
-          </div>
-        </div>
-        <div class="decl-field decl-field--model">
-          <label for="ph-model">Reading model</label>
-          <select id="ph-model" ${isViewer() ? 'disabled' : ''}></select>
-          <p class="decl-note" id="ph-model-note">Which model reads this project. Recorded with every run — the export says what produced each finding.</p>
-        </div>
-      </div>
-
-      <div class="phome-section">
-        <h2>Project notes</h2>
+        <h2>Quick note</h2>
         ${memoBlock('project', S.pid, {})}
       </div>
     </div>`;
+
+    c.querySelectorAll('[data-map-nav]').forEach(b => b.addEventListener('click', () => switchView(b.dataset.mapNav)));
+    c.querySelectorAll('[data-map-drawer]').forEach(b => b.addEventListener('click', openCodebookDrawer));
+    c.querySelectorAll('[data-map-doc]').forEach(b => b.addEventListener('click', () => openSession(b.dataset.mapDoc)));
     $('ph-add-text')?.addEventListener('click', openUploadSheet);
     $('ph-add-audio')?.addEventListener('click', openUploadSheet);
     c.querySelectorAll('[data-doc]').forEach(el =>
       el.addEventListener('click', () => openSession(el.dataset.doc)));
+
     if (!isViewer()) {
-      const saveDecl = debounce(async () => {
+      $('focus-edit')?.addEventListener('click', () => { S.focusEditing = true; renderContent(); });
+      $('focus-cancel')?.addEventListener('click', () => { S.focusEditing = false; renderContent(); });
+      $('focus-save')?.addEventListener('click', async () => {
+        const v = ($('focus-ta').value || '').trim();
+        const before = focusActive?.text ?? proj.research_question ?? '';
+        S.focusEditing = false;
+        if (!v || v === before) { renderContent(); return; }
+        try { await API.setFocus(S.pid, v); }
+        catch (e) {
+          // soft-fail: fall back to the pre-P10.2 write path so editing keeps working either way
+          try { await API.patchProject(S.pid, { research_question: v }); }
+          catch (e2) { toast(String(e2.message || e2), true); renderContent(); return; }
+        }
+        S.detail.project.research_question = v;
+        S.journal = await API.journal(S.pid).catch(() => S.journal);
+        toast('Focus updated');
+        render();
+      });
+      $('focus-prop-adopt')?.addEventListener('click', () => decideFocusProposal(proposal.n, 'accept'));
+      $('focus-prop-decline')?.addEventListener('click', () => decideFocusProposal(proposal.n, 'decline'));
+      const savePos = debounce(async () => {
         try {
-          const research_question = $('ph-rq').value, positionality = $('ph-pos').value;
-          await API.patchProject(S.pid, { research_question, positionality });
-          S.detail.project.research_question = research_question;
+          const positionality = $('ph-pos').value;
+          await API.patchProject(S.pid, { positionality });
           S.detail.project.positionality = positionality;
         } catch (e) { toast(String(e.message || e), true); }
       }, 700);
-      $('ph-rq').addEventListener('input', saveDecl);
-      $('ph-pos').addEventListener('input', saveDecl);
+      $('ph-pos').addEventListener('input', savePos);
       wireMemo(c, 'project', S.pid, {});
     }
-    wireModelPicker(proj);
   }
 
   // ---- model picker (P10.1c): the project's reading model. Unavailable entries (no credentials
@@ -2307,6 +2869,9 @@
     catch { sel.innerHTML = '<option>— unavailable —</option>'; sel.disabled = true; return; }
     const models = reg.models || [];
     const dflt = models.find(m => m.id === reg.default_model_id);
+    // the sidebar foot names the reading model — the one piece of machine configuration a
+    // researcher has any reason to keep in view (it rides into the methods export)
+    S.modelLabel = (models.find(m => m.id === proj.model_id) || dflt || {}).label || '';
     sel.innerHTML = `<option value="">Server default${dflt ? ` — ${esc(dflt.label)}` : ''}</option>` +
       models.map(m => `<option value="${esc(m.id)}" ${m.id === proj.model_id ? 'selected' : ''} ${m.available ? '' : 'disabled'}>${esc(m.label)}${m.available ? '' : ' — not configured'}</option>`).join('');
     const showNote = () => {
@@ -2753,7 +3318,7 @@
   document.addEventListener('scroll', _hideTip, true);
 
   // ---- root render -------------------------------------------------------------------------------
-  function render() { renderSidebar(); renderToolbar(); renderContent(); renderInspector(); }
+  function render() { renderSidebar(); renderToolbar(); renderContent(); renderInspector(); renderRail(); }
 
   // ---- init --------------------------------------------------------------------------------------
   async function init() {

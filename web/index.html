@@ -158,7 +158,15 @@
   .btn-bare { border: 0; background: none; color: var(--faint); font-size: 11px; padding: 2px 4px; }
   .btn-bare:hover { color: var(--fg); }
 
-  .content { overflow-y: auto; flex: 1; min-height: 0; }
+  /* P10.4: .content is now a grid child of .workbody (main column + right rail), not a lone
+     flex child of .stage — drop flex:1 (grid stretch handles height), keep the scroll contract. */
+  .content { overflow-y: auto; min-height: 0; min-width: 0; }
+  .workbody { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .rail {
+    width: 300px; overflow-y: auto; min-height: 0; min-width: 0;
+    border-left: 1px solid var(--hairline); background: var(--bg); padding: 30px 22px 60px;
+  }
+  .rail.is-empty { display: none; }
 
   /* ---------- reading ---------- */
   .transcript { padding: 44px 48px 90px; }
@@ -606,6 +614,122 @@
   .doc-row__name { font-weight: 600; font-size: 13px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .doc-row__meta { color: var(--faint); font-size: 11px; white-space: nowrap; }
 
+  /* ================= P10.4 — the research workbench ================= */
+  /* Restraint per design/masshine-session-mockup.html: no card-in-card, hairlines instead of
+     boxes, one accent for the researcher's own voice only, state as sentences not pills. */
+
+  /* evidence: a door, not a chip — used everywhere in the P10.4 surfaces (Home/Session/Journal).
+     The Text view's own inline .anchor chip is left as-is (P10.3, lower-traffic surfaces). */
+  .wb-evd {
+    display: inline; border: 0; background: none; padding: 0; color: var(--muted);
+    font-size: 12px; font-family: var(--font-ui); border-bottom: 1px solid transparent;
+    cursor: pointer; white-space: nowrap;
+  }
+  .wb-evd:hover { color: var(--accent); border-color: var(--accent); }
+  .wb-evd-row { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; }
+
+  /* the researcher's voice — the accent's only job */
+  .wb-mine { border-left: 2px solid var(--accent); padding-left: 12px; }
+  .wb-mine-tag { color: var(--accent); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+  .wb-was { color: var(--faint); font-size: 11.5px; margin-top: 4px; }
+
+  .wb-sec { margin: 34px 0; }
+  .wb-sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+  .wb-sec-head h2 { font-family: var(--font-display); font-size: 17px; font-weight: 600; margin: 0; }
+  .wb-hair { border: 0; border-top: 1px solid var(--hairline); margin: 30px 0; }
+
+  /* focus — versioned, editable in place */
+  .wb-focus blockquote { margin: 0; padding-left: 14px; border-left: 2px solid var(--hairline); font-family: var(--font-display); font-size: 19px; line-height: 1.4; }
+  .wb-focus small { display: block; margin-top: 8px; font-size: 11.5px; color: var(--faint); }
+  .wb-focus textarea {
+    width: 100%; font-family: var(--font-display); font-size: 17px; line-height: 1.5;
+    border: 1px solid var(--hairline); border-radius: 8px; background: var(--surface);
+    padding: 8px 10px; resize: vertical; min-height: 60px; outline: none;
+  }
+  .wb-focus textarea:focus { border-color: var(--accent); }
+  .wb-proposal {
+    margin-top: 14px; padding: 12px 14px; background: oklch(0% 0 0 / 0.022); border-radius: 10px;
+  }
+  .wb-proposal .kicker { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+  .wb-proposal blockquote { margin: 6px 0 4px; font-family: var(--font-display); font-size: 15.5px; line-height: 1.4; }
+  .wb-proposal p.why { margin: 0 0 10px; color: var(--muted); font-size: 12.5px; }
+
+  /* the analysis at a glance — a layered map, direction descending / evidence rising */
+  .wb-map { display: grid; grid-template-columns: 26px minmax(0, 1fr) 26px; border-top: 1px solid var(--fg); border-bottom: 1px solid var(--hairline); }
+  .wb-map-axis {
+    writing-mode: vertical-rl; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 0; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint);
+  }
+  .wb-map-axis.dir { color: var(--accent); transform: rotate(180deg); }
+  .wb-map-rows { border-left: 1px solid var(--hairline); border-right: 1px solid var(--hairline); }
+  .wb-map-row { display: grid; grid-template-columns: 108px minmax(0, 1fr); border-bottom: 1px solid var(--hairline); min-height: 76px; }
+  .wb-map-row:last-child { border-bottom: 0; }
+  .wb-map-row__label { padding: 16px 12px; font-size: 10.5px; color: var(--faint); }
+  .wb-map-row__label strong { display: block; color: var(--fg); font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .wb-map-items { display: flex; flex-wrap: wrap; align-items: stretch; }
+  .wb-map-item {
+    flex: 1 1 180px; min-width: 0; text-align: left; border: 0; border-left: 1px solid var(--hairline);
+    background: none; padding: 14px 14px; cursor: pointer;
+  }
+  .wb-map-item:first-child { border-left: 0; }
+  .wb-map-item:hover { background: oklch(0% 0 0 / 0.03); }
+  .wb-map-item strong { display: block; font-size: 12.5px; font-weight: 600; line-height: 1.35; }
+  .wb-map-item span { display: block; margin-top: 5px; color: var(--faint); font-size: 10.5px; }
+  .wb-map-item.is-quiet { color: var(--faint); font-style: italic; padding: 14px; }
+
+  /* needs judgment — exceptions only, never clerical work */
+  .wb-nj-item { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 11px 0; border-top: 1px solid var(--hairline); }
+  .wb-nj-item:first-child { border-top: 0; }
+  .wb-nj-item strong { display: block; font-size: 12.5px; font-weight: 600; }
+  .wb-nj-item span { display: block; margin-top: 3px; color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+  .wb-rail-kicker { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); margin: 0 0 4px; }
+  .wb-rail-sec { margin-bottom: 30px; }
+  .wb-rail-sec:last-child { margin-bottom: 0; }
+
+  /* session — one point at a time, segmented track, large serif statement */
+  .wb-track { display: flex; gap: 4px; margin-bottom: 26px; }
+  .wb-track i { flex: 1; height: 2px; background: var(--hairline); border-radius: 1px; display: block; }
+  .wb-track i.done { background: var(--fg); }
+  .wb-claim { font-family: var(--font-display); font-size: 26px; font-weight: 600; line-height: 1.28; letter-spacing: -0.015em; margin: 10px 0 10px; }
+  .wb-under { color: var(--muted); font-size: 14px; line-height: 1.6; max-width: 54ch; }
+  .wb-intro p { font-family: var(--font-serif); font-size: 15.5px; line-height: 1.75; margin: 0 0 16px; }
+
+  /* check-back: three plain statements, a dot instead of a coloured grid */
+  .wb-cb { margin-top: 20px; border-top: 1px solid var(--hairline); padding-top: 4px; }
+  .wb-cb-row { display: flex; gap: 14px; padding: 9px 0; align-items: baseline; border-bottom: 1px solid var(--hairline); }
+  .wb-cb-row:last-child { border-bottom: 0; }
+  .wb-cb-row b { font-weight: 600; font-size: 11.5px; letter-spacing: 0.02em; min-width: 92px; display: inline-flex; align-items: baseline; gap: 6px; flex: none; }
+  .wb-cb-row b::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .wb-cb-row.supports b { color: var(--green); } .wb-cb-row.strains b { color: var(--amber); } .wb-cb-row.notfound b { color: var(--faint); }
+  .wb-cb-row p { margin: 0; font-size: 13px; color: var(--muted); }
+
+  /* findings — standing/stance as sentences, not badges */
+  .wb-finding { padding: 18px 0; border-top: 1px solid var(--hairline); }
+  .wb-finding:first-child { border-top: 0; }
+  .wb-finding h3 { font-family: var(--font-display); font-size: 16.5px; font-weight: 600; margin: 0 0 6px; }
+  .wb-standing { color: var(--muted); font-size: 12px; margin: 0; }
+  .wb-stance { color: var(--muted); font-size: 12px; margin: 3px 0 0; }
+  .wb-stance .wb-mine-tag { text-transform: none; letter-spacing: 0; font-weight: 600; }
+  .wb-finding-evidence { display: none; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--hairline); }
+  .wb-finding.is-open .wb-finding-evidence { display: block; }
+  .wb-finding-evidence p { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
+
+  .wb-residue p { color: var(--muted); font-size: 13.5px; line-height: 1.6; margin: 0 0 8px; }
+  .wb-timeline-row { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; border-top: 1px solid var(--hairline); font-size: 12px; }
+  .wb-timeline-row:first-child { border-top: 0; }
+  .wb-timeline-row time { color: var(--faint); font-size: 10.5px; white-space: nowrap; }
+  .wb-timeline-row span { flex: 1; color: var(--fg); }
+
+  /* review sitting — a distinct, calmer register (wider sheet) */
+  .wb-sitting { width: 640px; max-width: calc(100vw - 40px); }
+  .wb-sitting h2 { font-family: var(--font-display); font-size: 24px; font-weight: 600; }
+  .wb-sitting-pooled { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 18px 0; }
+  .wb-sitting-quote { padding: 10px 0; border-top: 1px solid var(--hairline); font-size: 13px; }
+  .wb-sitting-quote:first-child { border-top: 0; }
+  .wb-sitting-quote p { margin: 4px 0 0; font-family: var(--font-serif); line-height: 1.55; }
+  .wb-gate { margin: 14px 0; font-size: 12.5px; color: var(--muted); }
+  .wb-unavailable { color: var(--faint); font-size: 12.5px; font-style: italic; }
+
   @media (max-width: 900px) {
     .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; min-height: 100vh; }
     .sidebar {
@@ -621,11 +745,23 @@
     .side-foot { display: none; }
     .toolbar { flex-wrap: wrap; height: auto; row-gap: 6px; }
     .inspector { position: fixed; right: 0; top: 0; bottom: 0; z-index: 150; }
+    /* P10.4: the right rail collapses BELOW the main column on narrow widths (not an overlay,
+       unlike .inspector above) — .workbody becomes the single scroll region, content then rail. */
+    .workbody { display: block; overflow-y: auto; }
+    .content { overflow-y: visible; }
+    .rail { width: auto; border-left: 0; border-top: 1px solid var(--hairline); padding: 22px 18px 40px; }
     .tx-passage { grid-template-columns: 1fr; }
     .tx-margin { padding-left: 0.9rem; margin: 0.3rem 0 0 1rem; }
     .tx-note { opacity: 1; transform: none; }
     .decl-grid { grid-template-columns: 1fr; }
     .drawer { width: 100vw; }
+    .wb-map { grid-template-columns: 1fr; }
+    .wb-map-axis { display: none; }
+    .wb-map-row { grid-template-columns: 1fr; }
+    .wb-map-items { flex-direction: column; }
+    .wb-map-item { border-left: 0; border-top: 1px solid var(--hairline); }
+    .wb-map-item:first-child { border-top: 0; }
+    .wb-sitting-pooled { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -634,7 +770,10 @@
     <aside class="sidebar" id="sidebar"></aside>
     <div class="stage">
       <header class="toolbar" id="toolbar"></header>
-      <main class="content" id="content"></main>
+      <div class="workbody">
+        <main class="content" id="content"></main>
+        <aside class="rail is-empty" id="rail"></aside>
+      </div>
     </div>
     <aside class="inspector is-hidden" id="inspector"></aside>
   </div>
@@ -642,7 +781,7 @@
   <div id="sheet-root"></div>
   <input type="file" id="file-input" accept=".txt,.md" hidden>
   <input type="file" id="file-input-audio" accept=".mp3,.m4a,.wav,.aiff" hidden>
-  <script src="/api.js?v=18"></script>
-  <script src="/app.js?v=18"></script>
+  <script src="/api.js?v=19"></script>
+  <script src="/app.js?v=19"></script>
 </body>
 </html>

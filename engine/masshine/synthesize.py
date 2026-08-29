@@ -134,6 +134,27 @@ def build_user_message(conn: sqlite3.Connection, doc_id: str, doc_codes: list[di
 
 # ---- validators (P1/P3: model proposes, Python disposes) --------------------------------------
 
+def _ids(raw) -> list[str]:
+    """Model output is untrusted SHAPE as well as untrusted content: a field documented as a list
+    of ids comes back, in practice, as a list of rich objects ({"code_id": ..., "note": ...}) about
+    as often as as a list of strings. Coerce both to plain ids and drop anything else, rather than
+    letting a dict reach a set membership test (which is how a real run died: TypeError:
+    unhashable type: 'dict'). Same P3 discipline as everywhere else — the model proposes, and
+    Python decides what that even was."""
+    out = []
+    for x in raw or []:
+        if isinstance(x, str):
+            v = x.strip()
+        elif isinstance(x, dict):
+            v = str(x.get("id") or x.get("code_id") or x.get("sentence_id")
+                    or x.get("sid") or "").strip()
+        else:
+            v = ""
+        if v:
+            out.append(v)
+    return out
+
+
 def _resolve_finding(item: dict, rid: str, prior: dict | None, valid_code_ids: set[str],
                      valid_sents: set[str], doc_id: str) -> dict | None:
     """Merge one model-returned finding against its PRIOR persisted state (ACCUMULATE, never
@@ -142,17 +163,16 @@ def _resolve_finding(item: dict, rid: str, prior: dict | None, valid_code_ids: s
     A model-supplied "standing"/"standing_note" is never read — only these five keys are ever
     copied out of `item`, and standing is computed later from the `supporting_code_ids` this
     returns (contract §5.1)."""
-    new_sup = [c for c in (item.get("supporting_code_ids") or []) if c in valid_code_ids]
+    new_sup = [c for c in _ids(item.get("supporting_code_ids")) if c in valid_code_ids]
     sup = list(dict.fromkeys((prior["supporting_code_ids"] if prior else []) + new_sup))
     if not sup:
         return None
     kev = []
-    for s in item.get("key_evidence_sentence_ids") or []:
-        s = str(s).strip()
+    for s in _ids(item.get("key_evidence_sentence_ids")):
         if s in valid_sents:
             kev.append(f"{doc_id}#{s}")
     kev = list(dict.fromkeys((prior["key_evidence_sentence_ids"] if prior else []) + kev))
-    new_tens = [c for c in (item.get("tensions") or []) if c in valid_code_ids]
+    new_tens = [c for c in _ids(item.get("tensions")) if c in valid_code_ids]
     tensions = list(dict.fromkeys((prior["tensions"] if prior else []) + new_tens))
     label = str(item.get("label", "")).strip() or (prior["label"] if prior else "")
     central = (str(item.get("central_concept", "")).strip()
@@ -197,7 +217,7 @@ def _resolve_checkback(item: dict, valid_finding_ids: set[str], valid_sents: set
     def _block(key: str) -> dict:
         b = item.get(key) or {}
         text = str(b.get("text", "")).strip()
-        sids = [f"{doc_id}#{s}" for s in (b.get("sids") or []) if str(s).strip() in valid_sents]
+        sids = [f"{doc_id}#{s}" for s in _ids(b.get("sids")) if s in valid_sents]
         return {"text": text, "sids": sids}
 
     supports, strains = _block("supports"), _block("strains")
@@ -214,8 +234,8 @@ def _resolve_residue(item: dict, valid_code_ids: set[str], valid_sents: set[str]
                      doc_id: str) -> dict | None:
     """None if nothing survives grounding — a residue note with no real sids and no real code ids
     points at nothing."""
-    sids = [f"{doc_id}#{s}" for s in (item.get("sids") or []) if str(s).strip() in valid_sents]
-    code_ids = [c for c in (item.get("code_ids") or []) if c in valid_code_ids]
+    sids = [f"{doc_id}#{s}" for s in _ids(item.get("sids")) if s in valid_sents]
+    code_ids = [c for c in _ids(item.get("code_ids")) if c in valid_code_ids]
     if not sids and not code_ids:
         return None
     return {"note": str(item.get("note", "")).strip(), "sids": sids, "code_ids": code_ids,
@@ -234,12 +254,12 @@ def _resolve_steps(items: list, valid_code_ids: set[str], valid_sents: set[str],
         if kind not in STEP_KINDS:
             continue
         statement = str(item.get("statement", "")).strip()
-        sids = [f"{doc_id}#{s}" for s in (item.get("sids") or []) if str(s).strip() in valid_sents]
+        sids = [f"{doc_id}#{s}" for s in _ids(item.get("sids")) if s in valid_sents]
         if not statement or not sids:
             continue
-        code_ids = [c for c in (item.get("code_ids") or []) if c in valid_code_ids]
-        weakest = [f"{doc_id}#{s}" for s in (item.get("weakest_sids") or [])
-                  if str(s).strip() in valid_sents]
+        code_ids = [c for c in _ids(item.get("code_ids")) if c in valid_code_ids]
+        weakest = [f"{doc_id}#{s}" for s in _ids(item.get("weakest_sids"))
+                  if s in valid_sents]
         finding_id = item.get("finding_id")
         if finding_id is not None and str(finding_id) not in valid_finding_ids:
             finding_id = None
@@ -261,8 +281,7 @@ def _resolve_paragraphs(items: list, valid_sents: set[str], doc_id: str,
         if not para:
             continue
         sids = []
-        for s in item.get("sids") or []:
-            s = str(s).strip()
+        for s in _ids(item.get("sids")):
             if s in valid_sents:
                 sids.append(f"{doc_id}#{s}")
             elif valid_qualified is not None and s in valid_qualified:
