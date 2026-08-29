@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import llm, models, packs, projects, read, runner, store, transcribe
+from . import llm, models, packs, projects, read, runner, store, synthesize, transcribe
 from .coding import code_document, code_sections_panel
 from .compress import compress_batches, propose_merges
 from .consolidate import consolidate_codebook
@@ -341,7 +341,15 @@ def read_work(pid: str, span: str | None = None):
         try:
             run = new_run(conn, "read")
             proj = projects.get_project(pid) or {}
-            research_question = (proj.get("research_question") or "").strip() or None
+            # P10.2: the active focus_version wins over the registry's cached mirror — the
+            # registry column stays in sync (api.py's /focus endpoints keep it that way) but a
+            # project db opened from an older backup, or read before any focus was ever minted,
+            # falls back to it untouched (contract §5: "READ receives the active focus").
+            focus = store.active_focus(conn)
+            if focus and (focus.get("text") or "").strip():
+                research_question = focus["text"].strip()
+            else:
+                research_question = (proj.get("research_question") or "").strip() or None
             rows = conn.execute(
                 "SELECT id, filename FROM document ORDER BY created_at, id").fetchall()
             order = [r[0] for r in rows]
@@ -385,6 +393,14 @@ def theme_work(pid: str, mode: str, feedback: bool = False):
         docs = state["docs"]
         conn = project_db(projects.project_db_path(pid))
         try:
+            # P10.2 findings live in theme_v2 under the SAME mode as this legacy walk, and
+            # persist_themes replaces a mode wholesale — so running this after a synthesis would
+            # silently delete the researcher's findings, their standing, and every reaction keyed
+            # to them. Refuse instead: the two pipelines are alternatives, not a sequence.
+            if conn.execute("SELECT 1 FROM step WHERE mode=? LIMIT 1", (mode,)).fetchone():
+                raise RuntimeError(
+                    f"'{mode}' already has synthesized findings — re-running the older theme walk "
+                    "would replace them. Run Synthesize instead, or start a separate project.")
             guidance = None
             if feedback:
                 guidance = store.compile_guidance(conn, mode=mode) or None
@@ -427,6 +443,43 @@ def theme_work(pid: str, mode: str, feedback: bool = False):
             conn.close()
         return {"mode": mode, "themes": len(themes), "failures": fails,
                 "feedback_used": bool(guidance)}
+    return work
+
+
+@with_model
+def synthesize_work(pid: str, mode: str = "standard"):
+    """SYNTHESIZE each not-yet-synthesized document (own checkpoint kind "synthesize" — a
+    separate file from code_work/theme_work's `checkpoint_{mode}.json`, so it never collides with
+    them), same per-doc skip-what's-done discipline as read_work. `mode` picks which finding
+    id-space this project's SYNTHESIZE writes into (theme_v2's existing `mode` column — see
+    synthesize.py's module docstring and store.py's "P10.2: findings" section for why findings
+    ARE theme_v2 rows); it does not gate anything about which documents get synthesized — every
+    document in the project is eligible, same as read_work."""
+    def work(progress):
+        cp = projects.checkpoint_path(pid, "synthesize")
+        state = runner.load_checkpoint(cp)
+        conn = project_db(projects.project_db_path(pid))
+        try:
+            rows = conn.execute(
+                "SELECT id, filename FROM document ORDER BY created_at, id").fetchall()
+            order = [r[0] for r in rows]
+            names = dict(rows)
+            done = state.setdefault("docs", {})
+            total = len(order)
+            results: dict[str, dict] = {}
+            for idx, doc_id in enumerate(order, 1):
+                if doc_id in done:
+                    continue
+                progress(stage="synthesize", doc_id=doc_id, done=idx - 1, total=total,
+                         message=f"synthesizing {names[doc_id]}")
+                data = synthesize.synthesize_document(conn, doc_id, mode)
+                digest = synthesize.persist_synthesis(conn, mode, doc_id, data)
+                results[doc_id] = digest
+                done[doc_id] = digest
+                runner.save_checkpoint(cp, state)
+        finally:
+            conn.close()
+        return {"mode": mode, "docs": results}
     return work
 
 

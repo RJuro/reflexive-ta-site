@@ -52,9 +52,9 @@ provider config above:
 - **Per-project default** — `PATCH /projects/{pid}` with `{"model_id": "glm-5-2"}` sets that
   project's default model (any id from `GET /models`); `{"model_id": null}` clears it back to
   the server default. `GET /projects/{pid}` echoes the project's current `model_id`.
-- **Per-run override** — `/code`, `/read`, `/themes`, and `/recode` all accept an optional
-  `model_id` in their POST body; it wins for that one run only, without touching the project's
-  default.
+- **Per-run override** — `/code`, `/read`, `/themes`, `/recode`, and `/synthesize` all accept an
+  optional `model_id` in their POST body; it wins for that one run only, without touching the
+  project's default.
 - **The registry** — `GET /models` lists the selectable models (`id`, `label`, `provider`,
   `model`, `note`, `available` — whether that provider's credentials are actually configured
   here) plus `default_model_id`. To replace the built-in list entirely, set `MASSHINE_MODELS` to

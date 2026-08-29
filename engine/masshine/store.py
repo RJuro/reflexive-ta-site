@@ -556,6 +556,486 @@ def demote_theme(conn: sqlite3.Connection, mode: str, theme_id: str) -> dict:
     return add_theme_revision(conn, mode, theme_id, "demote")
 
 
+# ---- P10.2: findings (theme_v2 rows minted incrementally by SYNTHESIZE) ------------------------
+# Findings are NOT a new table (contract §2's "do not invent a second findings table" /
+# MASSHINE.md §10's "theme authority (as finding editing)") — one finding IS one theme_v2 row,
+# read and merge/relabel/demote/restore-able through the EXACT SAME machinery P8b already built
+# (themes_payload, theme_revisions_map, add_theme_revision, compile_guidance's theme branch). The
+# one difference from the legacy sequential theorist (themes.theorize_walk / persist_themes above)
+# is persistence shape: that pass replaces a mode's WHOLE theme_v2 set on every run (a full
+# re-walk); SYNTHESIZE runs ONE DOCUMENT AT A TIME (jobs.synthesize_work, mirroring
+# jobs.read_work's per-doc checkpoint), so it needs to UPSERT one finding at a time instead —
+# `upsert_finding` below, never `persist_themes`, from here on for this mode.
+#
+# ponytail: a project that runs the OLD /code+/themes pipeline and the NEW /read+/synthesize
+# pipeline against the SAME `mode` string will corrupt each other's theme_v2 rows (persist_themes
+# wholesale-deletes a mode; /themes/{id}/revise also targets whichever mode is passed). This is
+# an operational constraint (pick one pipeline per project), not a runtime guard — add one (e.g.
+# a `pipeline` column on the project registry) if a real project ever needs both.
+
+def _next_finding_id(conn: sqlite3.Connection, mode: str) -> str:
+    """A monotonic per-mode T-sequence, never reused or renumbered — same discipline as
+    reconcile._next_code_id, keyed by `finding_seq:{mode}` in the shared `meta` table."""
+    key = f"finding_seq:{mode}"
+    row = conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+    n = (row[0] if row else 0) + 1
+    conn.execute("INSERT INTO meta (key, value) VALUES (?, ?) "
+                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, n))
+    return f"T{n:02d}"
+
+
+def finding_row(conn: sqlite3.Connection, mode: str, finding_id: str) -> dict | None:
+    """One finding straight off theme_v2 (payload merged in) — no theme_revision folding, no
+    finding_state join. Used by synthesize.py's per-document resolve step, which needs the
+    CURRENT persisted support to accumulate against (see synthesize._resolve_finding)."""
+    row = conn.execute(
+        "SELECT id, central_concept, coverage, claim_scope, falsified_if, payload "
+        "FROM theme_v2 WHERE mode=? AND id=?", (mode, finding_id)).fetchone()
+    if not row:
+        return None
+    f = {"id": row[0], "central_concept": row[1], "coverage": row[2], "claim_scope": row[3],
+         "falsified_if": row[4]}
+    f.update(json.loads(row[5] or "{}"))
+    return f
+
+
+def findings_for_mode(conn: sqlite3.Connection, mode: str) -> list[dict]:
+    """Every finding currently persisted for `mode`, in id order — SYNTHESIZE's "current
+    findings" prompt input (contract §3)."""
+    ids = [r[0] for r in conn.execute("SELECT id FROM theme_v2 WHERE mode=? ORDER BY id", (mode,))]
+    return [f for f in (finding_row(conn, mode, fid) for fid in ids) if f]
+
+
+def upsert_finding(conn: sqlite3.Connection, mode: str, finding: dict) -> str:
+    """Write one already-validated finding (see synthesize._resolve_finding): `finding["id"]`
+    empty mints a fresh one; non-empty UPDATES that row in place — no wholesale delete (the thing
+    persist_themes does, and this must not, since SYNTHESIZE runs one document at a time).
+    Returns the finding's final id."""
+    fid = finding["id"] or _next_finding_id(conn, mode)
+    payload = {k: v for k, v in finding.items() if k not in ("id", "central_concept")}
+    conn.execute(
+        "INSERT INTO theme_v2 (id, run_id, mode, central_concept, coverage, claim_scope, "
+        "falsified_if, payload) VALUES (?,?,?,?,?,?,?,?) "
+        "ON CONFLICT(mode, id) DO UPDATE SET central_concept=excluded.central_concept, "
+        "payload=excluded.payload",
+        (fid, "", mode, finding.get("central_concept", ""), "", "", "", json.dumps(payload)))
+    conn.commit()
+    return fid
+
+
+def findings_journal_payload(conn: sqlite3.Connection, mode: str) -> list[dict]:
+    """The Journal's finding cards (contract §4): persisted support plus the computed
+    standing/stance/opened-evidence gate state from `finding_state` (computed at SYNTHESIZE time
+    by recompute_finding_state, never derived live here). `evidence_total`/`evidence_opened_count`
+    are counted against the finding's OWN curated anchors (`key_evidence_sentence_ids`) — the
+    set the evidence gate (R6, data-session-spec §4) actually asks the researcher to open."""
+    states = {r[0]: r[1:] for r in conn.execute(
+        "SELECT theme_id, standing, standing_note, stance, opened_evidence "
+        "FROM finding_state WHERE mode=?", (mode,))}
+    out = []
+    for f in findings_for_mode(conn, mode):
+        standing, standing_note, stance, opened_json = states.get(f["id"], (None, "", None, "[]"))
+        opened = json.loads(opened_json or "[]")
+        kev = f.get("key_evidence_sentence_ids", [])
+        out.append({
+            "id": f["id"], "label": f.get("label", ""), "central_concept": f["central_concept"],
+            "standing": standing, "standing_note": standing_note, "stance": stance,
+            "supporting_code_ids": f.get("supporting_code_ids", []),
+            "key_evidence_sentence_ids": kev, "opened_evidence": opened,
+            "evidence_opened_count": len(set(opened) & set(kev)), "evidence_total": len(kev),
+        })
+    return out
+
+
+# ---- P10.2: finding_state — the computed standing, the rolled-up stance, the evidence gate ------
+
+STANDING_MIN_DOCS = 2
+STANDING_MIN_CODES = 3
+
+
+def compute_standing(n_docs: int, n_codes: int) -> tuple[str, str]:
+    """PURE — the evidential fact the contract forbids asking the model for (§3, §5.1): `firm`
+    needs BOTH >= STANDING_MIN_DOCS documents and >= STANDING_MIN_CODES supporting codes; exactly
+    one document is always `single-case` regardless of code count (there is no cross-case claim
+    to grade yet); anything else (>=2 docs but under the code floor, or the degenerate zero-docs
+    case) is `thin`."""
+    if n_docs >= STANDING_MIN_DOCS and n_codes >= STANDING_MIN_CODES:
+        return "firm", f"recurs in {n_docs} interviews · {n_codes} supporting codes"
+    if n_docs == 1:
+        return ("single-case",
+                f"seen in 1 interview so far · {n_codes} supporting code{'' if n_codes == 1 else 's'}")
+    if n_docs == 0:
+        return "thin", "no grounded supporting evidence"
+    return "thin", (f"recurs in {n_docs} interviews but only {n_codes} supporting code"
+                    f"{'' if n_codes == 1 else 's'} — under the firm floor of {STANDING_MIN_CODES}")
+
+
+def _finding_stance(conn: sqlite3.Connection, mode: str, finding_id: str) -> str | None:
+    """The most recent walkthrough reaction on any step naming this finding as its target — a
+    plain step carries it as payload["finding_id"], a checkback as payload["target"]. Folded in
+    Python (per-project step counts are small; no JSON1 dependency needed)."""
+    latest_at, latest_reaction = None, None
+    for created_at, kind, payload_json, reaction in conn.execute(
+            "SELECT created_at, kind, payload, reaction FROM step "
+            "WHERE mode=? AND reaction IS NOT NULL", (mode,)):
+        payload = json.loads(payload_json or "{}")
+        target = payload.get("target") if kind == "checkback" else payload.get("finding_id")
+        if target == finding_id and (latest_at is None or created_at >= latest_at):
+            latest_at, latest_reaction = created_at, reaction
+    return latest_reaction
+
+
+def recompute_finding_state(conn: sqlite3.Connection, mode: str, finding_id: str) -> dict:
+    """Recompute `standing`/`standing_note`/`stance` for one finding from its CURRENT persisted
+    support (contract §5.1: standing is computed, never trusted from the model or accepted from a
+    researcher endpoint) — called after every SYNTHESIZE document and after every step reaction
+    that targets a finding. `opened_evidence` is preserved untouched (this never writes the
+    evidence gate log)."""
+    f = finding_row(conn, mode, finding_id)
+    sup = f.get("supporting_code_ids", []) if f else []
+    codes = {c["id"]: c for c in codes_payload(conn)}
+    docs = {ev.split("#", 1)[0] for cid in sup for ev in codes.get(cid, {}).get("evidence", [])}
+    standing, note = compute_standing(len(docs), len(sup))
+    stance = _finding_stance(conn, mode, finding_id)
+    existing = conn.execute(
+        "SELECT opened_evidence FROM finding_state WHERE theme_id=?", (finding_id,)).fetchone()
+    opened = existing[0] if existing else "[]"
+    now = _now()
+    conn.execute(
+        "INSERT INTO finding_state (theme_id, mode, standing, standing_note, stance, "
+        "opened_evidence, updated_at) VALUES (?,?,?,?,?,?,?) "
+        "ON CONFLICT(theme_id) DO UPDATE SET mode=excluded.mode, standing=excluded.standing, "
+        "standing_note=excluded.standing_note, stance=excluded.stance, updated_at=excluded.updated_at",
+        (finding_id, mode, standing, note, stance, opened, now))
+    conn.commit()
+    return {"theme_id": finding_id, "mode": mode, "standing": standing, "standing_note": note,
+            "stance": stance, "opened_evidence": json.loads(opened), "updated_at": now}
+
+
+def mark_evidence_opened(conn: sqlite3.Connection, finding_id: str, sid: str) -> list[str] | None:
+    """Append one sid to a finding's opened-evidence gate log (idempotent — the same sid twice is
+    a no-op). None if the finding has no finding_state row yet (caller 404s) — in practice every
+    persisted finding gets one via recompute_finding_state the moment it first exists."""
+    row = conn.execute(
+        "SELECT opened_evidence FROM finding_state WHERE theme_id=?", (finding_id,)).fetchone()
+    if not row:
+        return None
+    opened = json.loads(row[0] or "[]")
+    if sid not in opened:
+        opened.append(sid)
+        conn.execute("UPDATE finding_state SET opened_evidence=?, updated_at=? WHERE theme_id=?",
+                     (json.dumps(opened), _now(), finding_id))
+        conn.commit()
+    return opened
+
+
+# ---- P10.2: focus versioning (contract §2, §4) --------------------------------------------------
+# The research question as a versioned object. Registry `project.research_question` (a DIFFERENT
+# sqlite file — projects.py's cross-project registry, not this project db) stays a cached mirror
+# of whichever row is 'active'; syncing that mirror is the CALLER's job (api.py, which already
+# imports `projects`) — this module only ever touches the project-db connection it's handed.
+
+def _next_focus_n(conn: sqlite3.Connection) -> int:
+    return (conn.execute("SELECT COALESCE(MAX(n), 0) FROM focus_version").fetchone()[0] or 0) + 1
+
+
+def mint_focus_version(conn: sqlite3.Connection, text: str, author: str, rationale: str = "",
+                       status: str = "active") -> dict:
+    """A fresh focus_version row. `status='active'` (the default — a researcher edit) supersedes
+    whatever was active before, so exactly one row is ever 'active'. `status='proposed'` (an
+    assistant suggestion) does NOT touch the active row — see propose_focus, which clears any
+    earlier pending proposal first."""
+    if status == "active":
+        conn.execute("UPDATE focus_version SET status='superseded' WHERE status='active'")
+    n = _next_focus_n(conn)
+    now = _now()
+    conn.execute(
+        "INSERT INTO focus_version (n, text, author, status, rationale, created_at) "
+        "VALUES (?,?,?,?,?,?)", (n, text, author, status, rationale, now))
+    conn.commit()
+    return {"n": n, "text": text, "author": author, "status": status, "rationale": rationale,
+            "created_at": now}
+
+
+def propose_focus(conn: sqlite3.Connection, text: str, rationale: str) -> dict:
+    """SYNTHESIZE's optional focus_proposal (contract §3) → a 'proposed' row. Any earlier
+    still-pending proposal is superseded first — only the latest machine suggestion stands."""
+    conn.execute("UPDATE focus_version SET status='superseded' WHERE status='proposed'")
+    return mint_focus_version(conn, text, "assistant", rationale, status="proposed")
+
+
+def active_focus(conn: sqlite3.Connection) -> dict | None:
+    row = conn.execute(
+        "SELECT n, text, author, rationale, created_at FROM focus_version "
+        "WHERE status='active' ORDER BY n DESC LIMIT 1").fetchone()
+    if not row:
+        return None
+    return {"n": row[0], "text": row[1], "author": row[2], "rationale": row[3],
+            "created_at": row[4]}
+
+
+def focus_history(conn: sqlite3.Connection) -> list[dict]:
+    """The adopted-focus lineage (active + superseded rows only — a declined or still-pending
+    proposal never WAS the focus, so it stays out of history and lives under `proposal` instead —
+    see journal_payload)."""
+    return [{"n": r[0], "text": r[1], "author": r[2], "status": r[3], "rationale": r[4],
+            "created_at": r[5]}
+            for r in conn.execute(
+                "SELECT n, text, author, status, rationale, created_at FROM focus_version "
+                "WHERE status IN ('active','superseded') ORDER BY n")]
+
+
+def pending_focus_proposal(conn: sqlite3.Connection) -> dict | None:
+    row = conn.execute(
+        "SELECT n, text, rationale, created_at FROM focus_version "
+        "WHERE status='proposed' ORDER BY n DESC LIMIT 1").fetchone()
+    if not row:
+        return None
+    return {"n": row[0], "text": row[1], "rationale": row[2], "created_at": row[3]}
+
+
+def accept_focus_proposal(conn: sqlite3.Connection, n: int) -> dict | None:
+    """Promote a pending proposal to the active focus. None if `n` isn't a pending proposal
+    (caller 404s)."""
+    row = conn.execute(
+        "SELECT text, rationale FROM focus_version WHERE n=? AND status='proposed'", (n,)).fetchone()
+    if not row:
+        return None
+    conn.execute("UPDATE focus_version SET status='superseded' WHERE status='active'")
+    conn.execute("UPDATE focus_version SET status='active' WHERE n=?", (n,))
+    conn.commit()
+    return {"n": n, "text": row[0], "author": "assistant", "rationale": row[1], "status": "active"}
+
+
+def decline_focus_proposal(conn: sqlite3.Connection, n: int) -> bool:
+    cur = conn.execute(
+        "UPDATE focus_version SET status='declined' WHERE n=? AND status='proposed'", (n,))
+    conn.commit()
+    return cur.rowcount > 0
+
+
+# ---- P10.2: walkthrough steps, checkbacks, and residue — all `step` rows ------------------------
+# Distinguished only by `kind` (contract §2: no separate residue table). `payload`'s shape depends
+# on kind: pattern/tension/uncertainty/delta/declined carry {"statement","sids","code_ids",
+# "weakest_sids","finding_id"}; checkback carries {"steer","target","supports":{"text","sids"},
+# "strains":{"text","sids"},"not_found":{"text"},"proposal"}; residue carries {"note","sids",
+# "code_ids","reframe_offer"}. `_step_view` flattens any of the three into ONE shape (the
+# contract's session response) so a caller never branches on kind to find `statement`/`sids`/
+# `finding_id` — a checkback additionally carries its raw shape back under `checkback`.
+
+_STEP_COLS = ("id", "mode", "doc_id", "position", "kind", "payload", "reaction",
+             "reaction_note", "created_at")
+
+
+def _step_row(r) -> dict:
+    d = dict(zip(_STEP_COLS, r))
+    d["payload"] = json.loads(d["payload"] or "{}")
+    return d
+
+
+def _step_view(row: dict) -> dict:
+    p, kind = row["payload"], row["kind"]
+    if kind == "checkback":
+        sids = list(p.get("supports", {}).get("sids", [])) + list(p.get("strains", {}).get("sids", []))
+        flat = {"statement": p.get("steer", ""), "sids": sids, "code_ids": [],
+               "weakest_sids": [], "finding_id": p.get("target"), "checkback": p}
+    elif kind == "residue":
+        flat = {"statement": p.get("note", ""), "sids": p.get("sids", []),
+               "code_ids": p.get("code_ids", []), "weakest_sids": [], "finding_id": None,
+               "reframe_offer": p.get("reframe_offer", "")}
+    else:
+        flat = {k: p.get(k) for k in ("statement", "sids", "code_ids", "weakest_sids", "finding_id")}
+    return {"id": row["id"], "doc_id": row["doc_id"], "kind": kind,
+            "reaction": row["reaction"], "reaction_note": row["reaction_note"], **flat}
+
+
+def insert_step(conn: sqlite3.Connection, mode: str, doc_id: str, kind: str, payload: dict) -> dict:
+    sid = "ST" + uuid.uuid4().hex[:8]
+    position = (conn.execute(
+        "SELECT COALESCE(MAX(position), -1) FROM step WHERE doc_id=?",
+        (doc_id,)).fetchone()[0] or -1) + 1
+    now = _now()
+    conn.execute(
+        "INSERT INTO step (id, mode, doc_id, position, kind, payload, reaction, reaction_note, "
+        "created_at) VALUES (?,?,?,?,?,?,NULL,NULL,?)",
+        (sid, mode, doc_id, position, kind, json.dumps(payload), now))
+    conn.commit()
+    return _step_view(_step_row(
+        (sid, mode, doc_id, position, kind, json.dumps(payload), None, None, now)))
+
+
+def steps_for_doc(conn: sqlite3.Connection, mode: str, doc_id: str,
+                  include_residue: bool = False) -> list[dict]:
+    """The per-document walkthrough (contract's GET /session/{doc_id}): every kind except
+    `residue` in position order — residue's home is the Journal's "doesn't fit yet" (MASSHINE.md
+    §2's mechanism table), not the paced per-document sequence. `include_residue=True` for a
+    caller that wants the raw rows regardless (there is none yet; kept for symmetry/tests)."""
+    q = f"SELECT {','.join(_STEP_COLS)} FROM step WHERE mode=? AND doc_id=?"
+    args = [mode, doc_id]
+    if not include_residue:
+        q += " AND kind != 'residue'"
+    q += " ORDER BY position"
+    return [_step_view(_step_row(r)) for r in conn.execute(q, args)]
+
+
+def residue_items(conn: sqlite3.Connection, mode: str) -> list[dict]:
+    """Every residue step, project-wide, oldest first — the stable ordering
+    POST /residue/{idx}/reframe's `idx` indexes into (contract §4)."""
+    rows = conn.execute(
+        f"SELECT {','.join(_STEP_COLS)} FROM step WHERE mode=? AND kind='residue' "
+        "ORDER BY created_at, id", (mode,)).fetchall()
+    return [_step_view(_step_row(r)) for r in rows]
+
+
+def adopt_reframe(conn: sqlite3.Connection, mode: str, idx: int) -> dict | None:
+    """Turn residue entry `idx`'s reframe offer into standing guidance (contract §5.3: never
+    auto-resolved — only this explicit researcher action does it). Marks the step's reaction
+    'reframe' so compile_guidance's adopted-reframe line picks it up on the next read/synthesis.
+    None if `idx` is out of range (caller 404s).
+
+    ponytail: `idx` is a POSITION in residue_items' stable ordering, not a durable id — fine as
+    long as nothing inserts a new residue row between a GET /journal and the matching POST here
+    (a single-researcher, single-request UI flow never race). A concurrent SYNTHESIZE run adding
+    residue mid-review could shift indices; a step-id-based endpoint would be sturdier. Upgrade
+    path if that ever bites: switch the route to take a step_id, same as /steps/{step_id}/react."""
+    rows = conn.execute(
+        "SELECT id FROM step WHERE mode=? AND kind='residue' ORDER BY created_at, id",
+        (mode,)).fetchall()
+    if idx < 0 or idx >= len(rows):
+        return None
+    step_id = rows[idx][0]
+    conn.execute("UPDATE step SET reaction='reframe' WHERE id=?", (step_id,))
+    conn.commit()
+    row = conn.execute(f"SELECT {','.join(_STEP_COLS)} FROM step WHERE id=?", (step_id,)).fetchone()
+    return _step_view(_step_row(row))
+
+
+def react_to_step(conn: sqlite3.Connection, step_id: str, reaction: str,
+                  note: str | None = None, statement: str | None = None) -> dict | None:
+    """Record a walkthrough reaction (contract §4 — agree/challenge/reframe/park). `reframe` with
+    a `statement` rewrites the step's own text — RESEARCHER WORDING WINS, the original is kept
+    under payload["original_statement"] (data-session-spec §3). If the step targets a finding (a
+    plain step's "finding_id", or a checkback's "target"), that finding's `stance` is recomputed
+    immediately — the researcher shouldn't have to wait for the next SYNTHESIZE run to see their
+    own reaction reflected in the Journal. None if `step_id` doesn't exist."""
+    row = conn.execute(f"SELECT {','.join(_STEP_COLS)} FROM step WHERE id=?", (step_id,)).fetchone()
+    if not row:
+        return None
+    d = _step_row(row)
+    payload = d["payload"]
+    if reaction == "reframe" and statement:
+        key = "note" if d["kind"] == "residue" else "steer" if d["kind"] == "checkback" else "statement"
+        payload.setdefault("original_statement", payload.get(key, ""))
+        payload[key] = statement
+    conn.execute("UPDATE step SET reaction=?, reaction_note=?, payload=? WHERE id=?",
+                 (reaction, note, json.dumps(payload), step_id))
+    conn.commit()
+    d["reaction"], d["reaction_note"], d["payload"] = reaction, note, payload
+    view = _step_view(d)
+    fid = view.get("finding_id")
+    if fid and conn.execute(
+            "SELECT 1 FROM theme_v2 WHERE mode=? AND id=?", (d["mode"], fid)).fetchone():
+        recompute_finding_state(conn, d["mode"], fid)
+    return view
+
+
+# ---- P10.2: story-so-far + document intros -------------------------------------------------------
+
+def add_story_version(conn: sqlite3.Connection, paragraphs: list[dict]) -> dict:
+    n = (conn.execute("SELECT COALESCE(MAX(n), 0) FROM story_version").fetchone()[0] or 0) + 1
+    now = _now()
+    conn.execute("INSERT INTO story_version (n, text, created_at) VALUES (?,?,?)",
+                (n, json.dumps(paragraphs), now))
+    conn.commit()
+    return {"n": n, "paras": paragraphs, "created_at": now}
+
+
+def latest_story(conn: sqlite3.Connection) -> dict:
+    row = conn.execute("SELECT n, text FROM story_version ORDER BY n DESC LIMIT 1").fetchone()
+    return {"n": row[0], "paras": json.loads(row[1])} if row else {"n": 0, "paras": []}
+
+
+def story_version_ns(conn: sqlite3.Connection) -> list[int]:
+    return [r[0] for r in conn.execute("SELECT n FROM story_version ORDER BY n")]
+
+
+def set_intro(conn: sqlite3.Connection, doc_id: str, paragraphs: list[dict]) -> None:
+    conn.execute(
+        "INSERT INTO intro (doc_id, text, created_at) VALUES (?,?,?) "
+        "ON CONFLICT(doc_id) DO UPDATE SET text=excluded.text, created_at=excluded.created_at",
+        (doc_id, json.dumps(paragraphs), _now()))
+    conn.commit()
+
+
+def get_intro(conn: sqlite3.Connection, doc_id: str) -> list[dict]:
+    row = conn.execute("SELECT text FROM intro WHERE doc_id=?", (doc_id,)).fetchone()
+    return json.loads(row[0]) if row else []
+
+
+# ---- P10.2: the three read surfaces (contract §4) ------------------------------------------------
+
+def session_payload(conn: sqlite3.Connection, mode: str, doc_id: str) -> dict | None:
+    row = conn.execute("SELECT id, title, filename FROM document WHERE id=?", (doc_id,)).fetchone()
+    if not row:
+        return None
+    title = (row[1] or "").strip() or row[2]
+    steps = steps_for_doc(conn, mode, doc_id)
+    return {"intro": get_intro(conn, doc_id), "steps": steps, "n_steps": len(steps),
+            "doc": {"id": row[0], "title": title}}
+
+
+def journal_payload(conn: sqlite3.Connection, mode: str) -> dict:
+    story = latest_story(conn)
+    residue = [{"note": r["statement"], "sids": r["sids"], "code_ids": r["code_ids"],
+               "reframe_offer": r["reframe_offer"]} for r in residue_items(conn, mode)]
+    return {
+        "focus": {"active": active_focus(conn), "history": focus_history(conn),
+                 "proposal": pending_focus_proposal(conn)},
+        "story": {"n": story["n"], "paras": story["paras"], "versions": story_version_ns(conn)},
+        "findings": findings_journal_payload(conn, mode),
+        "residue": residue,
+        "memos": list_memos(conn),
+        "history": [],   # project git-history timeline (data-session-spec §7) — not built in P10.2
+    }
+
+
+def needs_judgment_payload(conn: sqlite3.Connection, mode: str) -> list[dict]:
+    """Exceptions only (contract §5.4) — never clerical "N codes to review" busywork. Audio
+    awaiting review is NOT computed here (it needs the project's upload directory, a filesystem
+    concern this module doesn't otherwise touch) — api.py's endpoint appends those items itself."""
+    items = []
+    for r in conn.execute(
+            f"SELECT {','.join(_STEP_COLS)} FROM step WHERE mode=? AND kind='checkback' "
+            "AND reaction IS NULL ORDER BY created_at, id", (mode,)):
+        v = _step_view(_step_row(r))
+        cb = v["checkback"]
+        items.append({"kind": "checkback", "title": f'Check-back on {v["finding_id"] or "a finding"}',
+                     "detail": cb.get("steer", ""), "target_type": "step", "target_id": v["id"],
+                     "action_hint": "review the check-back against the material"})
+    for f in findings_journal_payload(conn, mode):
+        if f["stance"] == "challenge":
+            items.append({"kind": "strained_finding",
+                         "title": f["label"] or f["central_concept"],
+                         "detail": f["standing_note"], "target_type": "finding",
+                         "target_id": f["id"], "action_hint": "revisit the challenged finding"})
+        elif f["standing"] == "thin":
+            items.append({"kind": "thin_finding", "title": f["label"] or f["central_concept"],
+                         "detail": f["standing_note"], "target_type": "finding",
+                         "target_id": f["id"], "action_hint": "weigh the thin finding"})
+    proposal = pending_focus_proposal(conn)
+    if proposal:
+        items.append({"kind": "focus_proposal", "title": "A refined research focus is proposed",
+                     "detail": proposal["text"], "target_type": "focus",
+                     "target_id": str(proposal["n"]),
+                     "action_hint": "accept or decline the proposal"})
+    for idx, r in enumerate(residue_items(conn, mode)):
+        if r["reaction"] is None and r.get("reframe_offer"):
+            items.append({"kind": "residue", "title": "Material doesn't fit yet",
+                         "detail": r["reframe_offer"], "target_type": "residue",
+                         "target_id": str(idx), "action_hint": "adopt or leave the reframe offer"})
+    return items
+
+
 def code_counts(conn: sqlite3.Connection) -> dict:
     return {r[0]: r[1] for r in conn.execute(
         "SELECT coder, COUNT(*) FROM code GROUP BY coder")}
@@ -831,7 +1311,48 @@ def compile_guidance(conn: sqlite3.Connection, doc_id: str | None = None,
                     old_lbl = theme_labels.get(theme_id) or ctxs.get(theme_id, {}).get("label", theme_id)
                     lines.append(f'- The researcher renamed the theme "{old_lbl}" to '
                                  f'"{st["researcher_label"]}" — use the new name.')
-    return "\n".join(lines)
+    return "\n".join(lines + _p10_2_guidance_lines(conn))
+
+
+def _p10_2_guidance_lines(conn: sqlite3.Connection) -> list[str]:
+    """P10.2's additions to every guidance call, doc-scoped or project-scoped alike (contract
+    §5.5): the active focus and whether it changed, parked declines to re-offer (READ's own
+    out-of-scope memos — "each run", unconditionally, per contract §5), adopted reframes, and
+    standing walkthrough step reactions. Read WITHOUT a mode filter — READ's own guidance call
+    (jobs.read_work → compile_guidance(conn, doc_id)) carries no mode at all, and in practice a
+    project only ever runs SYNTHESIZE under one mode's id-space anyway (see the findings
+    section's ponytail note above)."""
+    lines: list[str] = []
+    focus = active_focus(conn)
+    if focus:
+        lines.append(f'- The current research focus is: "{focus["text"]}".')
+    history = focus_history(conn)
+    if len(history) > 1:
+        prev, cur = history[-2], history[-1]
+        rationale = f' — {cur["rationale"]}' if cur.get("rationale") else ""
+        lines.append(f'- The research focus changed from "{prev["text"]}" to "{cur["text"]}"'
+                     f'{rationale}. Reconsider anything declined under the earlier focus.')
+    for m in list_memos(conn, target_type="document"):
+        if m.get("author") == "assistant" and m.get("body"):
+            lines.append(f"- Material was declined as out of scope on {m['target_id']}: "
+                         f"{m['body']}")
+    verbs = {"agree": "agreed with", "challenge": "challenged", "reframe": "reframed",
+            "park": "parked"}
+    for row in conn.execute(
+            f"SELECT {','.join(_STEP_COLS)} FROM step WHERE reaction IS NOT NULL "
+            "ORDER BY created_at"):
+        v = _step_view(_step_row(row))
+        if v["kind"] == "residue" and v["reaction"] == "reframe":
+            lines.append('- An earlier "doesn\'t fit yet" passage was reframed by the '
+                         f'researcher: {v.get("reframe_offer") or v["statement"]} — treat this '
+                         "as new analytic direction.")
+            continue
+        verb = verbs.get(v["reaction"], v["reaction"])
+        line = f'- The researcher {verb} the walkthrough step "{v["statement"]}"'
+        if v["reaction_note"]:
+            line += f": {v['reaction_note']}"
+        lines.append(line + ".")
+    return lines
 
 
 def compile_family_guidance(conn: sqlite3.Connection) -> str:

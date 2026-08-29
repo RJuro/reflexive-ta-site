@@ -151,8 +151,21 @@ def resolve_ev(conn: sqlite3.Connection, qualified: str) -> str:
 # v11 adds per-run model provenance (P10.1c): `run.model` (nullable — the resolved model string
 # new_run() auto-captured from llm.model() when the run started), so a project coded partly under
 # one researcher-selected model and partly under another stays honest in the export manifest.
+# v12 adds the P10.2 loop machinery (design/P10.2-CONTRACT.md §2): `focus_version` (the research
+# question as a versioned, researcher/assistant-authored object — the registry's
+# `project.research_question` column stays a cached mirror of whichever row is 'active', so
+# existing readers of that column keep working untouched); `finding_state` (per-finding computed
+# `standing`/researcher `stance`/opened-evidence gate log — keyed by theme_id ALONE, not
+# (mode, theme_id), on the working assumption that one project only ever runs SYNTHESIZE under
+# one mode's id-space at a time — see synthesize.py's module docstring); `step` (walkthrough
+# steps AND checkbacks AND residue notes — all three are just `step.kind` values, so no separate
+# residue table exists, matching the contract's 5-table list); `story_version` (the project
+# narrative, versioned per document position); `intro` (one per-document introduction, keyed by
+# doc_id). Findings themselves are NOT a new table — SYNTHESIZE writes them into the EXISTING
+# `theme_v2`/`theme_step` tables (same id discipline, same theme_revision authority machinery —
+# see synthesize.py), so a "finding" and a P8b "theme" are the same row from here on.
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 
 def init_project_db(conn: sqlite3.Connection) -> None:
@@ -221,6 +234,51 @@ def init_project_db(conn: sqlite3.Connection) -> None:
             value TEXT,                          -- 'relabel': new label; 'reclaim': new claim;
                                                   -- 'merge': target theme id
             context TEXT,                        -- JSON snapshot of the theme at revision time
+            created_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS focus_version (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            n INTEGER,
+            text TEXT,
+            author TEXT,                         -- 'researcher' | 'assistant'
+            status TEXT,                         -- 'active' | 'superseded' | 'proposed' | 'declined'
+            rationale TEXT,
+            created_at TEXT
+        );
+        -- ponytail: theme_id ALONE is the PK here (per contract §2), not (mode, theme_id) —
+        -- exactly one mode's SYNTHESIZE finding-state can live safely per project. Two modes
+        -- both minting fresh ids from "T01" (each mode has its own sequence — see
+        -- store._next_finding_id) WOULD collide here. Upgrade path if a project ever needs
+        -- SYNTHESIZE findings in both modes at once: make this PK (mode, theme_id).
+        CREATE TABLE IF NOT EXISTS finding_state (
+            theme_id TEXT PRIMARY KEY,
+            mode TEXT,
+            standing TEXT,
+            standing_note TEXT,
+            stance TEXT,
+            opened_evidence TEXT,                -- JSON list of sid — a gate-visit log, append-only
+            updated_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS step (
+            id TEXT PRIMARY KEY,
+            mode TEXT,
+            doc_id TEXT,
+            position INTEGER,
+            kind TEXT,                           -- pattern|tension|uncertainty|delta|declined|checkback|residue
+            payload TEXT,                        -- JSON — shape depends on kind, see synthesize.py
+            reaction TEXT,                       -- 'agree' | 'challenge' | 'reframe' | 'park' | NULL
+            reaction_note TEXT,
+            created_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS story_version (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            n INTEGER,
+            text TEXT,                           -- JSON [{para, sids[]}]
+            created_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS intro (
+            doc_id TEXT PRIMARY KEY,
+            text TEXT,                           -- JSON [{para, sids[]}]
             created_at TEXT
         );
         """

@@ -182,6 +182,37 @@ class ReviseThemeReq(BaseModel):
                                      # 'merge': the TARGET theme id
 
 
+class SynthesizeReq(BaseModel):
+    mode: str = "standard"          # 'standard' | 'panel' — same finding id-space as /themes
+    model_id: str | None = None     # P10.1c: this run only — overrides the project default
+
+
+class StepReactReq(BaseModel):
+    reaction: str                   # 'agree' | 'challenge' | 'reframe' | 'park'
+    note: str | None = None
+    statement: str | None = None    # 'reframe' only: the researcher's rewritten statement
+
+
+class FocusReq(BaseModel):
+    text: str
+
+
+class FocusProposalReq(BaseModel):
+    # the contract wrote this verdict as a bare {accept|decline}; the engine names it `action`
+    # (matching ReviseReq/ReviseThemeReq) and the frontend reached for `decision`. Accept either
+    # spelling rather than making one side wrong — the value is what carries meaning.
+    action: str | None = None
+    decision: str | None = None
+
+    @property
+    def verdict(self) -> str:
+        return (self.action or self.decision or "").strip().lower()
+
+
+class EvidenceOpenedReq(BaseModel):
+    sid: str                        # a gate-visit log entry — recorded verbatim, idempotent
+
+
 def _require_project(pid: str) -> dict:
     p = projects.get_project(pid)
     if not p:
@@ -587,6 +618,187 @@ def get_friction(pid: str, doc_id: str):
         return store.friction_payload(conn, doc_id)
     finally:
         conn.close()
+
+
+# ---- SYNTHESIZE + the loop mechanisms (P10.2) -------------------------------------------------
+# The Session/Journal/needs-judgment surfaces (design/P10.2-CONTRACT.md §4) all read `mode` from
+# the project itself (`_mode_of`, defined below with export — same rule /themes and /export
+# already follow), never as a query param: a project has exactly one live finding id-space.
+
+@app.post("/projects/{pid}/synthesize")
+def run_synthesize(pid: str, req: SynthesizeReq):
+    """SYNTHESIZE each not-yet-synthesized document (P10.2) — one call per doc, after /read.
+    `mode` is the SAME dimension /themes already uses (findings are theme_v2 rows — see
+    synthesize.py's module docstring); it is not a coding-lens choice for this call."""
+    _require_project(pid)
+    if req.mode not in ("standard", "panel"):
+        raise HTTPException(400, "mode must be 'standard' or 'panel'")
+    _validate_model_id(req.model_id)
+    work = jobs.synthesize_work(pid, req.mode, model_id=req.model_id)
+    job = projects.create_job(pid, "synthesize", {"mode": req.mode, "model_id": work.model_id})
+    jobs.submit(job["id"], work)
+    return {"job_id": job["id"]}
+
+
+@app.get("/projects/{pid}/session/{doc_id}")
+def get_session(pid: str, doc_id: str):
+    """One document's paced walkthrough: its intro, its typed steps (patterns, tensions,
+    uncertainties, deltas, declines, check-backs — everything except residue, whose home is the
+    Journal, not the per-document sequence — see store.steps_for_doc)."""
+    proj = _require_project(pid)
+    conn = _conn(pid)
+    try:
+        payload = store.session_payload(conn, _mode_of(proj), doc_id)
+    finally:
+        conn.close()
+    if not payload:
+        raise HTTPException(404, f"no document {doc_id}")
+    return payload
+
+
+@app.post("/projects/{pid}/steps/{step_id}/react")
+def react_step(pid: str, step_id: str, req: StepReactReq):
+    """agree / challenge (note) / reframe (rewrite the statement — researcher wording wins,
+    original kept) / park — a walkthrough STEER, never a finding verdict (data-session-spec §3).
+    Persists into compile_guidance for the next read/synthesis and, when the step names a
+    finding, recomputes that finding's stance immediately."""
+    _require_project(pid)
+    if req.reaction not in ("agree", "challenge", "reframe", "park"):
+        raise HTTPException(400, "reaction must be agree | challenge | reframe | park")
+    conn = _conn(pid)
+    try:
+        step = store.react_to_step(conn, step_id, req.reaction, req.note, req.statement)
+        if not step:
+            raise HTTPException(404, f"no step {step_id}")
+    finally:
+        conn.close()
+    return {"ok": True, "step": step}
+
+
+@app.get("/projects/{pid}/journal")
+def get_journal(pid: str):
+    """Project home: the focus lineage + any pending machine proposal, the versioned story-so-far,
+    every finding with its computed standing/stance/evidence-gate state, residue, and memos. The
+    project git-history timeline (data-session-spec §7) is NOT built in P10.2 — `history` is
+    always `[]` for now; see the P10.2 build report."""
+    proj = _require_project(pid)
+    conn = _conn(pid)
+    try:
+        return store.journal_payload(conn, _mode_of(proj))
+    finally:
+        conn.close()
+
+
+def _audio_review_items(pid: str) -> list[dict]:
+    """needs-judgment's 'audio_review' kind: an audio upload whose transcript sidecar exists but
+    hasn't been ingested yet (upload_audio's review-first flow, auto_ingest=false). Filesystem,
+    not DB — that's why this lives here rather than in store.needs_judgment_payload."""
+    conn = _conn(pid)
+    try:
+        ingested = {r[0] for r in conn.execute("SELECT id FROM document")}
+    finally:
+        conn.close()
+    items = []
+    for sidecar_path in sorted(projects.uploads_dir(pid).glob("*.asr.json")):
+        stem = sidecar_path.name[: -len(".asr.json")]
+        if _audio_doc_id(stem) in ingested:
+            continue
+        items.append({
+            "kind": "audio_review", "title": f"Audio transcript awaiting review: {stem}",
+            "detail": "Transcribed but not yet ingested — review or redraft before it enters "
+                     "the pipeline.",
+            "target_type": "audio", "target_id": stem, "action_hint": "review the transcript",
+        })
+    return items
+
+
+@app.get("/projects/{pid}/needs-judgment")
+def get_needs_judgment(pid: str):
+    """The derived queue of EXCEPTIONS ONLY (contract §5.4) — never "N codes to review". Computed
+    fresh on every read, never stored (design/MASSHINE.md §2 / P10.2-CONTRACT.md §4)."""
+    proj = _require_project(pid)
+    conn = _conn(pid)
+    try:
+        items = store.needs_judgment_payload(conn, _mode_of(proj))
+    finally:
+        conn.close()
+    items = items + _audio_review_items(pid)
+    return {"items": items, "count": len(items)}
+
+
+@app.post("/projects/{pid}/focus")
+def set_focus(pid: str, req: FocusReq):
+    """A researcher edit mints a new ACTIVE focus_version (supersedes whatever was active) and
+    syncs the registry's cached `research_question` mirror — existing readers of that column
+    (jobs.read_work's fallback, the export manifest) keep working untouched."""
+    _require_project(pid)
+    text = req.text.strip()
+    if not text:
+        raise HTTPException(400, "text cannot be empty")
+    conn = _conn(pid)
+    try:
+        version = store.mint_focus_version(conn, text, "researcher")
+    finally:
+        conn.close()
+    projects.set_declaration(pid, research_question=text)
+    return version
+
+
+@app.post("/projects/{pid}/focus/proposal/{n}")
+def resolve_focus_proposal(pid: str, n: int, req: FocusProposalReq):
+    """Accept (mints a new active version from the proposal's text) or decline a machine-proposed
+    focus (contract §4). 404 when `n` doesn't name a currently-pending proposal — including a
+    proposal already resolved, since accept/decline both consume it."""
+    _require_project(pid)
+    if req.verdict not in ("accept", "decline"):
+        raise HTTPException(400, "action must be 'accept' or 'decline'")
+    conn = _conn(pid)
+    try:
+        if req.verdict == "accept":
+            version = store.accept_focus_proposal(conn, n)
+            if not version:
+                raise HTTPException(404, f"no pending focus proposal {n}")
+        else:
+            if not store.decline_focus_proposal(conn, n):
+                raise HTTPException(404, f"no pending focus proposal {n}")
+            version = {"n": n, "status": "declined"}
+    finally:
+        conn.close()
+    if req.verdict == "accept":
+        projects.set_declaration(pid, research_question=version["text"])
+    return version
+
+
+@app.post("/projects/{pid}/findings/{tid}/evidence-opened")
+def evidence_opened(pid: str, tid: str, req: EvidenceOpenedReq):
+    """Records a gate visit (R6, data-session-spec §4) — appends `sid` to the finding's
+    opened-evidence log, idempotently. 404 when `tid` names no finding (no finding_state row —
+    every persisted finding gets one the moment SYNTHESIZE first creates it)."""
+    _require_project(pid)
+    conn = _conn(pid)
+    try:
+        opened = store.mark_evidence_opened(conn, tid, req.sid)
+        if opened is None:
+            raise HTTPException(404, f"no finding {tid}")
+    finally:
+        conn.close()
+    return {"ok": True, "theme_id": tid, "opened_evidence": opened}
+
+
+@app.post("/projects/{pid}/residue/{idx}/reframe")
+def reframe_residue(pid: str, idx: int):
+    """Turn residue entry `idx`'s reframe offer into standing guidance (contract §5.3 — never
+    auto-resolved, only this explicit action does it). `idx` indexes the SAME stable ordering
+    GET /journal's `residue` list uses (store.residue_items — oldest first)."""
+    proj = _require_project(pid)
+    conn = _conn(pid)
+    try:
+        step = store.adopt_reframe(conn, _mode_of(proj), idx)
+        if not step:
+            raise HTTPException(404, f"no residue item {idx}")
+    finally:
+        conn.close()
+    return {"ok": True, "step": step}
 
 
 # ---- recode with feedback -------------------------------------------------------------------
