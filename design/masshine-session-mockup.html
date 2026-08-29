@@ -1,0 +1,535 @@
+<!--
+  MASSHINE — the data session, design mockup
+  =============================================
+  Built for design/UIUX_BRIEF.md against design/MASSHINE.md and data-session-spec.md.
+  Single self-contained scrolling file. Read top to bottom: it IS the researcher's day
+  (brief §3) — Home, drop in material, the system reads, familiarize, walk the debrief,
+  the journal, the sitting, the text — in the order a researcher actually moves through it.
+
+  KEY DECISIONS
+  - One scrolling file, not linked surfaces. The paper mockup already proved the pattern
+    (two pages, one file); a data session is itself a single sitting, and a lead reviewing
+    this should be able to read it the way the researcher lives it, without re-navigating.
+    Anchor nav at top jumps between surfaces for spot-checking.
+  - Tokens are the union of web/index.html's OKLCH app palette (chrome, accents, lens hues)
+    and masshine-paper-mockup.html's paper/page/ink family (material, claims). Nothing
+    reinvented — this is meant to read as the *same* design system arriving at its mockup
+    layer, per brief §5.
+  - Standing / stance / verdict get three deliberately different visual grammars, per the
+    spec's own instruction (data-session-spec.md §4): standing is a plain sentence, never a
+    pill ("no status-pill vocabulary" is explicit in the spec — I did not invent this
+    constraint, I designed to it, and it is the riskiest bet in this file — see report).
+    Stance is a quiet trace line. Verdict exists ONLY inside the Sitting, which gets its own
+    register (deeper paper tone, a locked-until-opened evidence gate) so it reads as a
+    different kind of moment, never a daily control.
+  - Evidence chips are real anchor links to a curated set of passages rendered in the Text
+    surface (§ text-passages) — clicking a sentence-id chip anywhere in this file actually
+    jumps to that verbatim passage. Not every sid mentioned in codebook counts is wired
+    (that would mean transcribing both full transcripts into this mockup); the ones used as
+    live doors are the ones actually quoted in Session/Journal, so "one click from the
+    verbatim words" is demonstrated as real behavior, not asserted in prose.
+  - Machine voice vs researcher voice: machine contributions carry a small sans small-caps
+    tag and sit in the paper's ink-soft register; researcher memos/reframes carry a warm
+    accent rule on the left and a "you" tag; when the researcher overrides a machine
+    statement the original is kept, small, struck through in tone (not literally struck out
+    — muted and demoted below the fold of the note).
+  - All content is real: both seed transcripts (DP-40 Grande, EI-845 Rodwin), and the actual
+    codes/themes this repo's pipeline produced from them (engine/exports/md/*, panel
+    friction file). No invented participants, no lorem ipsum, no fabricated statistics.
+    Where the brief allows invented presentation (intro prose, walkthrough step wording,
+    story-so-far prose, memos, the check-back reply), the wording is newly written for this
+    mockup but every claim in it is anchored to a real sentence id from the real material,
+    exactly as data-session-spec.md §6 requires ("every artifact is made of the material").
+
+  DIVERGENCES FROM THE BRIEF (and why)
+  - The document intro's "listen" control does not play audio (no external assets allowed,
+    and no synthesized narration exists for this mockup). It is a real toggle that animates
+    a playhead/caption state to show what listening feels like, clearly not a working player.
+  - History (§7) is shown as a short representative timeline (6 entries), not an exhaustive
+    log — a real project after 30 documents would have far more; length is a mockup
+    simplification, not a claim about the real data volume.
+  - The codebook drawer shows a representative slice of the 136-code project codebook
+    (grouped as the paper mockup's index does), not all 136 rows — same reasoning.
+  - The open-conversation panel shows three illustrative turns, not a full transcript log,
+    to keep it reading as a conversation rather than a chat product.
+  - Second-lens content (critical/phenomenological) is real — pulled from this repo's actual
+    panel/friction exports — but is shown already-summoned in one step for legibility, rather
+    than requiring a live click-through round trip, since no model call can run here.
+  Anything else omitted for space is called out inline with an HTML comment at the point of
+  omission rather than silently skipped.
+
+  See the final chat report for: a walkthrough of every surface, the riskiest bet, and open
+  questions for the product owner.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MASSHINE — data session mockup</title>
+<style>
+  :root {
+    color-scheme: light;
+    /* -- app chrome tokens (web/index.html, unchanged) -- */
+    --bg: oklch(98.3% 0.008 80);
+    --sidebar: oklch(96.2% 0.010 78);
+    --surface: oklch(99.5% 0.003 80);
+    --fg: oklch(25% 0.018 50);
+    --muted: oklch(52% 0.015 55);
+    --faint: oklch(68% 0.010 60);
+    --hairline: oklch(91% 0.008 75);
+    --accent: oklch(56% 0.115 32);
+    --accent-soft: oklch(56% 0.115 32 / 0.08);
+    --amber: oklch(62% 0.12 70);
+    --amber-soft: oklch(62% 0.12 70 / 0.12);
+    --green: oklch(60% 0.1 150);
+    --green-soft: oklch(60% 0.1 150 / 0.12);
+    --red: oklch(55% 0.15 25);
+    --lens-standard: oklch(56% 0.115 32);
+    --lens-critical: oklch(50% 0.09 255);
+    --lens-phenomenological: oklch(52% 0.08 150);
+    /* -- paper tokens (masshine-paper-mockup.html, unchanged) -- */
+    --paper: oklch(97.5% 0.009 85);
+    --page: oklch(99% 0.005 90);
+    --ink: oklch(24% 0.01 60);
+    --ink-soft: oklch(45% 0.015 60);
+    --pencil: oklch(55% 0.02 60);
+    --rule: oklch(88% 0.012 80);
+    --standard: 230;
+    --critical: 30;
+    --phenom: 150;
+    /* -- fonts -- */
+    --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-ui);
+    font-size: 14.5px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 8rem;
+  }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; cursor: pointer; background: none; }
+
+  /* ================= top chrome ================= */
+  .topbar {
+    position: sticky; top: 0; z-index: 40;
+    background: oklch(98.3% 0.008 80 / 0.92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--hairline);
+    display: flex; align-items: center; gap: 1.4rem;
+    padding: .7rem 1.6rem;
+    font-size: .78rem;
+  }
+  .topbar .wordmark { font-weight: 700; letter-spacing: .12em; font-size: .74rem; }
+  .topbar nav { display: flex; gap: 1.1rem; margin-left: .4rem; }
+  .topbar nav a {
+    text-decoration: none; color: var(--muted); padding: .2rem 0; border-bottom: 2px solid transparent;
+  }
+  .topbar nav a:hover { color: var(--fg); border-color: var(--hairline); }
+  .topbar .crumb { color: var(--faint); margin-left: auto; font-style: italic; }
+
+  section.surface { padding: 3.4rem 1.4rem 1rem; }
+  .surface-inner { max-width: 62rem; margin: 0 auto; }
+  .surface-kicker {
+    font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; color: var(--faint);
+    display: flex; align-items: center; gap: .6rem; margin-bottom: .5rem;
+  }
+  .surface-kicker::after { content: ""; height: 1px; flex: 1; background: var(--hairline); }
+  .surface-title { font-family: var(--font-serif); font-size: 1.7rem; font-weight: 500; margin-bottom: .3rem; }
+  .surface-sub { color: var(--muted); font-size: .92rem; max-width: 46rem; margin-bottom: 2.2rem; }
+
+  /* ================= shared bits ================= */
+  .card {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px;
+  }
+  .rule-list > * + * { border-top: 1px solid var(--hairline); }
+
+  /* evidence chip = a real door to the Text surface */
+  .sid {
+    display: inline-flex; align-items: baseline; gap: .15rem;
+    font-family: var(--font-ui); font-size: .68rem; letter-spacing: .01em;
+    color: var(--accent); text-decoration: none;
+    border-bottom: 1px dotted var(--accent);
+    padding: 0 .1rem;
+    white-space: nowrap;
+  }
+  .sid:hover { background: var(--accent-soft); border-radius: 3px; }
+  .sid::before { content: "»"; font-size: .8em; opacity: .6; }
+  .sids { display: inline-flex; flex-wrap: wrap; gap: .4rem; align-items: baseline; }
+
+  /* the two voices */
+  .voice-machine { font-family: var(--font-ui); }
+  .voice-tag {
+    font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; color: var(--faint);
+    display: inline-flex; align-items: center; gap: .35rem;
+  }
+  .voice-tag.researcher { color: var(--accent); }
+  .voice-tag .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .researcher-block {
+    border-left: 2px solid var(--accent); padding-left: .8rem; margin: .5rem 0;
+  }
+  .researcher-block .said { font-style: italic; color: var(--fg); }
+  .was-said {
+    margin-top: .35rem; font-size: .78rem; color: var(--faint); font-style: italic;
+  }
+  .was-said b { font-style: normal; font-weight: 600; color: var(--pencil); }
+
+  /* buttons */
+  .btn {
+    font-family: var(--font-ui); font-size: .78rem; font-weight: 600;
+    padding: .5rem 1rem; border-radius: 7px; border: 1px solid var(--hairline);
+    background: var(--surface); color: var(--fg);
+  }
+  .btn:hover { border-color: var(--faint); }
+  .btn.primary { background: var(--ink); color: var(--page); border-color: var(--ink); }
+  .btn.primary:hover { opacity: .9; }
+  .btn.ghost { border-color: transparent; background: none; color: var(--muted); }
+  .btn.ghost:hover { color: var(--fg); }
+  .btn[disabled] { opacity: .4; cursor: not-allowed; }
+  .btn:hover[disabled] { border-color: var(--hairline); }
+  .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+  .pill {
+    font-size: .68rem; letter-spacing: .04em; padding: .2rem .55rem; border-radius: 99px;
+    border: 1px solid var(--hairline); color: var(--muted); background: var(--surface);
+  }
+
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .85em; }
+
+  @media (max-width: 700px) {
+    .topbar { flex-wrap: wrap; }
+    .topbar .crumb { display: none; }
+    section.surface { padding: 2.2rem 1rem 1rem; }
+    .surface-title { font-size: 1.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="wordmark">MASSHINE</span>
+  <nav>
+    <a href="#home">Home</a>
+    <a href="#session">Session</a>
+    <a href="#journal">Journal</a>
+    <a href="#sitting">Sitting</a>
+    <a href="#text">Text</a>
+  </nav>
+  <span class="crumb">Migration &amp; kin-network study &nbsp;·&nbsp; Roman J.</span>
+</div>
+
+<!-- ======================================================================= -->
+<!-- HOME — project front door                                               -->
+<!-- ======================================================================= -->
+<section class="surface" id="home">
+  <div class="surface-inner">
+    <div class="surface-kicker">Home</div>
+    <h1 class="surface-title">Migration &amp; kin-network study</h1>
+    <p class="surface-sub">The project's front door: the declaration that frames every read, the material as it arrives, and the model doing the reading. Making a project is meant to feel like opening a fresh notebook, not filling out a form.</p>
+
+    <div class="btn-row" style="margin-bottom:2rem;">
+      <span style="font-size:.76rem;color:var(--faint);">Viewing:</span>
+      <button class="btn" id="home-view-existing" style="background:var(--ink);color:var(--page);border-color:var(--ink);">this project, 2 documents in</button>
+      <button class="btn ghost" id="home-view-empty">a brand-new project, nothing dropped in yet</button>
+    </div>
+
+    <!-- populated state -->
+    <div id="home-existing">
+      <div class="card" style="padding:1.4rem 1.6rem;margin-bottom:1.2rem;">
+        <div class="voice-tag" style="margin-bottom:.7rem;">Declaration · frames every read · exported</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;">
+          <div>
+            <div class="voice-tag researcher" style="margin-bottom:.3rem;"><span class="dot"></span> Research focus · v2 <span style="color:var(--faint);text-transform:none;letter-spacing:0;">(evolving — see Journal)</span></div>
+            <p style="font-family:var(--font-serif);font-size:1.02rem;">How do family economies absorb the costs of migration?</p>
+            <p class="was-said"><b>v1, at creation:</b> How do families organize transatlantic migration?</p>
+          </div>
+          <div>
+            <div class="voice-tag researcher" style="margin-bottom:.3rem;"><span class="dot"></span> Positionality</div>
+            <p style="font-size:.86rem;color:var(--muted);">Economic sociologist; no family connection to this corpus; reading with a household-economy frame and aware of it.</p>
+          </div>
+        </div>
+        <div style="margin-top:1rem;padding-top:.9rem;border-top:1px solid var(--hairline);display:flex;gap:1rem;align-items:baseline;flex-wrap:wrap;">
+          <span class="voice-tag">Reading model</span>
+          <span style="font-size:.84rem;">MiniMax M3 <span style="color:var(--faint);">— project default · recorded with every run</span></span>
+          <button class="btn ghost" style="font-size:.72rem;">change…</button>
+        </div>
+      </div>
+
+      <div class="voice-tag" style="margin:1.6rem 0 .5rem;">Material</div>
+      <div class="card rule-list">
+        <div style="padding:.9rem 1.3rem;display:flex;gap:1rem;align-items:baseline;">
+          <span style="font-family:var(--font-serif);font-weight:600;">DP-40 · Grande, M.</span>
+          <span style="font-size:.78rem;color:var(--muted);">Yugoslavia 1920 · read · 21 codes · in 3 findings</span>
+          <a class="sid" href="#session" style="margin-left:auto;">session</a>
+        </div>
+        <div style="padding:.9rem 1.3rem;display:flex;gap:1rem;align-items:baseline;">
+          <span style="font-family:var(--font-serif);font-weight:600;">EI-845 · Rodwin</span>
+          <span style="font-size:.78rem;color:var(--muted);">read · 18 codes · in 3 findings</span>
+          <a class="sid" href="#journal" style="margin-left:auto;">journal</a>
+        </div>
+        <!-- an AUDIO document mid-arrival: roles detected, redraft offered, not yet ingested -->
+        <div style="padding:1.1rem 1.3rem;background:var(--amber-soft);">
+          <div style="display:flex;gap:1rem;align-items:baseline;flex-wrap:wrap;">
+            <span style="font-family:var(--font-serif);font-weight:600;">interview_grande.m4a</span>
+            <span style="font-size:.78rem;color:var(--muted);">51 min · transcribed &amp; diarized · <b>awaiting your review before ingest</b></span>
+          </div>
+          <div style="display:flex;gap:1.6rem;margin-top:.7rem;flex-wrap:wrap;">
+            <div style="font-size:.8rem;"><span class="voice-tag">Speakers detected</span><br>
+              interviewer — <i>“This is Andrew Phillips…”</i> &nbsp;·&nbsp; narrator — <b>Mary Grande</b>
+              <button class="btn ghost" style="font-size:.7rem;">rename…</button></div>
+          </div>
+          <!-- the gated redraft: per-segment diff, conservative fixes only -->
+          <div class="card" style="margin-top:.8rem;background:var(--page);">
+            <div style="padding:.6rem 1rem;border-bottom:1px solid var(--hairline);" class="voice-tag">Suggested transcript fixes · 2 of 214 segments · nothing changes without you</div>
+            <div style="padding:.7rem 1rem;font-size:.84rem;display:flex;gap:.8rem;align-items:baseline;">
+              <span style="color:var(--faint);text-decoration:line-through;">Kandijaright over Novo Mesto</span>
+              <span>→ Kandija right over Novo Mesto</span>
+              <span class="btn-row" style="margin-left:auto;"><button class="btn" style="font-size:.7rem;padding:.25rem .7rem;">accept</button><button class="btn ghost" style="font-size:.7rem;">keep</button></span>
+            </div>
+            <div style="padding:.7rem 1rem;border-top:1px solid var(--hairline);font-size:.8rem;color:var(--muted);font-style:italic;">
+              “Marija Yankovik” — heard as “Jankovic.” Spelling of names is yours; the machine won’t guess.
+            </div>
+          </div>
+          <div class="btn-row" style="margin-top:.8rem;">
+            <button class="btn primary" style="font-size:.74rem;">Looks right — ingest</button>
+            <span style="font-size:.72rem;color:var(--faint);">after ingest the text is fixed; every claim will anchor to it</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-top:1.2rem;">
+        <button class="btn primary">＋ Add material</button>
+        <span style="font-size:.76rem;color:var(--faint);">audio (.m4a .mp3 .wav) or text — equals</span>
+      </div>
+    </div>
+
+    <!-- empty state: the blank notebook must invite, not lecture -->
+    <div id="home-empty" style="display:none;">
+      <div class="card" style="padding:3.2rem 2rem;text-align:center;">
+        <p style="font-family:var(--font-serif);font-size:1.25rem;margin-bottom:.4rem;">A new notebook.</p>
+        <p style="color:var(--muted);font-size:.9rem;max-width:30rem;margin:0 auto 1.4rem;">Drop in an interview — a voice recording or a transcript. You can state a research question now, or let one emerge from the material; either way it stays yours to change.</p>
+        <button class="btn primary">Drop in the first interview</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- SESSION — intro → walkthrough → conversation                            -->
+<!-- ======================================================================= -->
+<section class="surface" id="session" style="background:var(--paper);border-top:1px solid var(--rule);">
+  <div class="surface-inner">
+    <div class="surface-kicker">Session · DP-40 Grande · document 2 of 2</div>
+    <h1 class="surface-title">A colleague’s debrief</h1>
+    <p class="surface-sub">Evidence came up from the transcript; this is where direction goes down. First a three-minute introduction to familiarize, then the walkthrough — one claim at a time — then open conversation.</p>
+
+    <!-- the introduction: listenable, made of the material, every claim anchored -->
+    <div class="card" style="background:var(--page);padding:1.6rem 1.9rem;margin-bottom:2rem;">
+      <div style="display:flex;align-items:baseline;gap:.9rem;margin-bottom:.9rem;">
+        <span class="voice-tag">Introduction · ~3 min</span>
+        <button class="btn" style="font-size:.72rem;padding:.3rem .8rem;">▶ listen</button>
+        <span style="font-size:.7rem;color:var(--faint);">spoken rendering reads the prose; the anchors stay on screen</span>
+      </div>
+      <div style="font-family:var(--font-serif);font-size:1.02rem;line-height:1.75;color:var(--ink);">
+        <p style="margin-bottom:.8rem;">Mary Grande left a three-room peasant house near Novo Mesto in 1920, aged ten — a household her mother ran alone, farming and bartering cattle, while her father had been in the United States since 1911. <span class="sids"><a class="sid" href="#p-father">DP·S1.014</a></span> The journey itself runs on people, not institutions: when the family’s clothes are stolen in Trieste, it is “a fellow that my mother knew” who buys replacements in London. <span class="sids"><a class="sid" href="#p-trieste">DP·S1.017</a></span></p>
+        <p style="margin-bottom:.8rem;">What she dwells on longest is not hardship but texture — the barn under the same roof, a pet cow she “loved very much,” animals as ordinary company. <span class="sids"><a class="sid" href="#p-cow">DP·S2.031</a></span> That warmth sits oddly against the economic frame this project has been building, and I have not resolved it.</p>
+        <p style="color:var(--ink-soft);"><b style="font-weight:600;">For the story:</b> this interview mostly confirms what Rodwin gave us about households absorbing migration’s costs — and complicates the word “kin.”</p>
+      </div>
+    </div>
+
+    <!-- walkthrough: shown stacked here for review; in the product, one step at a time -->
+    <div class="voice-tag" style="margin-bottom:.6rem;">Walkthrough · in the product these arrive one at a time · 3 of 6 shown</div>
+
+    <!-- STEP: pattern, with the researcher's reframe already taken -->
+    <div class="card" style="background:var(--page);padding:1.4rem 1.9rem;margin-bottom:1rem;border-left:3px solid oklch(62% 0.09 var(--standard));">
+      <div class="voice-tag" style="margin-bottom:.4rem;">Pattern · strong in this document</div>
+      <p style="font-family:var(--font-serif);font-size:1.15rem;margin-bottom:.5rem;">The household is run as a split economy: one earner abroad, farm and barter at home.</p>
+      <p style="font-size:.86rem;color:var(--ink-soft);margin-bottom:.6rem;">Carried by <span class="sids"><a class="sid" href="#p-father">DP·S1.014</a> <a class="sid" href="#p-home">DP·S2.019</a></span> and five more · <i>weakest:</i> a single passing mention of remittances — read it before leaning on it. <a class="sid" href="#p-father">DP·S1.015</a></p>
+      <div class="researcher-block">
+        <div class="voice-tag researcher"><span class="dot"></span> you reframed</div>
+        <p class="said">“Migration’s costs are absorbed by the household — mostly by women.”</p>
+        <p class="was-said"><b>machine’s wording, kept:</b> Split-household migration economy</p>
+      </div>
+      <div class="btn-row"><button class="btn">Agree</button><button class="btn">Challenge…</button><button class="btn" style="border-color:var(--accent);color:var(--accent);">Reframed ✓</button><button class="btn ghost">Park</button></div>
+    </div>
+
+    <!-- STEP: uncertainty, with a second lens summoned on demand -->
+    <div class="card" style="background:var(--page);padding:1.4rem 1.9rem;margin-bottom:1rem;border-left:3px solid oklch(62% 0.09 var(--critical));">
+      <div class="voice-tag" style="margin-bottom:.4rem;">Uncertainty · voiced, not hidden</div>
+      <p style="font-family:var(--font-serif);font-size:1.15rem;margin-bottom:.5rem;">The Trieste theft is coded as the family’s account, not as an established event.</p>
+      <p style="font-size:.86rem;color:var(--ink-soft);margin-bottom:.8rem;">The transcript cannot establish who took the clothes or why; what it does establish is what the loss set in motion. <span class="sids"><a class="sid" href="#p-trieste">DP·S1.017</a></span></p>
+      <div style="border-top:1px dashed var(--rule);padding-top:.8rem;">
+        <div class="voice-tag" style="color:oklch(50% 0.09 255);margin-bottom:.3rem;">Second reading, summoned · critical lens · this passage only</div>
+        <p style="font-size:.86rem;color:var(--ink-soft);">Property loss at transit points reads as routine extraction from migrants in motion — the family treats it as weather, not as crime worth pursuing. <span class="sids"><a class="sid" href="#p-trieste">DP·S1.017</a></span></p>
+      </div>
+      <div class="btn-row" style="margin-top:.8rem;"><button class="btn">Agree</button><button class="btn">Challenge…</button><button class="btn">Reframe…</button><button class="btn ghost">Park</button></div>
+    </div>
+
+    <!-- STEP: delta + THE CHECK-BACK — direction tested against evidence -->
+    <div class="card" style="background:var(--page);padding:1.4rem 1.9rem;margin-bottom:1rem;border-left:3px solid oklch(62% 0.09 var(--phenom));">
+      <div class="voice-tag" style="margin-bottom:.4rem;">What this document does to the story · and a check on your steer</div>
+      <p style="font-family:var(--font-serif);font-size:1.15rem;margin-bottom:.7rem;">You framed finding 2 as <i>“kin networks as migration infrastructure.”</i> I checked that against both interviews:</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;font-size:.84rem;">
+        <div><div class="voice-tag" style="color:var(--green);margin-bottom:.3rem;">Supports</div>7 passages, both interviews — lodging, first work, the crossing itself arranged through relatives. <span class="sids"><a class="sid" href="#p-father">DP·S1.014</a></span></div>
+        <div><div class="voice-tag" style="color:var(--amber);margin-bottom:.3rem;">Strains</div>The Trieste rescue came from <i>“a fellow that my mother knew”</i> — an acquaintance, not kin. The word may be too narrow. <span class="sids"><a class="sid" href="#p-trieste">DP·S1.017</a></span></div>
+        <div><div class="voice-tag" style="color:var(--red);margin-bottom:.3rem;">Could not find</div>Nothing in Rodwin shows the network working past arrival — “infrastructure” implies a persistence I cannot yet see.</div>
+      </div>
+      <div class="btn-row" style="margin-top:1rem;">
+        <button class="btn primary" style="font-size:.76rem;">Refine to “kin and acquaintance networks”</button>
+        <button class="btn">Keep my framing</button>
+        <button class="btn ghost">Open the straining passage</button>
+      </div>
+    </div>
+
+    <!-- open conversation -->
+    <div class="card" style="background:var(--page);padding:1.3rem 1.9rem;margin-top:1.8rem;">
+      <div class="voice-tag" style="margin-bottom:.8rem;">Open conversation · answers are retrieved and anchored, never recalled</div>
+      <div class="researcher-block"><p class="said">Where does she talk about money?</p></div>
+      <p style="font-size:.88rem;color:var(--ink-soft);margin:.5rem 0 1rem;">Three places: her mother “raised some cattle and bartered with them” <a class="sid" href="#p-father">DP·S1.014</a>; the clothes bought in London after the theft <a class="sid" href="#p-trieste">DP·S1.017</a>; and the household’s barn-under-one-roof economy <a class="sid" href="#p-home">DP·S2.019</a>. Money as such is nearly absent — exchange happens in kind and through people.</p>
+      <div style="border-top:1px solid var(--rule);padding-top:.8rem;display:flex;gap:.6rem;">
+        <input style="flex:1;border:1px solid var(--rule);border-radius:7px;padding:.55rem .8rem;background:var(--surface);font:inherit;font-size:.86rem;" placeholder="Ask the material… or: read this passage against the grain">
+        <button class="btn">Ask</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- JOURNAL — project home: focus, story, findings, residue, history        -->
+<!-- ======================================================================= -->
+<section class="surface" id="journal">
+  <div class="surface-inner">
+    <div class="surface-kicker">Journal · project home</div>
+    <h1 class="surface-title">The analysis, accumulating</h1>
+    <p class="surface-sub">Everything here was either computed from evidence below or written by a hand that is named. Standing rises from the material; stance is yours; verdicts wait for the sitting.</p>
+
+    <!-- the evolving focus -->
+    <div class="card" style="padding:1.2rem 1.6rem;margin-bottom:1.4rem;">
+      <div class="voice-tag" style="margin-bottom:.6rem;">Research focus · a versioned object, not a form field</div>
+      <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.84rem;">
+        <span style="color:var(--faint);">v1 <i>at creation</i> — organizing migration</span>
+        <span style="color:var(--faint);">→</span>
+        <span><b>v2</b> <i>you, after doc 2</i> — <span style="font-family:var(--font-serif);font-size:.95rem;">how family economies absorb migration’s costs</span></span>
+      </div>
+      <div style="margin-top:.8rem;padding-top:.8rem;border-top:1px dashed var(--hairline);font-size:.84rem;display:flex;gap:.8rem;align-items:baseline;flex-wrap:wrap;">
+        <span class="voice-tag">machine proposes v3</span>
+        <span style="font-family:var(--font-serif);font-size:.95rem;">…and <i>who inside the household</i> carries them?</span>
+        <span style="color:var(--faint);font-size:.76rem;">— the material keeps answering a question you haven’t asked</span>
+        <span class="btn-row" style="margin-left:auto;"><button class="btn" style="font-size:.7rem;">adopt</button><button class="btn ghost" style="font-size:.7rem;">decline</button></span>
+      </div>
+    </div>
+
+    <!-- story-so-far, versioned -->
+    <div class="card" style="padding:1.4rem 1.6rem;margin-bottom:1.4rem;background:var(--page);">
+      <div style="display:flex;gap:.8rem;align-items:baseline;margin-bottom:.7rem;">
+        <span class="voice-tag">Story so far</span>
+        <span class="pill" style="opacity:.5;">v1 · after Grande</span>
+        <span class="pill" style="border-color:var(--ink);color:var(--ink);">v2 · after Rodwin</span>
+        <button class="btn ghost" style="font-size:.7rem;margin-left:auto;">▶ listen</button>
+      </div>
+      <p style="font-family:var(--font-serif);font-size:1.02rem;line-height:1.75;color:var(--ink);">Across both interviews, migration is financed less with money than with people: households split themselves across the Atlantic and the women who stay run what remains <a class="sid" href="#p-father">DP·S1.014</a>, while the journey’s emergencies are met through whoever the family can reach <a class="sid" href="#p-trieste">DP·S1.017</a>. What the story cannot yet hold is the warmth — the narrators keep returning to animals, rooms, and routines with an affection the cost-frame has no place for <a class="sid" href="#p-cow">DP·S2.031</a>.</p>
+      <p style="font-size:.76rem;color:var(--faint);margin-top:.6rem;"><i>changed in v2:</i> “kin” widened toward acquaintance; the unresolved warmth was added rather than smoothed away.</p>
+    </div>
+
+    <!-- findings: standing (computed) · stance (yours) · verdict (at the sitting) -->
+    <div class="voice-tag" style="margin-bottom:.5rem;">Findings · standing is computed, never asked of you</div>
+    <div class="card rule-list" style="margin-bottom:1.4rem;">
+      <div style="padding:1rem 1.4rem;">
+        <div style="display:flex;gap:.7rem;align-items:baseline;flex-wrap:wrap;">
+          <span style="font-family:var(--font-serif);font-size:1.05rem;">Migration’s costs are absorbed by the household — mostly by women</span>
+          <span class="voice-tag researcher"><span class="dot"></span> your wording</span>
+        </div>
+        <p style="font-size:.8rem;color:var(--muted);margin-top:.3rem;"><i>standing:</i> firm — 11 passages, both interviews, including one that cuts against it. &nbsp;<i>stance:</i> reframed, then agreed twice. &nbsp;<i>verdict:</i> at the sitting.</p>
+      </div>
+      <div style="padding:1rem 1.4rem;">
+        <div style="display:flex;gap:.7rem;align-items:baseline;flex-wrap:wrap;">
+          <span style="font-family:var(--font-serif);font-size:1.05rem;">Kin and acquaintance networks carry the journey</span>
+          <span class="pill" style="font-size:.62rem;">refined via check-back</span>
+        </div>
+        <p style="font-size:.8rem;color:var(--muted);margin-top:.3rem;"><i>standing:</i> firm on the journey itself; unshown past arrival. &nbsp;<i>stance:</i> you challenged “infrastructure”; the material agreed with you.</p>
+      </div>
+      <div style="padding:1rem 1.4rem;">
+        <div style="display:flex;gap:.7rem;align-items:baseline;flex-wrap:wrap;">
+          <span style="font-family:var(--font-serif);font-size:1.05rem;">The left-behind home is remembered with warmth, not grievance</span>
+        </div>
+        <p style="font-size:.8rem;color:var(--muted);margin-top:.3rem;"><i>standing:</i> thin — one interview carries nearly all of it. &nbsp;<i>stance:</i> parked. &nbsp;<i>machine’s note:</i> watch Rodwin-type interviews for its opposite.</p>
+      </div>
+    </div>
+
+    <!-- residue: abduction lives here -->
+    <div class="card" style="padding:1.2rem 1.6rem;margin-bottom:1.4rem;border-left:3px solid var(--amber);">
+      <div class="voice-tag" style="margin-bottom:.5rem;">Doesn’t fit yet · 3 passages, 1 code · residue is a signal, not a mess</div>
+      <p style="font-size:.88rem;color:var(--muted);margin-bottom:.6rem;">The pet cow “I loved very much,” the barn under one roof, the manure pile “just to the side” — coded, but no finding wants them. <span class="sids"><a class="sid" href="#p-cow">DP·S2.031</a> <a class="sid" href="#p-home">DP·S2.019</a></span></p>
+      <p style="font-size:.86rem;"><span class="voice-tag">machine proposes</span> &nbsp;a reframe: the farm is not only an economy — it is what “home” means when narrators measure what migration cost. Read the residue against that? <button class="btn ghost" style="font-size:.72rem;">summon a reading</button></p>
+    </div>
+
+    <!-- history: git underneath, never git on the surface -->
+    <div class="card" style="padding:1.2rem 1.6rem;">
+      <div class="voice-tag" style="margin-bottom:.7rem;">History · every point restorable · none of this is jargon</div>
+      <div style="display:flex;gap:0;align-items:flex-start;font-size:.74rem;color:var(--muted);overflow-x:auto;">
+        <div style="min-width:8.5rem;">● project created</div>
+        <div style="min-width:8.5rem;">● read DP-40</div>
+        <div style="min-width:8.5rem;">● session · 5 reactions</div>
+        <div style="min-width:9.5rem;color:var(--accent);">◆ marked: “before re-focus”</div>
+        <div style="min-width:8.5rem;">● read EI-845</div>
+        <div style="min-width:8.5rem;">● focus → v2 <button class="btn ghost" style="font-size:.66rem;display:block;padding:.1rem 0;">restore to here</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- THE SITTING — a different register; verdicts live only here             -->
+<!-- ======================================================================= -->
+<section class="surface" id="sitting" style="background:oklch(94.5% 0.012 80);border-block:1px solid var(--rule);">
+  <div class="surface-inner">
+    <div class="surface-kicker">Theme review sitting · suggested after 4 documents · you are 2 in</div>
+    <h1 class="surface-title">Verdicts, with everything on the table</h1>
+    <p class="surface-sub">A deliberate moment, not a daily control: pooled cross-case evidence per finding, and only here — keep-and-name, merge, split, demote, drop. This is RTA’s reviewing phase made literal.</p>
+    <div class="card" style="background:var(--page);padding:1.5rem 1.9rem;">
+      <p style="font-family:var(--font-serif);font-size:1.15rem;margin-bottom:.4rem;">Migration’s costs are absorbed by the household — mostly by women</p>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem;">Pooled evidence: 11 passages · Grande 7, Rodwin 4 · <b>9 of 11 opened by you</b> — naming unlocks when you’ve read them all.</p>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+        <button class="btn primary" disabled title="2 passages unopened">Keep &amp; name…</button>
+        <button class="btn">Merge into…</button>
+        <button class="btn">Split…</button>
+        <button class="btn">Demote to memo</button>
+        <button class="btn ghost" style="color:var(--red);">Drop</button>
+        <a class="sid" href="#p-father" style="margin-left:auto;align-self:center;">open the 2 unread passages</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<!-- TEXT — the destination: verbatim passages every chip above lands on     -->
+<!-- ======================================================================= -->
+<section class="surface" id="text" style="background:var(--paper);">
+  <div class="surface-inner" style="max-width:46rem;">
+    <div class="surface-kicker">Text · the destination, never homework</div>
+    <h1 class="surface-title" style="font-size:1.3rem;">DP-40 · Mary Yankovik Grande</h1>
+    <p class="surface-sub">Every evidence chip in this file lands on one of these verbatim passages. Full treatment of this surface — margin ticks, hover notes, the codebook drawer as a book index — lives in <a href="masshine-paper-mockup.html">masshine-paper-mockup.html</a>; these excerpts exist so the doors above genuinely open.</p>
+
+    <div class="card" style="background:var(--page);padding:2rem 2.3rem;font-family:var(--font-serif);font-size:1rem;line-height:1.8;">
+      <p id="p-father" style="margin-bottom:1.2rem;"><span style="font-variant:small-caps;letter-spacing:.08em;color:var(--ink-soft);">Grande:</span> Well, my father was here in the States since 1911. In fact, he was, during World War One, here in the United States, and my mother was a farmer, and she raised some cattle and bartered with them. <a class="sid" href="#session">↩ S1.014</a></p>
+      <p id="p-trieste" style="margin-bottom:1.2rem;"><span style="font-variant:small-caps;letter-spacing:.08em;color:var(--ink-soft);">Grande:</span> But part of our clothes was stolen in Trieste, so a fellow that my mother knew, he went in, I believe, in London, to buy some clothes for us. He could speak American. <a class="sid" href="#session">↩ S1.017</a></p>
+      <p id="p-home" style="margin-bottom:1.2rem;"><span style="font-variant:small-caps;letter-spacing:.08em;color:var(--ink-soft);">Grande:</span> It was an average peasant home. It was three rooms, living room and kitchen in the middle and a small room on the side. And then facing what would be, I guess, the east side was half, was a barn where the cattle were. <a class="sid" href="#session">↩ S2.019</a></p>
+      <p id="p-cow"><span style="font-variant:small-caps;letter-spacing:.08em;color:var(--ink-soft);">Grande:</span> Oh, yes. I enjoyed it because they were part of my life. In fact, I had a pet cow that I loved very much. It was just a regular home life between the animals. <a class="sid" href="#journal">↩ S2.031</a></p>
+    </div>
+  </div>
+</section>
+
+<script>
+  // mockup-only: Home populated/empty toggle
+  const ex = document.getElementById('home-existing'), em = document.getElementById('home-empty');
+  document.getElementById('home-view-existing').addEventListener('click', () => { ex.style.display=''; em.style.display='none'; });
+  document.getElementById('home-view-empty').addEventListener('click', () => { ex.style.display='none'; em.style.display=''; });
+</script>
+</body>
+</html>
