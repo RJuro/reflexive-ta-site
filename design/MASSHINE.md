@@ -10,11 +10,13 @@ Detail lives in [data-session-spec.md](data-session-spec.md) (P10, current) and
 
 MASSHINE is an instrument for reflexive thematic analysis that sits between the computational
 and the qualitative. It takes interviews in — as text or as **audio** — reads them closely
-and cheaply, and then **debriefs the researcher like a junior colleague who did the immersive
-first pass**: here is what I found, here is the evidence, here is what I'm unsure about, here
-is what this interview does to what we thought after the last one. The researcher interrogates,
-challenges, reframes, and decides. The machine never owns an interpretation, and every
-sentence it says is one click from the verbatim words that produced it.
+and cheaply, and then **reports what it found**: the patterns, the evidence under each one,
+what it could not resolve, and what this interview does to the account built so far. The
+researcher interrogates, challenges, reframes, and decides. The machine never owns an
+interpretation, and every sentence it produces is one click from the verbatim words behind it.
+
+**It is an instrument, not a character.** No persona, no assistant voice, no charm — it states
+findings and shows evidence, and the interface is built the same way.
 
 ## 2. How knowing moves — the loop architecture
 

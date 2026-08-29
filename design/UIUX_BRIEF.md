@@ -8,11 +8,15 @@ not a restyle of what currently runs.*
 
 MASSHINE is an instrument for reflexive thematic analysis that sits **between the
 computational and the qualitative**. The researcher gives it interviews (audio or text); the
-system reads them closely; then it **debriefs the researcher like a junior colleague who did
-the immersive first pass** — here is what I found, here is the evidence, here is what I'm
-unsure about, here is what this interview does to what we thought yesterday. The researcher
-interrogates, challenges, reframes, decides. The machine never owns an interpretation, and
-every sentence it says is one click from the verbatim words that produced it.
+system reads them closely; then it **reports what it found** — the patterns, the evidence
+under each, what it could not resolve, and what this interview does to the account so far.
+The researcher interrogates, challenges, reframes, decides. The machine never owns an
+interpretation, and every sentence it produces is one click from the verbatim words behind it.
+
+**No persona, ever.** The system is an instrument, not a character: no "your AI colleague",
+no assistant avatar, no chattiness, no first-person charm, no debrief-from-a-helpful-friend
+framing. It states findings and shows evidence. Write and design the way Apple describes a
+tool — plainly, about what it does — never the way a startup describes a companion.
 
 **It must not feel like NVivo with AI bolted on.** No code-tree manager, no chip walls, no
 accept/dismiss queues as a daily duty, no dashboard aesthetics, and none of the
@@ -94,8 +98,16 @@ for a brand-new project (the blank notebook must invite, not lecture).
 - **Paper, archival, calm.** Serif for material and claims; quiet sans for chrome. The
   existing OKLCH token system (see `web/index.html` `:root`) is the palette family; the
   paper mockup shows the register. Light-first.
-- **Generous whitespace; one thing at a time.** The walkthrough is a conversation, not a
-  form. Density is the enemy — the old UI died of chips.
+- **Restraint of the kind Apple practises** — the discipline, not the pastiche. Concretely:
+  *content is the interface* (no card-in-card, almost no boxes — separate with whitespace and
+  the occasional hairline); *typography carries hierarchy* (a tight scale, few weights, size
+  and colour instead of borders and badges); *chrome recedes* (translucent, thin, out of the
+  way until reached for); *one accent used sparingly* — here it marks the researcher's own
+  voice and nothing else; *state is shown, not announced* (no pills or badge vocabulary where
+  a plain sentence works); *motion is small and explanatory*. Every element must justify its
+  ink. If a rule, box, or label can be deleted without losing meaning, delete it.
+- **Generous whitespace; one thing at a time.** The walkthrough is a sequence, not a form.
+  Density is the enemy — the old UI died of chips.
 - **Evidence chips are doors, not decoration** — sentence-id chips open the text at the
   passage. Every model-made claim visibly carries its anchors.
 - **Two voices, visibly distinct**: the machine's contributions and the researcher's
@@ -135,7 +147,7 @@ for a brand-new project (the blank notebook must invite, not lecture).
 
 A skeptical qualitative researcher should look at any screen and see their OWN practice —
 data sessions, memos, an analytic journal, marginalia — not a tech product's idea of it.
-Every claim shows its receipts. The machine sounds like a careful colleague, plain register,
-no theory-inflated wording. Narrow-width must not break (the paper mockup has the collapse
+Every claim shows its receipts. The writing is plain and precise — no theory-inflated wording,
+no persona, no charm. Narrow-width must not break (the paper mockup has the collapse
 pattern). And the whole thing should be quietly beautiful — the kind of tool a researcher
 would *want* to spend a day in.

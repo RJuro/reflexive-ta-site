@@ -1322,7 +1322,7 @@
     c.innerHTML = `<div class="sesh">
       <div class="sesh__head">
         <h1>Session — ${esc(docTitle(d))}</h1>
-        <p class="sub">A colleague's debrief of what this document carries. Agree, challenge, reframe, or park each point — your reactions steer what happens next.</p>
+        <p class="sub">What this interview carries, one point at a time. Agree, challenge, reframe, or park each — your reactions steer the next read.</p>
       </div>
       <div class="sesh__progress">
         <div class="sesh__progress-bar"><div class="sesh__progress-fill" style="width:${((idx + 1) / visible.length) * 100}%"></div></div>

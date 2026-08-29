@@ -11,10 +11,11 @@ Everything built so far, the paper UI included, casts the researcher as **curato
 taxonomy**: review codes, approve merges, drag families. That is AI-augmented NVivo however
 good the typography. MASSHINE's actual position is *between* the computational and the
 qualitative, and the form that expresses it comes from research practice itself: **the data
-session**. A junior colleague has done the immersive first pass — read everything, coded
-everything, never got tired — and debriefs the senior researcher, who interrogates and owns
-the interpretation. The researcher's work stops being clerical (managing a code tree) and
-becomes judgment.
+session**. The immersive first pass is done — everything read, everything coded — and the
+system reports it to the researcher, who interrogates and owns the interpretation. The
+researcher's work stops being clerical (managing a code tree) and becomes judgment. This is a
+division of labour, not a persona: the system reads and reports, and never acquires a
+character, a voice, or a name of its own.
 
 This is also the methodologically congruent form per the literature we analyzed and then
 ignored in P9: Friese's "From Coding to Conversation", Morgan's QBA (broad queries → specific
@@ -45,8 +46,8 @@ management duty).
 
 ## 3. The walkthrough
 
-One paced sequence per processed document, in a colleague's voice, plain register. Steps are
-typed, ordered by the generator:
+One paced sequence per processed document, plain declarative register. Steps are typed,
+ordered by the generator:
 
 | kind | content |
 |---|---|
@@ -241,7 +242,7 @@ researcher duty; the three-place paper UI as the app shell (Text keeps the paper
 4. **P10.4 validation** — run the Livicia Antoine transcript end-to-end; compare the
    walkthrough + memos against Nirosha's sheet (the pairing assets in `pairing_nirosha/`).
    Acceptance: every walkthrough claim resolves to real spans; the memo layer reads like a
-   colleague's; the researcher path from debrief to accepted finding works without ever
+   grounded and plain; the researcher path from report to accepted finding works without ever
    visiting a codebook view.
 
 ## 12. The audio path (upload → Voxtral → canonical transcript)
